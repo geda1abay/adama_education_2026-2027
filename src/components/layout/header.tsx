@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Users,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -41,9 +42,15 @@ import SidebarNav from './sidebar-nav';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function Header() {
+  const router = useRouter();
   const userProfileAvatar = PlaceHolderImages.find(
     (img) => img.id === 'user-profile-avatar'
   );
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('isAdmin');
+    router.push('/login');
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -112,7 +119,7 @@ export default function Header() {
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Logout</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

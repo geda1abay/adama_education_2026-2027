@@ -1,5 +1,8 @@
+'use client';
+
 import Link from "next/link"
 import { Bot } from "lucide-react"
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +16,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
+    const router = useRouter();
+
+    const handleLogin = () => {
+        // In a real app, you'd validate credentials.
+        // For this demo, we'll just set a flag.
+        sessionStorage.setItem('isAdmin', 'true');
+        router.push('/dashboard');
+    };
+
   return (
     <div className="w-full h-screen lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]">
       <div className="flex items-center justify-center py-12">
@@ -45,11 +57,9 @@ export default function LoginPage() {
               </div>
               <Input id="password" type="password" required />
             </div>
-            <Link href="/dashboard">
-                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
-                Login
-                </Button>
-            </Link>
+            <Button onClick={handleLogin} type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+            Login
+            </Button>
           </div>
           <div className="mt-4 text-center text-sm">
             Not an admin?{" "}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useData } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,28 +10,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentDashboardPage() {
   const { students, recentExamResults } = useData();
-  const router = useRouter();
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const studentId = sessionStorage.getItem('studentId');
-    if (!studentId) {
-      router.push('/student/login');
-      return;
-    }
-
-    const currentStudent = students.find(s => s.id === studentId);
-    if (currentStudent) {
-      setStudent(currentStudent);
-    } else {
-      // If student not found (e.g. bad data in session storage), clear it and redirect
-      sessionStorage.removeItem('studentId');
-      router.push('/student/login');
-      return;
+    // The auth check is now in the layout, so we just need to get the student data
+    if (studentId) {
+      const currentStudent = students.find(s => s.id === studentId);
+      if (currentStudent) {
+        setStudent(currentStudent);
+      }
     }
     setIsLoading(false);
-  }, [router, students]);
+  }, [students]);
 
 
   if (isLoading) {
@@ -76,7 +67,7 @@ export default function StudentDashboardPage() {
   }
 
   if (!student) {
-    // This case should be handled by the redirect, but as a fallback.
+    // This case should be handled by the redirect in the layout, but as a fallback.
     return (
         <div className="flex items-center justify-center h-[80vh]">
             <Card>
