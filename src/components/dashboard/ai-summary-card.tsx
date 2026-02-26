@@ -60,12 +60,12 @@ export default function AiSummaryCard() {
     try {
       const result = await getStudentProgressOverview(dataToSummarize);
       setSummary(result.summary);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to generate summary:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to generate AI summary. Please try again.',
+        title: 'AI Summary Error',
+        description: error.message || 'Failed to generate AI summary. Please try again.',
       });
     } finally {
       setIsLoading(false);

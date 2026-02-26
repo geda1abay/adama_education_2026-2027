@@ -67,5 +67,8 @@ const aiEnhancedStudentProgressOverviewFlow = ai.defineFlow(
 export async function getStudentProgressOverview(
   input: AIEnhancedStudentProgressOverviewInput
 ): Promise<AIEnhancedStudentProgressOverviewOutput> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('The Gemini API key is missing. Please add it to your .env file to use AI features.');
+  }
   return aiEnhancedStudentProgressOverviewFlow(input);
 }
