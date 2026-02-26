@@ -8,19 +8,19 @@ export const MOCK_STAT_CARDS: {
   icon: keyof typeof Icons;
 }[] = [
   {
-    title: 'Total Students',
+    title: 'Total Students (up to now)',
     value: '1,250',
     change: '+15.2%',
     icon: 'Users',
   },
   {
-    title: 'Total Teachers',
+    title: 'Total Teachers (up to now)',
     value: '78',
     change: '+5.7%',
     icon: 'GraduationCap',
   },
   {
-    title: 'Fees Collected',
+    title: 'Fees Collected (up to now)',
     value: '$250K',
     change: '-2.1%',
     icon: 'DollarSign',
@@ -308,7 +308,8 @@ const generateYearlyAttendance = (studentId: string) => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   return months.map((month, monthIndex) => {
     const studentIdNum = parseInt(studentId.split('-')[1]);
-    const daysPresent = 18 + ((studentIdNum + monthIndex) % 5);
+    // Make the data generation deterministic
+    const daysPresent = 18 + ((studentIdNum + monthIndex) % 5); 
     return {
       studentId,
       month,
