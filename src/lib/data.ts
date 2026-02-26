@@ -8,12 +8,6 @@ export const MOCK_STAT_CARDS: {
   icon: keyof typeof Icons;
 }[] = [
   {
-    title: 'Total Students',
-    value: '1,250',
-    change: '+15.2%',
-    icon: 'Users',
-  },
-  {
     title: 'Total Teachers',
     value: '78',
     change: '+5.7%',
@@ -73,74 +67,21 @@ export const PERFORMANCE_CHART_CONFIG = {
   },
 } satisfies ChartConfig;
 
-export const NOTIFICATIONS = [
-  {
-    id: '1',
-    avatar: 'user-avatar-1',
-    name: 'Emily Johnson',
-    message: 'submitted a new assignment for Mathematics.',
-    time: '5m ago',
-  },
-  {
-    id: '2',
-    avatar: 'user-avatar-2',
-    name: 'Admin',
-    message: 'posted a new announcement about the upcoming parent-teacher meeting.',
-    time: '1h ago',
-  },
-  {
-    id: '3',
-    avatar: 'user-avatar-3',
-    name: 'Michael Davis',
-    message: 'has a fee payment overdue.',
-    time: '3h ago',
-  },
-  {
-    id: '4',
-    avatar: 'user-avatar-4',
-    name: 'Jessica Brown',
-    message: 'requested leave for tomorrow.',
-    time: '1d ago',
-  },
-];
+export const NOTIFICATIONS: {
+    id: string;
+    avatar: string;
+    name: string;
+    message: string;
+    time: string;
+}[] = [];
 
-export const RECENT_ACTIVITIES = [
-  {
-    id: '1',
-    user: 'Mr. Alan',
-    activity: 'Updated grades for Class 10A Science.',
-    timestamp: '2024-05-21T10:30:00Z',
-    status: 'Completed',
-  },
-  {
-    id: '2',
-    user: 'Admin',
-    activity: 'Enrolled 5 new students.',
-    timestamp: '2024-05-21T09:45:00Z',
-    status: 'Completed',
-  },
-  {
-    id: '3',
-    user: 'Ms. Sarah',
-    activity: 'Created a new assignment for English.',
-    timestamp: '2024-05-20T15:00:00Z',
-    status: 'In Progress',
-  },
-  {
-    id: '4',
-    user: 'Admin',
-    activity: 'Sent out fee reminders.',
-    timestamp: '2024-05-20T11:00:00Z',
-    status: 'Completed',
-  },
-  {
-    id: '5',
-    user: 'Student Portal',
-    activity: 'Liam Wilson submitted "History of Art" essay.',
-    timestamp: '2024-05-19T20:15:00Z',
-    status: 'Pending Review',
-  },
-];
+export const RECENT_ACTIVITIES: {
+    id: string;
+    user: string;
+    activity: string;
+    timestamp: string;
+    status: string;
+}[] = [];
 
 export const EXAM_STAT_CARDS: {
   title: string;
@@ -174,53 +115,11 @@ export const EXAM_STAT_CARDS: {
   },
 ];
 
-export const RECENT_EXAM_RESULTS = [
-  {
-    id: '1',
-    studentName: 'Liam Johnson',
-    class: '10A',
-    subject: 'Mathematics',
-    score: '95/100',
-    grade: 'A+',
-  },
-  {
-    id: '2',
-    studentName: 'Olivia Smith',
-    class: '10A',
-    subject: 'Science',
-    score: '88/100',
-    grade: 'A',
-  },
-  {
-    id: '3',
-    studentName: 'Noah Williams',
-    class: '10B',
-    subject: 'English',
-    score: '76/100',
-    grade: 'B',
-  },
-  {
-    id: '4',
-    studentName: 'Emma Brown',
-    class: '10A',
-    subject: 'Mathematics',
-    score: '89/100',
-    grade: 'A',
-  },
-  {
-    id: '5',
-    studentName: 'James Jones',
-    class: '10C',
-    subject: 'History',
-    score: '65/100',
-    grade: 'C',
-  },
-  {
-    id: '6',
-    studentName: 'Sophia Garcia',
-    class: '10B',
-    subject: 'Science',
-    score: '92/100',
-    grade: 'A+',
-  },
-];
+export const RECENT_EXAM_RESULTS: {
+    id: string;
+    studentName: string;
+    class: string;
+    subject: string;
+    score: string;
+    grade: string;
+}[] = [];
