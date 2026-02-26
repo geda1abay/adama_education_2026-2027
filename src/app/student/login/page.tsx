@@ -33,15 +33,15 @@ export default function StudentLoginPage() {
 
         let loginId = studentId;
 
-        // The student ID displayed on the roster is like "Hgr/1000/24".
+        // The student ID displayed on the roster is like "Hgr/0000/24".
         // The internal ID used for login is like "STU-001".
         // This logic converts the display ID back to the internal ID.
         if (loginId.toUpperCase().startsWith('HGR/')) {
             const parts = loginId.split('/');
             if (parts.length >= 2) {
                 const idNumber = parseInt(parts[1], 10);
-                if (!isNaN(idNumber) && idNumber >= 1000) {
-                    const originalNumber = idNumber - 1000 + 1;
+                if (!isNaN(idNumber)) {
+                    const originalNumber = idNumber + 1;
                     loginId = `STU-${String(originalNumber).padStart(3, '0')}`;
                 }
             }
@@ -51,7 +51,7 @@ export default function StudentLoginPage() {
             sessionStorage.setItem('studentId', loginId.toUpperCase());
             router.push('/student/dashboard');
         } else {
-            setError('Invalid Student ID or Password. The password for all students is 1515. Please use the ID from the student roster (e.g., Hgr/1000/24).');
+            setError('Invalid Student ID or Password. The password for all students is 1515. Please use the ID from the student roster (e.g., Hgr/0000/24).');
         }
     }
 
@@ -85,7 +85,7 @@ export default function StudentLoginPage() {
               <Input
                 id="student-id"
                 type="text"
-                placeholder="Hgr/1000/24"
+                placeholder="Hgr/0000/24"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
                 required
