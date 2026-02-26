@@ -6,6 +6,7 @@ import {
   ListFilter,
   MoreHorizontal,
   PlusCircle,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -38,6 +39,17 @@ import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useData } from '@/context/data-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
   switch (status) {
@@ -51,7 +63,7 @@ const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
 };
 
 export default function TeachersPage() {
-  const { teachers } = useData();
+  const { teachers, clearTeachers } = useData();
 
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
@@ -224,6 +236,28 @@ export default function TeachersPage() {
                 Add Teacher
               </span>
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" className="h-8 gap-1">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Clear All
+                  </span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete all teacher data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearTeachers}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
         <TabsContent value="all">{teacherTableCard}</TabsContent>

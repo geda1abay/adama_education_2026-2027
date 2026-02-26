@@ -26,6 +26,8 @@ interface DataContextType {
   addAttendance: (attendanceData: StudentAttendance) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
   addFee: (feeData: Fee) => void;
+  clearStudents: () => void;
+  clearTeachers: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -125,6 +127,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const clearStudents = () => {
+    setStudents([]);
+    setStudentAttendance([]);
+    setRecentExamResults([]);
+    setFeesData([]);
+  };
+
+  const clearTeachers = () => {
+    setTeachers([]);
+  };
+
   const value = {
     students,
     teachers,
@@ -135,6 +148,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addAttendance,
     addExamResult,
     addFee,
+    clearStudents,
+    clearTeachers,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
