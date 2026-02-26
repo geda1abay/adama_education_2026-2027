@@ -152,8 +152,11 @@ export default function StudentsPage() {
                       </AvatarFallback>
                     </Avatar>
                   </TableCell>
-                  <TableCell className="font-medium">
-                    {student.name}
+                  <TableCell>
+                    <div className="font-medium">{student.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {student.id.replace('STU-', 'Ugr/')}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{student.class}</Badge>
