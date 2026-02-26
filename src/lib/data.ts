@@ -250,12 +250,17 @@ export const STUDENTS: {
 
 const generateYearlyAttendance = (studentId: string) => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return months.map(month => ({
-    studentId,
-    month,
-    daysPresent: Math.floor(Math.random() * (22 - 18) + 18),
-    totalDays: 22,
-  }));
+  return months.map((month, monthIndex) => {
+    // Deterministic generation based on student ID and month to avoid hydration mismatch
+    const studentIdNum = parseInt(studentId.split('-')[1]);
+    const daysPresent = 18 + ((studentIdNum + monthIndex) % 5); // Generates a value between 18 and 22
+    return {
+      studentId,
+      month,
+      daysPresent,
+      totalDays: 22,
+    };
+  });
 };
 
 export const STUDENT_ATTENDANCE = STUDENTS.flatMap(student => generateYearlyAttendance(student.id));
