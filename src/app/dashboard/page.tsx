@@ -24,6 +24,7 @@ export default function DashboardPage() {
             value={card.value}
             change={card.change}
             icon={card.icon}
+            href={card.href}
           />
         ))}
       </div>

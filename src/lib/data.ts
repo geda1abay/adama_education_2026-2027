@@ -6,24 +6,28 @@ export const MOCK_STAT_CARDS: {
   value: string;
   change: string;
   icon: keyof typeof Icons;
+  href: string;
 }[] = [
   {
     title: 'Total Students (up to now)',
-    value: '1,250',
+    value: '5',
     change: '+15.2%',
     icon: 'Users',
+    href: '/dashboard/students',
   },
   {
     title: 'Total Teachers (up to now)',
-    value: '78',
+    value: '5',
     change: '+5.7%',
     icon: 'GraduationCap',
+    href: '/dashboard/teachers',
   },
   {
     title: 'Fees Collected (up to now)',
     value: '$250K',
     change: '-2.1%',
     icon: 'DollarSign',
+    href: '/dashboard/fees',
   },
 ];
 
@@ -350,21 +354,21 @@ export const RECENT_EXAM_RESULTS: {
     grade: 'B',
   },
   {
-    id: 'EXAM-004',
+    id: 'EXAM-005',
     studentId: 'STU-005',
     subject: 'English',
     score: '92/100',
     grade: 'A',
   },
   {
-    id: 'EXAM-005',
+    id: 'EXAM-006',
     studentId: 'STU-006',
     subject: 'Mathematics',
     score: '81/100',
     grade: 'B+',
   },
   {
-    id: 'EXAM-006',
+    id: 'EXAM-007',
     studentId: 'STU-007',
     subject: 'Science',
     score: '98/100',

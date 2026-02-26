@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import * as Icons from 'lucide-react';
@@ -8,6 +9,7 @@ interface StatCardProps {
   value: string;
   change: string;
   icon: keyof typeof Icons;
+  href?: string;
 }
 
 export default function StatCard({
@@ -15,12 +17,13 @@ export default function StatCard({
   value,
   change,
   icon,
+  href,
 }: StatCardProps) {
   const LucideIcon = Icons[icon] as LucideIcon;
   const isPositiveChange = change.startsWith('+');
 
-  return (
-    <Card className="bg-card/70 backdrop-blur-sm transition-all hover:shadow-lg hover:-translate-y-1">
+  const cardContent = (
+    <Card className="bg-card/70 backdrop-blur-sm transition-all hover:shadow-lg hover:-translate-y-1 h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
@@ -40,4 +43,14 @@ export default function StatCard({
       </CardContent>
     </Card>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 }
