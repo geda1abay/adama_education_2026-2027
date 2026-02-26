@@ -95,29 +95,7 @@ export const NOTIFICATIONS: {
   name: string;
   message: string;
   time: string;
-}[] = [
-  {
-    id: '1',
-    avatar: 'user-avatar-1',
-    name: 'John Doe',
-    message: 'submitted a new assignment for review.',
-    time: '5 min ago',
-  },
-  {
-    id: '2',
-    avatar: 'user-avatar-2',
-    name: 'Jane Smith',
-    message: 'has a fee payment overdue.',
-    time: '1 hour ago',
-  },
-  {
-    id: '3',
-    avatar: 'user-avatar-3',
-    name: 'Alex Johnson',
-    message: 'is absent today.',
-    time: '3 hours ago',
-  },
-];
+}[] = [];
 
 export const RECENT_ACTIVITIES: {
   id: string;
@@ -188,58 +166,7 @@ export const EXAM_STAT_CARDS: {
   },
 ];
 
-export const STUDENTS: Student[] = [
-  {
-    id: 'STU-001',
-    name: 'Olivia Martin',
-    class: '10-A',
-    parentName: 'Liam Martin',
-    mobile: '+1 123 456 7890',
-    email: 'olivia.martin@example.com',
-    avatar: 'user-avatar-1',
-    status: 'Active',
-  },
-  {
-    id: 'STU-002',
-    name: 'Jackson Lee',
-    class: '10-B',
-    parentName: 'Noah Lee',
-    mobile: '+1 234 567 8901',
-    email: 'jackson.lee@example.com',
-    avatar: 'user-avatar-2',
-    status: 'Active',
-  },
-  {
-    id: 'STU-003',
-    name: 'Sophia Williams',
-    class: '11-A',
-    parentName: 'Ava Williams',
-    mobile: '+1 345 678 9012',
-    email: 'sophia.williams@example.com',
-    avatar: 'user-avatar-3',
-    status: 'Inactive',
-  },
-  {
-    id: 'STU-004',
-    name: 'Ethan Garcia',
-    class: '11-C',
-    parentName: 'Mia Garcia',
-    mobile: '+1 456 789 0123',
-    email: 'ethan.garcia@example.com',
-    avatar: 'user-avatar-4',
-    status: 'Active',
-  },
-  {
-    id: 'STU-005',
-    name: 'Isabella Rodriguez',
-    class: '12-B',
-    parentName: 'Evelyn Rodriguez',
-    mobile: '+1 567 890 1234',
-    email: 'isabella.rodriguez@example.com',
-    avatar: 'user-avatar-5',
-    status: 'Active',
-  },
-];
+export const STUDENTS: Student[] = [];
 
 export const TEACHERS: {
   id: string;
@@ -320,36 +247,7 @@ export const RECENT_EXAM_RESULTS: {
   subject: string;
   score: string;
   grade: string;
-}[] = [
-  {
-    id: 'EXAM-001',
-    studentId: 'STU-001',
-    subject: 'Mathematics',
-    score: '95/100',
-    grade: 'A+',
-  },
-  {
-    id: 'EXAM-002',
-    studentId: 'STU-002',
-    subject: 'Science',
-    score: '88/100',
-    grade: 'A',
-  },
-  {
-    id: 'EXAM-003',
-    studentId: 'STU-004',
-    subject: 'History',
-    score: '76/100',
-    grade: 'B',
-  },
-  {
-    id: 'EXAM-004',
-    studentId: 'STU-005',
-    subject: 'English',
-    score: '92/100',
-    grade: 'A',
-  },
-];
+}[] = [];
 
 export const FEES_DATA: Fee[] = STUDENTS.map((student, index) => ({
   studentId: student.id,

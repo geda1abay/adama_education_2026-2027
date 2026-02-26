@@ -13,7 +13,21 @@ import * as Icons from 'lucide-react';
 
 
 export default function DashboardPage() {
-  const { students, teachers } = useData();
+  const { students, teachers, feesData, studentAttendance } = useData();
+
+  const totalFeesCollected = useMemo(() => {
+    return feesData
+      .filter((fee) => fee.status === 'Paid')
+      .reduce((acc, fee) => acc + fee.amount, 0);
+  }, [feesData]);
+
+  const averageAttendance = useMemo(() => {
+    if (studentAttendance.length === 0) return 0;
+    const totalPresent = studentAttendance.reduce((acc, att) => acc + att.daysPresent, 0);
+    const totalDays = studentAttendance.reduce((acc, att) => acc + att.totalDays, 0);
+    if (totalDays === 0) return 0;
+    return (totalPresent / totalDays) * 100;
+  }, [studentAttendance]);
 
   const statCards: {
     title: string;
@@ -25,32 +39,32 @@ export default function DashboardPage() {
     {
       title: 'Total Students (up to now)',
       value: String(students.length),
-      change: '+15.2%',
+      change: '+0.0% from last month',
       icon: 'Users',
       href: '/dashboard/students',
     },
     {
       title: 'Total Teachers (up to now)',
       value: String(teachers.length),
-      change: '+5.7%',
+      change: '+0.0% from last month',
       icon: 'GraduationCap',
       href: '/dashboard/teachers',
     },
     {
       title: 'Fees Collected (up to now)',
-      value: 'Birr 250K',
-      change: '-2.1%',
+      value: `Birr ${(totalFeesCollected / 1000).toFixed(1)}K`,
+      change: '+0.0% from last month',
       icon: 'DollarSign',
       href: '/dashboard/fees',
     },
     {
         title: 'Average Attendance',
-        value: '87.2%',
-        change: '+2.1% from last month',
+        value: `${averageAttendance.toFixed(1)}%`,
+        change: '+0.0% from last month',
         icon: 'ClipboardCheck',
         href: '/dashboard/attendance',
     }
-  ], [students, teachers]);
+  ], [students, teachers, totalFeesCollected, averageAttendance]);
 
 
   return (
@@ -77,12 +91,12 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-6">
-           <PerformanceChart id="performance-chart" />
+           <PerformanceChart />
            <RecentActivitiesTable />
         </div>
         <div className="flex flex-col gap-6">
             <AiSummaryCard />
-            <AttendanceChart id="attendance-chart" />
+            <AttendanceChart />
             <NotificationsPanel />
         </div>
       </div>

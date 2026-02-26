@@ -15,9 +15,10 @@ import {
   type AIEnhancedStudentProgressOverviewInput,
 } from '@/ai/flows/ai-enhanced-student-progress-overview';
 import { useToast } from '@/hooks/use-toast';
+import { useData } from '@/context/data-context';
 
 const mockStudentData: AIEnhancedStudentProgressOverviewInput = {
-  studentName: 'Jane Doe',
+  studentName: 'a student',
   grades: [
     { subject: 'Mathematics', score: 85, maxScore: 100 },
     { subject: 'Science', score: 92, maxScore: 100 },
@@ -34,12 +35,30 @@ export default function AiSummaryCard() {
   const [summary, setSummary] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { students } = useData();
 
   const handleGenerateSummary = async () => {
+    if (students.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Students',
+        description: 'Please add a student to generate a progress overview.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     setSummary('');
+
+    // In a real application, you'd have a way to select a student.
+    // For now, we'll use the first student and mock their data.
+    const dataToSummarize = {
+      ...mockStudentData,
+      studentName: students[0].name,
+    };
+
     try {
-      const result = await getStudentProgressOverview(mockStudentData);
+      const result = await getStudentProgressOverview(dataToSummarize);
       setSummary(result.summary);
     } catch (error) {
       console.error('Failed to generate summary:', error);
@@ -68,7 +87,7 @@ export default function AiSummaryCard() {
         <div className="flex flex-col gap-4">
           <Button
             onClick={handleGenerateSummary}
-            disabled={isLoading}
+            disabled={isLoading || students.length === 0}
             className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
           >
             {isLoading ? (
@@ -76,7 +95,7 @@ export default function AiSummaryCard() {
             ) : (
               <Wand2 className="mr-2 h-4 w-4" />
             )}
-            Generate for Jane Doe
+            {students.length > 0 ? `Generate for ${students[0].name}` : 'Generate Summary'}
           </Button>
           {(isLoading || summary) && (
             <div className="min-h-[100px] rounded-lg border bg-muted/50 p-4 text-sm">
