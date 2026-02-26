@@ -1,8 +1,9 @@
 'use client';
 
 import Link from "next/link"
-import { Bot } from "lucide-react"
+import { Bot, Terminal } from "lucide-react"
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,15 +15,24 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
     const router = useRouter();
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-    const handleLogin = () => {
-        // In a real app, you'd validate credentials.
-        // For this demo, we'll just set a flag.
-        sessionStorage.setItem('isAdmin', 'true');
-        router.push('/dashboard');
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        // For this demo, we'll just check the password.
+        if (password === '151835') {
+            sessionStorage.setItem('isAdmin', 'true');
+            router.push('/dashboard');
+        } else {
+            setError('Invalid password. Please try again.');
+        }
     };
 
   return (
@@ -32,35 +42,43 @@ export default function LoginPage() {
           <div className="grid gap-2 text-center">
             <h1 className="text-3xl font-bold font-headline">Admin Login</h1>
             <p className="text-balance text-muted-foreground">
-              Enter your email below to login to your account
+              Enter your credentials to login to your account.
             </p>
           </div>
-          <div className="grid gap-4">
+          {error && (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Login Failed</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="admin@example.com"
+                defaultValue="admin@example.com"
                 required
               />
             </div>
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                <Link
-                  href="#"
-                  className="ml-auto inline-block text-sm underline"
-                >
-                  Forgot your password?
-                </Link>
               </div>
-              <Input id="password" type="password" required />
+              <Input 
+                id="password" 
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+              />
             </div>
-            <Button onClick={handleLogin} type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
             Login
             </Button>
-          </div>
+          </form>
           <div className="mt-4 text-center text-sm">
             Not an admin?{" "}
             <Link href="/student/login" className="underline">
