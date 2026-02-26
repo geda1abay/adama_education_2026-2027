@@ -108,6 +108,7 @@ export default function Header() {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem>My Profile</DropdownMenuItem>
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />

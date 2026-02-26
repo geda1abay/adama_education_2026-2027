@@ -35,7 +35,7 @@ export default function SidebarNav() {
           className="flex items-center gap-2 font-headline text-lg font-semibold"
         >
           <Bot className="h-6 w-6 text-sidebar-primary" />
-          <span>ScholarlyFlow</span>
+          <span>Adama Model</span>
         </Link>
       </div>
       <div className="flex-1">

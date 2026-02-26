@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'ScholarlyFlow',
+  title: 'Adama Model',
   description: 'A Modern School Management System',
 };
 
