@@ -31,7 +31,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -61,7 +68,13 @@ export default function Header() {
             <span className="sr-only">Toggle Menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="sm:max-w-xs">
+        <SheetContent side="left" className="sm:max-w-xs p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Menu</SheetTitle>
+            <SheetDescription>
+              Main navigation menu for the dashboard.
+            </SheetDescription>
+          </SheetHeader>
           <SidebarNav />
         </SheetContent>
       </Sheet>
