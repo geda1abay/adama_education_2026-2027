@@ -336,7 +336,7 @@ export const RECENT_EXAM_RESULTS: {
     grade: 'B',
   },
   {
-    id: 'EXAM-005',
+    id: 'EXAM-004',
     studentId: 'STU-005',
     subject: 'English',
     score: '92/100',
