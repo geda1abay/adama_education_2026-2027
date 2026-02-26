@@ -166,48 +166,6 @@ export const EXAM_STAT_CARDS: {
   },
 ];
 
-export const RECENT_EXAM_RESULTS: {
-  id: string;
-  studentName: string;
-  class: string;
-  subject: string;
-  score: string;
-  grade: string;
-}[] = [
-  {
-    id: '1',
-    studentName: 'Michael Brown',
-    class: '10-A',
-    subject: 'Mathematics',
-    score: '95/100',
-    grade: 'A+',
-  },
-  {
-    id: '2',
-    studentName: 'Jessica Green',
-    class: '10-B',
-    subject: 'Science',
-    score: '88/100',
-    grade: 'A',
-  },
-  {
-    id: '3',
-    studentName: 'David Wilson',
-    class: '10-A',
-    subject: 'History',
-    score: '76/100',
-    grade: 'B',
-  },
-  {
-    id: '4',
-    studentName: 'Sarah Miller',
-    class: '10-C',
-    subject: 'English',
-    score: '92/100',
-    grade: 'A',
-  },
-];
-
 export const STUDENTS: {
   id: string;
   name: string;
@@ -268,4 +226,99 @@ export const STUDENTS: {
     avatar: 'user-avatar-5',
     status: 'Active',
   },
+  {
+    id: 'STU-006',
+    name: 'Liam Brown',
+    class: '10-A',
+    parentName: 'James Brown',
+    mobile: '+1 678 901 2345',
+    email: 'liam.brown@example.com',
+    avatar: 'user-avatar-1',
+    status: 'Active',
+  },
+  {
+    id: 'STU-007',
+    name: 'Emma Jones',
+    class: '12-A',
+    parentName: 'David Jones',
+    mobile: '+1 789 012 3456',
+    email: 'emma.jones@example.com',
+    avatar: 'user-avatar-2',
+    status: 'Active',
+  },
 ];
+
+const generateYearlyAttendance = (studentId: string) => {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return months.map(month => ({
+    studentId,
+    month,
+    daysPresent: Math.floor(Math.random() * (22 - 18) + 18),
+    totalDays: 22,
+  }));
+};
+
+export const STUDENT_ATTENDANCE = STUDENTS.flatMap(student => generateYearlyAttendance(student.id));
+
+export const RECENT_EXAM_RESULTS: {
+  id: string;
+  studentId: string;
+  subject: string;
+  score: string;
+  grade: string;
+}[] = [
+  {
+    id: 'EXAM-001',
+    studentId: 'STU-001',
+    subject: 'Mathematics',
+    score: '95/100',
+    grade: 'A+',
+  },
+  {
+    id: 'EXAM-002',
+    studentId: 'STU-002',
+    subject: 'Science',
+    score: '88/100',
+    grade: 'A',
+  },
+  {
+    id: 'EXAM-003',
+    studentId: 'STU-004',
+    subject: 'History',
+    score: '76/100',
+    grade: 'B',
+  },
+  {
+    id: 'EXAM-004',
+    studentId: 'STU-005',
+    subject: 'English',
+    score: '92/100',
+    grade: 'A',
+  },
+  {
+    id: 'EXAM-005',
+    studentId: 'STU-006',
+    subject: 'Mathematics',
+    score: '81/100',
+    grade: 'B+',
+  },
+  {
+    id: 'EXAM-006',
+    studentId: 'STU-007',
+    subject: 'Science',
+    score: '98/100',
+    grade: 'A+',
+  },
+];
+
+export const FEES_DATA: {
+  studentId: string;
+  amount: number;
+  dueDate: string;
+  status: 'Paid' | 'Due' | 'Overdue';
+}[] = STUDENTS.map((student, index) => ({
+  studentId: student.id,
+  amount: 1200,
+  dueDate: '2024-08-15',
+  status: index % 3 === 0 ? 'Paid' : (index % 3 === 1 ? 'Due' : 'Overdue'),
+}));
