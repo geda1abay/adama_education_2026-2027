@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   File,
   ListFilter,
@@ -54,6 +55,7 @@ const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
 export default function StudentsPage() {
   const { students, addStudent } = useData();
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+  const router = useRouter();
 
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
@@ -170,7 +172,7 @@ export default function StudentsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id}`)}>View Details</DropdownMenuItem>
                         <DropdownMenuItem>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
