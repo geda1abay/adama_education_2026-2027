@@ -1,19 +1,37 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { GraduationCap, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/context/data-context';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import type { Student } from '@/lib/data';
+import { Skeleton } from '../ui/skeleton';
 
 export default function StudentHeader() {
-    // For now, we mock the logged-in student as the first one.
-    // In a real app, this would come from an auth context.
-    const { students } = useData();
-    const student = students[0];
-    const avatar = PlaceHolderImages.find((img) => img.id === student?.avatar);
+  const { students } = useData();
+  const router = useRouter();
+  const [student, setStudent] = useState<Student | null>(null);
 
+  useEffect(() => {
+    const studentId = sessionStorage.getItem('studentId');
+    if (studentId) {
+      const currentStudent = students.find(s => s.id === studentId);
+      if (currentStudent) {
+        setStudent(currentStudent);
+      }
+    }
+  }, [students]);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('studentId');
+    router.push('/student/login');
+  };
+
+  const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
@@ -26,7 +44,7 @@ export default function StudentHeader() {
         </Link>
 
       <div className="ml-auto flex items-center gap-4">
-        {student && (
+        {student ? (
             <div className="flex items-center gap-2">
                  <Avatar className="h-9 w-9">
                     <AvatarImage src={avatar?.imageUrl} alt={student.name} data-ai-hint={avatar?.imageHint} />
@@ -37,13 +55,19 @@ export default function StudentHeader() {
                     <span className="text-xs text-muted-foreground">{student.class}</span>
                 </div>
             </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className='flex flex-col gap-1'>
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
         )}
-        <Link href="/student/login">
-            <Button variant="outline" size="sm">
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-            </Button>
-        </Link>
+        <Button onClick={handleLogout} variant="outline" size="sm">
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+        </Button>
       </div>
     </header>
   );

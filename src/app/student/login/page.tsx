@@ -1,5 +1,9 @@
+'use client';
+
 import Link from "next/link"
-import { GraduationCap } from "lucide-react"
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { GraduationCap, Terminal } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -11,8 +15,30 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { STUDENTS } from "@/lib/data";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 export default function StudentLoginPage() {
+    const router = useRouter();
+    const [studentId, setStudentId] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+
+    const validStudentIds = STUDENTS.map(s => s.id);
+
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        if (validStudentIds.includes(studentId.toUpperCase()) && password === '1515') {
+            sessionStorage.setItem('studentId', studentId.toUpperCase());
+            router.push('/student/dashboard');
+        } else {
+            setError('Invalid Student ID or Password. The password for all students is 1515.');
+        }
+    }
+
   return (
     <div className="w-full h-screen lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]">
       <div className="hidden bg-muted lg:flex items-center justify-center p-8 bg-gradient-to-br from-primary to-accent">
@@ -30,13 +56,22 @@ export default function StudentLoginPage() {
               Enter your credentials to access your portal
             </p>
           </div>
-          <div className="grid gap-4">
+          {error && (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Login Failed</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="student-id">Student ID</Label>
               <Input
                 id="student-id"
                 type="text"
                 placeholder="STU-001"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
                 required
               />
             </div>
@@ -46,18 +81,22 @@ export default function StudentLoginPage() {
                 <Link
                   href="#"
                   className="ml-auto inline-block text-sm underline"
+                  onClick={(e) => { e.preventDefault(); alert("The password is '1515' for all students for this demo."); }}
                 >
                   Forgot your password?
                 </Link>
               </div>
-              <Input id="password" type="password" required />
+              <Input 
+                id="password" 
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} 
+                required />
             </div>
-            <Link href="/student/dashboard" className="w-full">
                 <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
                 Login
                 </Button>
-            </Link>
-          </div>
+          </form>
           <div className="mt-4 text-center text-sm">
             Not a student?{" "}
             <Link href="/login" className="underline">

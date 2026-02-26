@@ -1,23 +1,88 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useData } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import type { Student } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentDashboardPage() {
-  // For now, we mock the logged-in student as the first one.
-  // In a real app, this would come from an auth context.
   const { students, recentExamResults } = useData();
-  const student = students[0];
+  const router = useRouter();
+  const [student, setStudent] = useState<Student | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const studentId = sessionStorage.getItem('studentId');
+    if (!studentId) {
+      router.push('/student/login');
+      return;
+    }
+
+    const currentStudent = students.find(s => s.id === studentId);
+    if (currentStudent) {
+      setStudent(currentStudent);
+    } else {
+      // If student not found (e.g. bad data in session storage), clear it and redirect
+      sessionStorage.removeItem('studentId');
+      router.push('/student/login');
+      return;
+    }
+    setIsLoading(false);
+  }, [router, students]);
+
+
+  if (isLoading) {
+    return (
+        <div className="container mx-auto py-8">
+            <div className="mb-6">
+                <Skeleton className="h-9 w-64 mb-2" />
+                <Skeleton className="h-5 w-80" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-48 mb-2" />
+                    <Skeleton className="h-5 w-72" />
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Subject</TableHead>
+                                <TableHead>Score</TableHead>
+                                <TableHead className="text-right">Grade</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow>
+                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-6 w-10 inline-block" /></TableCell>
+                            </TableRow>
+                             <TableRow>
+                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-6 w-10 inline-block" /></TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
+    )
+  }
 
   if (!student) {
+    // This case should be handled by the redirect, but as a fallback.
     return (
         <div className="flex items-center justify-center h-[80vh]">
             <Card>
                 <CardHeader>
-                    <CardTitle>No Student Data</CardTitle>
-                    <CardDescription>Could not find information. Please contact administration.</CardDescription>
+                    <CardTitle>Student Not Found</CardTitle>
+                    <CardDescription>Could not find your information. Please try logging in again.</CardDescription>
                 </CardHeader>
             </Card>
         </div>
