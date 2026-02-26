@@ -153,7 +153,7 @@ export default function FeesPage() {
                     <TableCell>
                       <Badge variant="outline">{student?.class || 'N/A'}</Badge>
                     </TableCell>
-                    <TableCell>${fee.amount.toFixed(2)}</TableCell>
+                    <TableCell>Birr {fee.amount.toFixed(2)}</TableCell>
                     <TableCell>{fee.dueDate}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={getStatusVariant(fee.status)}>{fee.status}</Badge>

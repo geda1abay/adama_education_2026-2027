@@ -42,7 +42,7 @@ export const MOCK_STAT_CARDS: {
   },
   {
     title: 'Fees Collected (up to now)',
-    value: '$250K',
+    value: 'Birr 250K',
     change: '-2.1%',
     icon: 'DollarSign',
     href: '/dashboard/fees',
