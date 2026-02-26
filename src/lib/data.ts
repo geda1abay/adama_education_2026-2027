@@ -141,3 +141,86 @@ export const RECENT_ACTIVITIES = [
     status: 'Pending Review',
   },
 ];
+
+export const EXAM_STAT_CARDS: {
+  title: string;
+  value: string;
+  change: string;
+  icon: keyof typeof Icons;
+}[] = [
+  {
+    title: 'Average Score',
+    value: '82.5%',
+    change: '+3.2% from last term',
+    icon: 'Activity',
+  },
+  {
+    title: 'Pass Rate',
+    value: '95.8%',
+    change: '+1.5% from last term',
+    icon: 'CheckCircle',
+  },
+  {
+    title: 'Highest Scorer',
+    value: 'Emily White',
+    change: '99.2% in Science',
+    icon: 'Trophy',
+  },
+  {
+    title: 'Upcoming Exams',
+    value: '3',
+    change: 'Next week',
+    icon: 'Calendar',
+  },
+];
+
+export const RECENT_EXAM_RESULTS = [
+  {
+    id: '1',
+    studentName: 'Liam Johnson',
+    class: '10A',
+    subject: 'Mathematics',
+    score: '95/100',
+    grade: 'A+',
+  },
+  {
+    id: '2',
+    studentName: 'Olivia Smith',
+    class: '10A',
+    subject: 'Science',
+    score: '88/100',
+    grade: 'A',
+  },
+  {
+    id: '3',
+    studentName: 'Noah Williams',
+    class: '10B',
+    subject: 'English',
+    score: '76/100',
+    grade: 'B',
+  },
+  {
+    id: '4',
+    studentName: 'Emma Brown',
+    class: '10A',
+    subject: 'Mathematics',
+    score: '89/100',
+    grade: 'A',
+  },
+  {
+    id: '5',
+    studentName: 'James Jones',
+    class: '10C',
+    subject: 'History',
+    score: '65/100',
+    grade: 'C',
+  },
+  {
+    id: '6',
+    studentName: 'Sophia Garcia',
+    class: '10B',
+    subject: 'Science',
+    score: '92/100',
+    grade: 'A+',
+  },
+];
