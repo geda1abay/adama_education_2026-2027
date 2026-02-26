@@ -213,3 +213,65 @@ export const RECENT_EXAM_RESULTS: {
     grade: 'A',
   },
 ];
+
+export const STUDENTS: {
+  id: string;
+  name: string;
+  class: string;
+  parentName: string;
+  mobile: string;
+  email: string;
+  avatar: string;
+  status: 'Active' | 'Inactive';
+}[] = [
+  {
+    id: 'STU-001',
+    name: 'Olivia Martin',
+    class: '10-A',
+    parentName: 'Liam Martin',
+    mobile: '+1 123 456 7890',
+    email: 'olivia.martin@example.com',
+    avatar: 'user-avatar-1',
+    status: 'Active',
+  },
+  {
+    id: 'STU-002',
+    name: 'Jackson Lee',
+    class: '10-B',
+    parentName: 'Noah Lee',
+    mobile: '+1 234 567 8901',
+    email: 'jackson.lee@example.com',
+    avatar: 'user-avatar-2',
+    status: 'Active',
+  },
+  {
+    id: 'STU-003',
+    name: 'Sophia Williams',
+    class: '11-A',
+    parentName: 'Ava Williams',
+    mobile: '+1 345 678 9012',
+    email: 'sophia.williams@example.com',
+    avatar: 'user-avatar-3',
+    status: 'Inactive',
+  },
+  {
+    id: 'STU-004',
+    name: 'Ethan Garcia',
+    class: '11-C',
+    parentName: 'Mia Garcia',
+    mobile: '+1 456 789 0123',
+    email: 'ethan.garcia@example.com',
+    avatar: 'user-avatar-4',
+    status: 'Active',
+  },
+  {
+    id: 'STU-005',
+    name: 'Isabella Rodriguez',
+    class: '12-B',
+    parentName: 'Evelyn Rodriguez',
+    mobile: '+1 567 890 1234',
+    email: 'isabella.rodriguez@example.com',
+    avatar: 'user-avatar-5',
+    status: 'Active',
+  },
+];
