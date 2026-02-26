@@ -20,12 +20,6 @@ export const MOCK_STAT_CARDS: {
     icon: 'GraduationCap',
   },
   {
-    title: 'Total Classes',
-    value: '45',
-    change: '+10.0%',
-    icon: 'Book',
-  },
-  {
     title: 'Fees Collected',
     value: '$250K',
     change: '-2.1%',
