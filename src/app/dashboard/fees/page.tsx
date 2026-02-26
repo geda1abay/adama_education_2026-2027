@@ -27,15 +27,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { STUDENTS, FEES_DATA } from '@/lib/data';
+import { useData } from '@/context/data-context';
 
 export default function FeesPage() {
+  const { students, feesData } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(STUDENTS.map((student) => student.class));
+    const classes = new Set(students.map((student) => student.class));
     return Array.from(classes).sort();
-  }, []);
+  }, [students]);
 
   const handleClassFilterChange = (className: string, checked: boolean) => {
     setClassFilters((prev) => {
@@ -47,14 +48,14 @@ export default function FeesPage() {
     });
   };
 
-  const getStudentById = (studentId: string) => STUDENTS.find(s => s.id === studentId);
+  const getStudentById = (studentId: string) => students.find(s => s.id === studentId);
 
   const filteredFees = useMemo(() => {
-    return FEES_DATA.filter((fee) => {
+    return feesData.filter((fee) => {
       const student = getStudentById(fee.studentId);
       return classFilters.length === 0 || (student && classFilters.includes(student.class));
     });
-  }, [classFilters]);
+  }, [classFilters, feesData, students]);
 
   const getStatusVariant = (status: 'Paid' | 'Due' | 'Overdue') => {
     switch (status) {

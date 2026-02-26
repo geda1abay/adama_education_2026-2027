@@ -28,15 +28,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { EXAM_STAT_CARDS, RECENT_EXAM_RESULTS, STUDENTS } from '@/lib/data';
+import { EXAM_STAT_CARDS } from '@/lib/data';
+import { useData } from '@/context/data-context';
 
 export default function ExamsPage() {
+  const { students, recentExamResults } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(STUDENTS.map((student) => student.class));
+    const classes = new Set(students.map((student) => student.class));
     return Array.from(classes).sort();
-  }, []);
+  }, [students]);
 
   const handleClassFilterChange = (className: string, checked: boolean) => {
     setClassFilters((prev) => {
@@ -49,14 +51,14 @@ export default function ExamsPage() {
   };
 
   const filteredResults = useMemo(() => {
-    const studentIdToClassMap = new Map(STUDENTS.map(s => [s.id, s.class]));
-    return RECENT_EXAM_RESULTS.filter((result) => {
+    const studentIdToClassMap = new Map(students.map(s => [s.id, s.class]));
+    return recentExamResults.filter((result) => {
       const studentClass = studentIdToClassMap.get(result.studentId);
       return classFilters.length === 0 || (studentClass && classFilters.includes(studentClass));
     });
-  }, [classFilters]);
+  }, [classFilters, students, recentExamResults]);
 
-  const getStudentById = (studentId: string) => STUDENTS.find(s => s.id === studentId);
+  const getStudentById = (studentId: string) => students.find(s => s.id === studentId);
 
   const getGradeVariant = (grade: string) => {
     if (grade.startsWith('A')) return 'default';

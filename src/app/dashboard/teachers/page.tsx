@@ -35,9 +35,9 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { TEACHERS } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useData } from '@/context/data-context';
 
 const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
   switch (status) {
@@ -51,6 +51,8 @@ const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
 };
 
 export default function TeachersPage() {
+  const { teachers } = useData();
+
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
 
@@ -58,9 +60,9 @@ export default function TeachersPage() {
   const [activeTab, setActiveTab] = useState('all');
 
   const uniqueSubjects = useMemo(() => {
-    const subjects = new Set(TEACHERS.map((teacher) => teacher.subject));
+    const subjects = new Set(teachers.map((teacher) => teacher.subject));
     return Array.from(subjects).sort();
-  }, []);
+  }, [teachers]);
 
   const handleSubjectFilterChange = (subject: string, checked: boolean) => {
     setSubjectFilters((prev) => {
@@ -73,14 +75,14 @@ export default function TeachersPage() {
   };
 
   const filteredTeachers = useMemo(() => {
-    return TEACHERS.filter((teacher) => {
+    return teachers.filter((teacher) => {
       const statusMatch =
         activeTab === 'all' || teacher.status.toLowerCase() === activeTab;
       const subjectMatch =
         subjectFilters.length === 0 || subjectFilters.includes(teacher.subject);
       return statusMatch && subjectMatch;
     });
-  }, [activeTab, subjectFilters]);
+  }, [activeTab, subjectFilters, teachers]);
 
   const teacherTableCard = (
     <Card>
@@ -168,7 +170,7 @@ export default function TeachersPage() {
       <CardFooter>
         <div className="text-xs text-muted-foreground">
           Showing <strong>{filteredTeachers.length}</strong> of{' '}
-          <strong>{TEACHERS.length}</strong> teachers
+          <strong>{teachers.length}</strong> teachers
         </div>
       </CardFooter>
     </Card>

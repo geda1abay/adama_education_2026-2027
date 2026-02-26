@@ -28,15 +28,17 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { STUDENTS, STUDENT_ATTENDANCE } from '@/lib/data';
+import { useData } from '@/context/data-context';
+
 
 export default function AttendancePage() {
+  const { students, studentAttendance } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(STUDENTS.map((student) => student.class));
+    const classes = new Set(students.map((student) => student.class));
     return Array.from(classes).sort();
-  }, []);
+  }, [students]);
 
   const handleClassFilterChange = (className: string, checked: boolean) => {
     setClassFilters((prev) => {
@@ -49,14 +51,14 @@ export default function AttendancePage() {
   };
 
   const filteredStudents = useMemo(() => {
-    return STUDENTS.filter((student) => {
+    return students.filter((student) => {
       return classFilters.length === 0 || classFilters.includes(student.class);
     });
-  }, [classFilters]);
+  }, [classFilters, students]);
 
   // For this example, let's just show attendance for "June"
   const currentMonth = 'June';
-  const attendanceForMonth = STUDENT_ATTENDANCE.filter(att => att.month === currentMonth);
+  const attendanceForMonth = studentAttendance.filter(att => att.month === currentMonth);
 
   const getStudentAttendance = (studentId: string) => {
     return attendanceForMonth.find(att => att.studentId === studentId);

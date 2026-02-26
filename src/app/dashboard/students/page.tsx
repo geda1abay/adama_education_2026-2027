@@ -35,9 +35,10 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { STUDENTS } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useData } from '@/context/data-context';
+import { AddStudentDialog } from '@/components/dashboard/add-student-dialog';
 
 const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
   switch (status) {
@@ -51,6 +52,9 @@ const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
 };
 
 export default function StudentsPage() {
+  const { students, addStudent } = useData();
+  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
 
@@ -58,9 +62,9 @@ export default function StudentsPage() {
   const [activeTab, setActiveTab] = useState('all');
 
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(STUDENTS.map((student) => student.class));
+    const classes = new Set(students.map((student) => student.class));
     return Array.from(classes).sort();
-  }, []);
+  }, [students]);
 
   const handleClassFilterChange = (className: string, checked: boolean) => {
     setClassFilters((prev) => {
@@ -73,14 +77,20 @@ export default function StudentsPage() {
   };
 
   const filteredStudents = useMemo(() => {
-    return STUDENTS.filter((student) => {
+    return students.filter((student) => {
       const statusMatch =
         activeTab === 'all' || student.status.toLowerCase() === activeTab;
       const classMatch =
         classFilters.length === 0 || classFilters.includes(student.class);
       return statusMatch && classMatch;
     });
-  }, [activeTab, classFilters]);
+  }, [activeTab, classFilters, students]);
+
+  const handleAddStudent = (data: any) => {
+    addStudent(data);
+    setIsAddStudentDialogOpen(false);
+  };
+
 
   const studentTableCard = (
     <Card>
@@ -174,7 +184,7 @@ export default function StudentsPage() {
       <CardFooter>
         <div className="text-xs text-muted-foreground">
           Showing <strong>{filteredStudents.length}</strong> of{' '}
-          <strong>{STUDENTS.length}</strong> students
+          <strong>{students.length}</strong> students
         </div>
       </CardFooter>
     </Card>
@@ -222,7 +232,7 @@ export default function StudentsPage() {
                 Export
               </span>
             </Button>
-            <Button size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+            <Button onClick={() => setIsAddStudentDialogOpen(true)} size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                 Add Student
@@ -234,6 +244,11 @@ export default function StudentsPage() {
         <TabsContent value="active">{studentTableCard}</TabsContent>
         <TabsContent value="inactive">{studentTableCard}</TabsContent>
       </Tabs>
+      <AddStudentDialog 
+        open={isAddStudentDialogOpen}
+        onOpenChange={setIsAddStudentDialogOpen}
+        onStudentAdd={handleAddStudent}
+      />
     </div>
   );
 }

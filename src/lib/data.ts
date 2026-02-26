@@ -1,6 +1,17 @@
 import type { ChartConfig } from '@/components/ui/chart';
 import * as Icons from 'lucide-react';
 
+export type Student = {
+  id: string;
+  name: string;
+  class: string;
+  parentName: string;
+  mobile: string;
+  email: string;
+  avatar: string;
+  status: 'Active' | 'Inactive';
+};
+
 export const MOCK_STAT_CARDS: {
   title: string;
   value: string;
@@ -170,16 +181,7 @@ export const EXAM_STAT_CARDS: {
   },
 ];
 
-export const STUDENTS: {
-  id: string;
-  name: string;
-  class: string;
-  parentName: string;
-  mobile: string;
-  email: string;
-  avatar: string;
-  status: 'Active' | 'Inactive';
-}[] = [
+export const STUDENTS: Student[] = [
   {
     id: 'STU-001',
     name: 'Olivia Martin',
@@ -228,26 +230,6 @@ export const STUDENTS: {
     mobile: '+1 567 890 1234',
     email: 'isabella.rodriguez@example.com',
     avatar: 'user-avatar-5',
-    status: 'Active',
-  },
-  {
-    id: 'STU-006',
-    name: 'Liam Brown',
-    class: '10-A',
-    parentName: 'James Brown',
-    mobile: '+1 678 901 2345',
-    email: 'liam.brown@example.com',
-    avatar: 'user-avatar-1',
-    status: 'Active',
-  },
-  {
-    id: 'STU-007',
-    name: 'Emma Jones',
-    class: '12-A',
-    parentName: 'David Jones',
-    mobile: '+1 789 012 3456',
-    email: 'emma.jones@example.com',
-    avatar: 'user-avatar-2',
     status: 'Active',
   },
 ];
@@ -359,20 +341,6 @@ export const RECENT_EXAM_RESULTS: {
     subject: 'English',
     score: '92/100',
     grade: 'A',
-  },
-  {
-    id: 'EXAM-006',
-    studentId: 'STU-006',
-    subject: 'Mathematics',
-    score: '81/100',
-    grade: 'B+',
-  },
-  {
-    id: 'EXAM-007',
-    studentId: 'STU-007',
-    subject: 'Science',
-    score: '98/100',
-    grade: 'A+',
   },
 ];
 
