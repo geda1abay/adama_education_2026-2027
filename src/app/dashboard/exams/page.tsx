@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { FileDown, ListFilter } from 'lucide-react';
+import { FileDown, ListFilter, PlusCircle } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,10 +30,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { EXAM_STAT_CARDS } from '@/lib/data';
 import { useData } from '@/context/data-context';
+import { AddExamResultDialog } from '@/components/dashboard/add-exam-result-dialog';
 
 export default function ExamsPage() {
-  const { students, recentExamResults } = useData();
+  const { students, recentExamResults, addExamResult } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
+  const [isAddExamResultDialogOpen, setIsAddExamResultDialogOpen] = useState(false);
   
   const uniqueClasses = useMemo(() => {
     const classes = new Set(students.map((student) => student.class));
@@ -61,10 +63,15 @@ export default function ExamsPage() {
   const getStudentById = (studentId: string) => students.find(s => s.id === studentId);
 
   const getGradeVariant = (grade: string) => {
-    if (grade.startsWith('A')) return 'default';
+    if (grade.startsWith('A') || grade === 'N/A') return 'default';
     if (grade.startsWith('B')) return 'secondary';
     if (grade.startsWith('C')) return 'outline';
     return 'destructive';
+  }
+
+  const handleAddExamResult = (data: any) => {
+    addExamResult(data);
+    setIsAddExamResultDialogOpen(false);
   }
 
   return (
@@ -102,6 +109,12 @@ export default function ExamsPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button onClick={() => setIsAddExamResultDialogOpen(true)} size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Add Result
+              </span>
+            </Button>
           <Button className="w-full sm:w-auto bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
             <FileDown className="mr-2 h-4 w-4" />
             Export Results
@@ -158,6 +171,12 @@ export default function ExamsPage() {
         </Table>
         </CardContent>
       </Card>
+      <AddExamResultDialog
+        open={isAddExamResultDialogOpen}
+        onOpenChange={setIsAddExamResultDialogOpen}
+        onExamResultAdd={handleAddExamResult}
+        students={students}
+      />
     </div>
   );
 }

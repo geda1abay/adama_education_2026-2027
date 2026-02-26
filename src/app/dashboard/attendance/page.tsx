@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ListFilter } from 'lucide-react';
+import { ListFilter, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -29,11 +29,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useData } from '@/context/data-context';
+import { AddAttendanceDialog } from '@/components/dashboard/add-attendance-dialog';
 
 
 export default function AttendancePage() {
-  const { students, studentAttendance } = useData();
+  const { students, studentAttendance, addAttendance } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
+  const [isAddAttendanceDialogOpen, setIsAddAttendanceDialogOpen] = useState(false);
   
   const uniqueClasses = useMemo(() => {
     const classes = new Set(students.map((student) => student.class));
@@ -68,6 +70,11 @@ export default function AttendancePage() {
     if (percentage > 90) return 'bg-green-500';
     if (percentage > 75) return 'bg-yellow-500';
     return 'bg-red-500';
+  }
+
+  const handleAddAttendance = (data: any) => {
+    addAttendance(data);
+    setIsAddAttendanceDialogOpen(false);
   }
 
   return (
@@ -105,13 +112,19 @@ export default function AttendancePage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button onClick={() => setIsAddAttendanceDialogOpen(true)} size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Add Record
+              </span>
+            </Button>
           </div>
       </div>
       
       <Card>
         <CardHeader>
           <CardTitle>Monthly Attendance - {currentMonth}</CardTitle>
-          <CardDescription>Showing attendance for the current month.</CardDescription>
+          <CardDescription>Showing attendance for June. You can add or update records for any month using the button above.</CardDescription>
         </CardHeader>
         <CardContent>
         <Table>
@@ -150,6 +163,12 @@ export default function AttendancePage() {
         </CardContent>
       </Card>
 
+      <AddAttendanceDialog 
+        open={isAddAttendanceDialogOpen}
+        onOpenChange={setIsAddAttendanceDialogOpen}
+        onAttendanceAdd={handleAddAttendance}
+        students={students}
+      />
     </div>
   );
 }

@@ -22,6 +22,8 @@ interface DataContextType {
   recentExamResults: ExamResult[];
   feesData: Fee[];
   addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status'>) => void;
+  addAttendance: (attendanceData: StudentAttendance) => void;
+  addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -77,6 +79,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setFeesData(prev => [...prev, newFee]);
   };
 
+  const addAttendance = (data: StudentAttendance) => {
+    setStudentAttendance(prev => {
+      const existingIndex = prev.findIndex(
+        att => att.studentId === data.studentId && att.month === data.month
+      );
+
+      if (existingIndex !== -1) {
+        const updatedAttendance = [...prev];
+        updatedAttendance[existingIndex] = {
+          ...updatedAttendance[existingIndex],
+          daysPresent: data.daysPresent,
+          totalDays: data.totalDays,
+        };
+        return updatedAttendance;
+      } else {
+        return [...prev, data];
+      }
+    });
+  };
+
+  const addExamResult = (data: Omit<ExamResult, 'id'>) => {
+    const newExamResult: ExamResult = {
+      id: `EXAM-${String(recentExamResults.length + 1).padStart(3, '0')}`,
+      ...data
+    };
+    setRecentExamResults(prev => [newExamResult, ...prev]);
+  };
+
   const value = {
     students,
     teachers,
@@ -84,6 +114,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     recentExamResults,
     feesData,
     addStudent,
+    addAttendance,
+    addExamResult,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
