@@ -21,7 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function StudentLoginPage() {
     const router = useRouter();
-    const [studentId, setStudentId] = useState(''); // This is the registrationId from the UI
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
@@ -29,13 +29,13 @@ export default function StudentLoginPage() {
         e.preventDefault();
         setError('');
 
-        const student = STUDENTS.find(s => s.registrationId.toUpperCase() === studentId.toUpperCase());
+        const student = STUDENTS.find(s => s.email.toLowerCase() === email.toLowerCase());
 
         if (student && password === '1515') {
             sessionStorage.setItem('studentId', student.id); // Store the internal ID
             router.push('/student/dashboard');
         } else {
-            setError('Invalid Student ID or Password. The password for all students is 1515. Please use the ID from the student roster (e.g., Hgr/0000/24).');
+            setError('Invalid Email or Password. The password for all students is 1515.');
         }
     }
 
@@ -65,13 +65,13 @@ export default function StudentLoginPage() {
           )}
           <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="student-id">Student ID</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="student-id"
-                type="text"
-                placeholder="Hgr/0000/24"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="student@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
