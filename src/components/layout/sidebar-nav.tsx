@@ -29,12 +29,12 @@ import {
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '#', icon: Users, label: 'Students' },
-  { href: '#', icon: GraduationCap, label: 'Teachers' },
-  { href: '#', icon: Book, label: 'Classes & Subjects' },
-  { href: '#', icon: ClipboardList, label: 'Attendance' },
-  { href: '#', icon: BarChart, label: 'Exams & Results' },
-  { href: '#', icon: DollarSign, label: 'Fee Management' },
+  { href: '/dashboard', icon: Users, label: 'Students' },
+  { href: '/dashboard', icon: GraduationCap, label: 'Teachers' },
+  { href: '/dashboard', icon: Book, label: 'Classes & Subjects' },
+  { href: '/dashboard', icon: ClipboardList, label: 'Attendance' },
+  { href: '/dashboard', icon: BarChart, label: 'Exams & Results' },
+  { href: '/dashboard', icon: DollarSign, label: 'Fee Management' },
 ];
 
 export default function SidebarNav() {
@@ -70,14 +70,14 @@ export default function SidebarNav() {
       <div className="mt-auto border-t border-sidebar-border p-4">
         <nav className="grid gap-1">
           <Link
-            href="#"
+            href="/dashboard"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <Settings className="h-4 w-4" />
             Settings
           </Link>
           <Link
-            href="#"
+            href="/dashboard"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <LifeBuoy className="h-4 w-4" />

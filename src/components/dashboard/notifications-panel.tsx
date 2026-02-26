@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { NOTIFICATIONS } from '@/lib/data';
@@ -17,10 +18,10 @@ export default function NotificationsPanel() {
           <CardTitle>Notifications</CardTitle>
         </div>
         <Button asChild size="sm" className="ml-auto gap-1">
-          <a href="#">
+          <Link href="/dashboard">
             View All
             <ArrowRight className="h-4 w-4" />
-          </a>
+          </Link>
         </Button>
       </CardHeader>
       <CardContent className="grid gap-4">
