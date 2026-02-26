@@ -22,7 +22,11 @@ export default function AttendanceChart() {
         <CardDescription>January - June 2024</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={ATTENDANCE_CHART_CONFIG} className="h-64">
+        <ChartContainer
+          id="attendance-chart"
+          config={ATTENDANCE_CHART_CONFIG}
+          className="h-64"
+        >
           <BarChart accessibilityLayer data={ATTENDANCE_DATA}>
             <CartesianGrid vertical={false} />
             <XAxis

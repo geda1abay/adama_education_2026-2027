@@ -25,7 +25,11 @@ export default function PerformanceChart() {
         <CardDescription>Average scores across key subjects</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={PERFORMANCE_CHART_CONFIG} className="h-64">
+        <ChartContainer
+          id="performance-chart"
+          config={PERFORMANCE_CHART_CONFIG}
+          className="h-64"
+        >
           <LineChart
             accessibilityLayer
             data={PERFORMANCE_DATA}
