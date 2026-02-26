@@ -1,33 +1,29 @@
-import type {
-  BarChart,
-  Book,
-  ClipboardList,
-  GraduationCap,
-  LayoutDashboard,
-  LucideIcon,
-  Settings,
-  Users,
-} from 'lucide-react';
 import type { ChartConfig } from '@/components/ui/chart';
+import * as Icons from 'lucide-react';
 
-export const MOCK_STAT_CARDS = [
+export const MOCK_STAT_CARDS: {
+  title: string;
+  value: string;
+  change: string;
+  icon: keyof typeof Icons;
+}[] = [
   {
     title: 'Total Students',
     value: '1,250',
     change: '+15.2%',
-    icon: Users,
+    icon: 'Users',
   },
   {
     title: 'Total Teachers',
     value: '78',
     change: '+5.7%',
-    icon: GraduationCap,
+    icon: 'GraduationCap',
   },
   {
     title: 'Total Classes',
     value: '45',
     change: '+10.0%',
-    icon: Book,
+    icon: 'Book',
   },
   {
     title: 'Fees Collected',

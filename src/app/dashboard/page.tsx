@@ -16,7 +16,7 @@ export default function DashboardPage() {
             title={card.title}
             value={card.value}
             change={card.change}
-            icon={card.icon as any}
+            icon={card.icon}
           />
         ))}
       </div>
