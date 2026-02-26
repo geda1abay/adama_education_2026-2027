@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useMemo } from 'react';
 import {
   File,
   ListFilter,
@@ -19,6 +22,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Table,
@@ -49,10 +54,136 @@ export default function StudentsPage() {
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
 
+  const [classFilters, setClassFilters] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('all');
+
+  const uniqueClasses = useMemo(() => {
+    const classes = new Set(STUDENTS.map((student) => student.class));
+    return Array.from(classes).sort();
+  }, []);
+
+  const handleClassFilterChange = (className: string, checked: boolean) => {
+    setClassFilters((prev) => {
+      if (checked) {
+        return [...prev, className];
+      } else {
+        return prev.filter((c) => c !== className);
+      }
+    });
+  };
+
+  const filteredStudents = useMemo(() => {
+    return STUDENTS.filter((student) => {
+      const statusMatch =
+        activeTab === 'all' || student.status.toLowerCase() === activeTab;
+      const classMatch =
+        classFilters.length === 0 || classFilters.includes(student.class);
+      return statusMatch && classMatch;
+    });
+  }, [activeTab, classFilters]);
+
+  const studentTableCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Student Roster</CardTitle>
+        <CardDescription>
+          Manage your students and view their details.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="hidden w-[100px] sm:table-cell">
+                <span className="sr-only">Image</span>
+              </TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Class</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Parent
+              </TableHead>
+              <TableHead className="hidden md:table-cell">
+                Contact
+              </TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredStudents.map((student) => {
+              const avatar = getImage(student.avatar);
+              return (
+                <TableRow key={student.id}>
+                  <TableCell className="hidden sm:table-cell">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={avatar?.imageUrl}
+                        alt={avatar?.description || student.name}
+                        data-ai-hint={avatar?.imageHint}
+                      />
+                      <AvatarFallback>
+                        {student.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {student.name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{student.class}</Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {student.parentName}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {student.mobile}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(student.status)}>
+                      {student.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          aria-haspopup="true"
+                          size="icon"
+                          variant="ghost"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <CardFooter>
+        <div className="text-xs text-muted-foreground">
+          Showing <strong>{filteredStudents.length}</strong> of{' '}
+          <strong>{STUDENTS.length}</strong> students
+        </div>
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <div>
       <h1 className="text-3xl font-bold font-headline mb-4">Students</h1>
-      <Tabs defaultValue="all">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center">
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
@@ -70,8 +201,19 @@ export default function StudentsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-                {/* Add filter options here */}
+                <DropdownMenuLabel>Filter by Class</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {uniqueClasses.map((cls) => (
+                  <DropdownMenuCheckboxItem
+                    key={cls}
+                    checked={classFilters.includes(cls)}
+                    onCheckedChange={(checked) =>
+                      handleClassFilterChange(cls, !!checked)
+                    }
+                  >
+                    {cls}
+                  </DropdownMenuCheckboxItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="sm" variant="outline" className="h-8 gap-1">
@@ -88,103 +230,9 @@ export default function StudentsPage() {
             </Button>
           </div>
         </div>
-        <TabsContent value="all">
-          <Card>
-            <CardHeader>
-              <CardTitle>Student Roster</CardTitle>
-              <CardDescription>
-                Manage your students and view their details.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="hidden w-[100px] sm:table-cell">
-                      <span className="sr-only">Image</span>
-                    </TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Class</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Parent
-                    </TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Contact
-                    </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>
-                      <span className="sr-only">Actions</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {STUDENTS.map((student) => {
-                    const avatar = getImage(student.avatar);
-                    return (
-                      <TableRow key={student.id}>
-                        <TableCell className="hidden sm:table-cell">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage
-                              src={avatar?.imageUrl}
-                              alt={avatar?.description || student.name}
-                              data-ai-hint={avatar?.imageHint}
-                            />
-                            <AvatarFallback>
-                              {student.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {student.name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{student.class}</Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {student.parentName}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {student.mobile}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusVariant(student.status)}>
-                            {student.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-            <CardFooter>
-              <div className="text-xs text-muted-foreground">
-                Showing <strong>1-{STUDENTS.length}</strong> of{' '}
-                <strong>{STUDENTS.length}</strong> students
-              </div>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+        <TabsContent value="all">{studentTableCard}</TabsContent>
+        <TabsContent value="active">{studentTableCard}</TabsContent>
+        <TabsContent value="inactive">{studentTableCard}</TabsContent>
       </Tabs>
     </div>
   );
