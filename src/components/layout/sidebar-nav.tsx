@@ -12,10 +12,12 @@ import {
   BarChart,
   DollarSign,
   LifeBuoy,
+  Users,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard/students', icon: Users, label: 'Students' },
   { href: '/dashboard/teachers', icon: GraduationCap, label: 'Teachers' },
   { href: '/dashboard/classes', icon: Book, label: 'Classes & Subjects' },
   { href: '/dashboard/attendance', icon: ClipboardList, label: 'Attendance' },

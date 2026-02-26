@@ -2,6 +2,9 @@ import StatCard from '@/components/dashboard/stat-card';
 import AttendanceChart from '@/components/dashboard/attendance-chart';
 import PerformanceChart from '@/components/dashboard/performance-chart';
 import { MOCK_STAT_CARDS } from '@/lib/data';
+import RecentActivitiesTable from '@/components/dashboard/recent-activities-table';
+import NotificationsPanel from '@/components/dashboard/notifications-panel';
+import AiSummaryCard from '@/components/dashboard/ai-summary-card';
 
 export default function DashboardPage() {
   return (
@@ -27,10 +30,13 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 flex flex-col gap-6">
-           <PerformanceChart />
+           <PerformanceChart id="performance-chart" />
+           <RecentActivitiesTable />
         </div>
         <div className="lg:col-span-2 flex flex-col gap-6">
-            <AttendanceChart />
+            <AiSummaryCard />
+            <AttendanceChart id="attendance-chart" />
+            <NotificationsPanel />
         </div>
       </div>
     </div>

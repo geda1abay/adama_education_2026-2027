@@ -8,6 +8,12 @@ export const MOCK_STAT_CARDS: {
   icon: keyof typeof Icons;
 }[] = [
   {
+    title: 'Total Students',
+    value: '1,250',
+    change: '+15.2%',
+    icon: 'Users',
+  },
+  {
     title: 'Total Teachers',
     value: '78',
     change: '+5.7%',
@@ -68,20 +74,71 @@ export const PERFORMANCE_CHART_CONFIG = {
 } satisfies ChartConfig;
 
 export const NOTIFICATIONS: {
-    id: string;
-    avatar: string;
-    name: string;
-    message: string;
-    time: string;
-}[] = [];
+  id: string;
+  avatar: string;
+  name: string;
+  message: string;
+  time: string;
+}[] = [
+  {
+    id: '1',
+    avatar: 'user-avatar-1',
+    name: 'John Doe',
+    message: 'submitted a new assignment for review.',
+    time: '5 min ago',
+  },
+  {
+    id: '2',
+    avatar: 'user-avatar-2',
+    name: 'Jane Smith',
+    message: 'has a fee payment overdue.',
+    time: '1 hour ago',
+  },
+  {
+    id: '3',
+    avatar: 'user-avatar-3',
+    name: 'Alex Johnson',
+    message: 'is absent today.',
+    time: '3 hours ago',
+  },
+];
 
 export const RECENT_ACTIVITIES: {
-    id: string;
-    user: string;
-    activity: string;
-    timestamp: string;
-    status: string;
-}[] = [];
+  id: string;
+  user: string;
+  activity: string;
+  timestamp: string;
+  status: string;
+}[] = [
+  {
+    id: '1',
+    user: 'Mr. Anderson',
+    activity: 'Graded "The Great Gatsby" essays',
+    timestamp: '2024-07-30T10:00:00Z',
+    status: 'Completed',
+  },
+  {
+    id: '2',
+    user: 'Admin',
+    activity: 'Updated school event calendar',
+    timestamp: '2024-07-30T09:30:00Z',
+    status: 'Completed',
+  },
+  {
+    id: '3',
+    user: 'Ms. Davis',
+    activity: 'Posted a new announcement',
+    timestamp: '2024-07-30T08:45:00Z',
+    status: 'In Progress',
+  },
+  {
+    id: '4',
+    user: 'System',
+    activity: 'Generated weekly attendance report',
+    timestamp: '2024-07-30T08:00:00Z',
+    status: 'Pending Review',
+  },
+];
 
 export const EXAM_STAT_CARDS: {
   title: string;
@@ -116,10 +173,43 @@ export const EXAM_STAT_CARDS: {
 ];
 
 export const RECENT_EXAM_RESULTS: {
-    id: string;
-    studentName: string;
-    class: string;
-    subject: string;
-    score: string;
-    grade: string;
-}[] = [];
+  id: string;
+  studentName: string;
+  class: string;
+  subject: string;
+  score: string;
+  grade: string;
+}[] = [
+  {
+    id: '1',
+    studentName: 'Michael Brown',
+    class: '10-A',
+    subject: 'Mathematics',
+    score: '95/100',
+    grade: 'A+',
+  },
+  {
+    id: '2',
+    studentName: 'Jessica Green',
+    class: '10-B',
+    subject: 'Science',
+    score: '88/100',
+    grade: 'A',
+  },
+  {
+    id: '3',
+    studentName: 'David Wilson',
+    class: '10-A',
+    subject: 'History',
+    score: '76/100',
+    grade: 'B',
+  },
+  {
+    id: '4',
+    studentName: 'Sarah Miller',
+    class: '10-C',
+    subject: 'English',
+    score: '92/100',
+    grade: 'A',
+  },
+];
