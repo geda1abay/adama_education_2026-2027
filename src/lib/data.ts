@@ -248,12 +248,67 @@ export const STUDENTS: {
   },
 ];
 
+export const TEACHERS: {
+  id: string;
+  name: string;
+  subject: string;
+  mobile: string;
+  email: string;
+  avatar: string;
+  status: 'Active' | 'Inactive';
+}[] = [
+  {
+    id: 'TCH-001',
+    name: 'Mr. Anderson',
+    subject: 'Mathematics',
+    mobile: '+1 111 222 3333',
+    email: 'mr.anderson@example.com',
+    avatar: 'user-avatar-6',
+    status: 'Active',
+  },
+  {
+    id: 'TCH-002',
+    name: 'Ms. Davis',
+    subject: 'Science',
+    mobile: '+1 222 333 4444',
+    email: 'ms.davis@example.com',
+    avatar: 'user-avatar-7',
+    status: 'Active',
+  },
+  {
+    id: 'TCH-003',
+    name: 'Mrs. Wilson',
+    subject: 'English',
+    mobile: '+1 333 444 5555',
+    email: 'mrs.wilson@example.com',
+    avatar: 'user-avatar-8',
+    status: 'Active',
+  },
+  {
+    id: 'TCH-004',
+    name: 'Mr. Taylor',
+    subject: 'History',
+    mobile: '+1 444 555 6666',
+    email: 'mr.taylor@example.com',
+    avatar: 'user-avatar-1',
+    status: 'Inactive',
+  },
+  {
+    id: 'TCH-005',
+    name: 'Ms. Brown',
+    subject: 'Mathematics',
+    mobile: '+1 555 666 7777',
+    email: 'ms.brown@example.com',
+    avatar: 'user-avatar-2',
+    status: 'Active',
+  },
+];
+
 const generateYearlyAttendance = (studentId: string) => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   return months.map((month, monthIndex) => {
-    // Deterministic generation based on student ID and month to avoid hydration mismatch
     const studentIdNum = parseInt(studentId.split('-')[1]);
-    const daysPresent = 18 + ((studentIdNum + monthIndex) % 5); // Generates a value between 18 and 22
+    const daysPresent = 18 + ((studentIdNum + monthIndex) % 5);
     return {
       studentId,
       month,
