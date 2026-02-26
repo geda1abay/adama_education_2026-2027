@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 export default function Home() {
   useEffect(() => {
-    redirect('/dashboard');
+    redirect('/login');
   }, []);
 
   return null;
