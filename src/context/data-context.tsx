@@ -22,7 +22,7 @@ interface DataContextType {
   studentAttendance: StudentAttendance[];
   recentExamResults: ExamResult[];
   feesData: Fee[];
-  addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status'>) => void;
+  addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => void;
   addAttendance: (attendanceData: StudentAttendance) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
   addFee: (feeData: Fee) => void;
@@ -39,10 +39,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
 
-  const addStudent = (studentData: Omit<Student, 'id' | 'avatar' | 'status'>) => {
+  const addStudent = (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
     const newStudentId = `STU-${String(students.length + 1).padStart(3, '0')}`;
+    const newRegistrationId = `Hgr/${String(students.length).padStart(4, '0')}/24`;
     const newStudent: Student = {
       id: newStudentId,
+      registrationId: newRegistrationId,
       ...studentData,
       status: 'Active',
       avatar: `user-avatar-${(students.length % 5) + 1}`,

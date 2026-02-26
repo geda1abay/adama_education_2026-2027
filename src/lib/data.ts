@@ -3,6 +3,7 @@ import * as Icons from 'lucide-react';
 
 export type Student = {
   id: string;
+  registrationId: string;
   name: string;
   class: string;
   parentName: string;
@@ -169,6 +170,7 @@ export const EXAM_STAT_CARDS: {
 export const STUDENTS: Student[] = [
   {
     id: 'STU-001',
+    registrationId: 'Hgr/0000/24',
     name: 'Abebe Kebede',
     class: '10-A',
     parentName: 'Kebede Alemu',
@@ -179,6 +181,7 @@ export const STUDENTS: Student[] = [
   },
   {
     id: 'STU-002',
+    registrationId: 'Hgr/0001/24',
     name: 'Birtukan Tadesse',
     class: '10-B',
     parentName: 'Tadesse Lemma',
@@ -189,6 +192,7 @@ export const STUDENTS: Student[] = [
   },
   {
     id: 'STU-003',
+    registrationId: 'Hgr/0002/24',
     name: 'Chala Dibaba',
     class: '11-A',
     parentName: 'Dibaba Kenenisa',

@@ -155,7 +155,7 @@ export default function StudentsPage() {
                   <TableCell>
                     <div className="font-medium">{student.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {`Hgr/${String(parseInt(student.id.split('-')[1], 10) - 1).padStart(4, '0')}/24`}
+                      {student.registrationId}
                     </div>
                   </TableCell>
                   <TableCell>

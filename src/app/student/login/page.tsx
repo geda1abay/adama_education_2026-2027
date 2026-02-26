@@ -21,34 +21,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function StudentLoginPage() {
     const router = useRouter();
-    const [studentId, setStudentId] = useState('');
+    const [studentId, setStudentId] = useState(''); // This is the registrationId from the UI
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-
-    const validStudentIds = STUDENTS.map(s => s.id);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        let loginId = studentId;
+        const student = STUDENTS.find(s => s.registrationId.toUpperCase() === studentId.toUpperCase());
 
-        // The student ID displayed on the roster is like "Hgr/0000/24".
-        // The internal ID used for login is like "STU-001".
-        // This logic converts the display ID back to the internal ID.
-        if (loginId.toUpperCase().startsWith('HGR/')) {
-            const parts = loginId.split('/');
-            if (parts.length >= 2) {
-                const idNumber = parseInt(parts[1], 10);
-                if (!isNaN(idNumber)) {
-                    const originalNumber = idNumber + 1;
-                    loginId = `STU-${String(originalNumber).padStart(3, '0')}`;
-                }
-            }
-        }
-
-        if (validStudentIds.includes(loginId.toUpperCase()) && password === '1515') {
-            sessionStorage.setItem('studentId', loginId.toUpperCase());
+        if (student && password === '1515') {
+            sessionStorage.setItem('studentId', student.id); // Store the internal ID
             router.push('/student/dashboard');
         } else {
             setError('Invalid Student ID or Password. The password for all students is 1515. Please use the ID from the student roster (e.g., Hgr/0000/24).');
