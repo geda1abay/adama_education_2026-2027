@@ -12,6 +12,13 @@ export type Student = {
   status: 'Active' | 'Inactive';
 };
 
+export type Fee = {
+  studentId: string;
+  amount: number;
+  dueDate: string;
+  status: 'Paid' | 'Due' | 'Overdue';
+};
+
 export const MOCK_STAT_CARDS: {
   title: string;
   value: string;
@@ -344,12 +351,7 @@ export const RECENT_EXAM_RESULTS: {
   },
 ];
 
-export const FEES_DATA: {
-  studentId: string;
-  amount: number;
-  dueDate: string;
-  status: 'Paid' | 'Due' | 'Overdue';
-}[] = STUDENTS.map((student, index) => ({
+export const FEES_DATA: Fee[] = STUDENTS.map((student, index) => ({
   studentId: student.id,
   amount: 1200,
   dueDate: '2024-08-15',

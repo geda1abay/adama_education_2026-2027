@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ListFilter, FileDown } from 'lucide-react';
+import { ListFilter, FileDown, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -28,10 +28,13 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/context/data-context';
+import { AddFeeDialog } from '@/components/dashboard/add-fee-dialog';
+import type { Fee } from '@/lib/data';
 
 export default function FeesPage() {
-  const { students, feesData } = useData();
+  const { students, feesData, addFee } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
+  const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
   
   const uniqueClasses = useMemo(() => {
     const classes = new Set(students.map((student) => student.class));
@@ -69,6 +72,11 @@ export default function FeesPage() {
         return 'outline';
     }
   };
+
+  const handleAddFee = (data: Fee) => {
+    addFee(data);
+    setIsAddFeeDialogOpen(false);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -111,6 +119,12 @@ export default function FeesPage() {
                 Export
               </span>
             </Button>
+            <Button onClick={() => setIsAddFeeDialogOpen(true)} size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Add Record
+              </span>
+            </Button>
         </div>
       </div>
       
@@ -151,6 +165,12 @@ export default function FeesPage() {
           </Table>
         </CardContent>
       </Card>
+      <AddFeeDialog
+        open={isAddFeeDialogOpen}
+        onOpenChange={setIsAddFeeDialogOpen}
+        onFeeAdd={handleAddFee}
+        students={students}
+      />
     </div>
   );
 }

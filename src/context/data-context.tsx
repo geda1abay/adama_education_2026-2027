@@ -7,13 +7,14 @@ import {
     STUDENT_ATTENDANCE,
     RECENT_EXAM_RESULTS,
     FEES_DATA,
-    type Student
+    type Student,
+    type Fee,
 } from '@/lib/data';
 
 type Teacher = (typeof TEACHERS)[number];
 type StudentAttendance = (typeof STUDENT_ATTENDANCE)[number];
 type ExamResult = (typeof RECENT_EXAM_RESULTS)[number];
-type Fee = (typeof FEES_DATA)[number];
+
 
 interface DataContextType {
   students: Student[];
@@ -24,6 +25,7 @@ interface DataContextType {
   addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status'>) => void;
   addAttendance: (attendanceData: StudentAttendance) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
+  addFee: (feeData: Fee) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -107,6 +109,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setRecentExamResults(prev => [newExamResult, ...prev]);
   };
 
+  const addFee = (data: Fee) => {
+    setFeesData(prev => {
+      const existingIndex = prev.findIndex(
+        fee => fee.studentId === data.studentId
+      );
+
+      if (existingIndex !== -1) {
+        const updatedFees = [...prev];
+        updatedFees[existingIndex] = { ...updatedFees[existingIndex], ...data };
+        return updatedFees;
+      } else {
+        return [...prev, data];
+      }
+    });
+  };
+
   const value = {
     students,
     teachers,
@@ -116,6 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addStudent,
     addAttendance,
     addExamResult,
+    addFee,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
