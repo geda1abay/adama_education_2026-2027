@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 import { 
     STUDENTS, 
     TEACHERS,
@@ -39,7 +39,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
 
-  const addStudent = (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
+  const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
     const newStudentId = `STU-${String(students.length + 1).padStart(3, '0')}`;
     const newRegistrationId = `Hgr/${String(students.length).padStart(4, '0')}/24`;
     const newStudent: Student = {
@@ -83,9 +83,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         status: 'Due',
     };
     setFeesData(prev => [...prev, newFee]);
-  };
+  }, [students.length, recentExamResults.length]);
 
-  const addAttendance = (data: StudentAttendance) => {
+  const addAttendance = useCallback((data: StudentAttendance) => {
     setStudentAttendance(prev => {
       const existingIndex = prev.findIndex(
         att => att.studentId === data.studentId && att.month === data.month
@@ -103,17 +103,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return [...prev, data];
       }
     });
-  };
+  }, []);
 
-  const addExamResult = (data: Omit<ExamResult, 'id'>) => {
-    const newExamResult: ExamResult = {
-      id: `EXAM-${String(recentExamResults.length + 1).padStart(3, '0')}`,
-      ...data
-    };
-    setRecentExamResults(prev => [newExamResult, ...prev]);
-  };
+  const addExamResult = useCallback((data: Omit<ExamResult, 'id'>) => {
+    setRecentExamResults(prev => {
+      const newExamResult: ExamResult = {
+        id: `EXAM-${String(prev.length + 1).padStart(3, '0')}`,
+        ...data
+      };
+      return [newExamResult, ...prev];
+    });
+  }, []);
 
-  const addFee = (data: Fee) => {
+  const addFee = useCallback((data: Fee) => {
     setFeesData(prev => {
       const existingIndex = prev.findIndex(
         fee => fee.studentId === data.studentId
@@ -127,20 +129,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return [...prev, data];
       }
     });
-  };
+  }, []);
 
-  const clearStudents = () => {
+  const clearStudents = useCallback(() => {
     setStudents([]);
     setStudentAttendance([]);
     setRecentExamResults([]);
     setFeesData([]);
-  };
+  }, []);
 
-  const clearTeachers = () => {
+  const clearTeachers = useCallback(() => {
     setTeachers([]);
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     students,
     teachers,
     studentAttendance,
@@ -152,7 +154,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addFee,
     clearStudents,
     clearTeachers,
-  };
+  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addAttendance, addExamResult, addFee, clearStudents, clearTeachers]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
