@@ -34,7 +34,7 @@ export default function StudentDashboardLayout({
     if (!user || !studentRole) {
       router.push('/student/login');
     }
-  }, [isLoading, user, studentRole, router]);
+  }, [isLoading, user, studentRole]);
 
   if (isLoading || !user || !studentRole) {
     return (
