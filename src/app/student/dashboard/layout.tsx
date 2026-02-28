@@ -24,16 +24,19 @@ export default function StudentDashboardLayout({
 
   const { data: studentRole, isLoading: isStudentRoleLoading } = useDoc(studentRoleRef);
 
-  const isLoading = isUserLoading || isStudentRoleLoading;
-  const isAuthorized = !isLoading && user && studentRole;
+  const isLoading = isUserLoading || (!!user && isStudentRoleLoading);
 
   useEffect(() => {
-    if (!isLoading && !isAuthorized) {
+    if (isLoading) {
+      return; // Wait until all loading is complete
+    }
+
+    if (!user || !studentRole) {
       router.push('/student/login');
     }
-  }, [isLoading, isAuthorized]);
+  }, [isLoading, user, studentRole, router]);
 
-  if (isLoading || !isAuthorized) {
+  if (isLoading || !user || !studentRole) {
     return (
         <div className="min-h-screen w-full bg-background">
             <header className="flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">

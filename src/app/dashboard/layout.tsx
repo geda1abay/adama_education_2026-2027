@@ -25,17 +25,20 @@ export default function DashboardLayout({
 
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
 
-  const isLoading = isUserLoading || isAdminRoleLoading;
-  const isAuthorized = !isLoading && !!user && !!adminRole;
+  const isLoading = isUserLoading || (!!user && isAdminRoleLoading);
 
   useEffect(() => {
-    if (!isLoading && !isAuthorized) {
+    if (isLoading) {
+      return; // Wait until all loading is complete
+    }
+
+    if (!user || !adminRole) {
       router.push('/login');
     }
-  }, [isLoading, isAuthorized]);
+  }, [isLoading, user, adminRole, router]);
 
   // Show skeleton while loading, or if the user is not authorized (before the redirect happens).
-  if (isLoading || !isAuthorized) {
+  if (isLoading || !user || !adminRole) {
     return (
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-muted/40 md:block">
@@ -45,9 +48,9 @@ export default function DashboardLayout({
             </div>
             <div className="flex-1">
               <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full mt-2" />
-                <Skeleton className="h-8 w-full mt-2" />
+                <Skeleton className="mt-2 h-8 w-full" />
+                <Skeleton className="mt-2 h-8 w-full" />
+                <Skeleton className="mt-2 h-8 w-full" />
               </nav>
             </div>
           </div>
@@ -55,7 +58,7 @@ export default function DashboardLayout({
         <div className="flex flex-col">
           <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
             <Skeleton className="h-8 w-8 rounded-full" />
-            <Skeleton className="h-8 w-48 ml-auto" />
+            <Skeleton className="ml-auto h-8 w-48" />
             <Skeleton className="h-8 w-8 rounded-full" />
           </header>
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
@@ -75,7 +78,7 @@ export default function DashboardLayout({
         </div>
         <div className="flex flex-col">
           <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+          <main className="flex flex-1 flex-col gap-4 bg-background p-4 lg:gap-6 lg:p-6">
             {children}
           </main>
         </div>
