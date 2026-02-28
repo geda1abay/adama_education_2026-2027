@@ -130,7 +130,7 @@ service cloud.firestore {
      */
     match /admins/{userId} {
       allow create: if request.resource.data.email == 'gedaabay@gmail.com' && isOwner(userId);
-      allow get: if isAdmin() || isOwner(userId);
+      allow get: if isSignedIn();
       allow list, update, delete: if isAdmin();
     }
 
@@ -399,3 +399,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
