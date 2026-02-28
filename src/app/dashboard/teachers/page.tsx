@@ -50,6 +50,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { AddTeacherDialog } from '@/components/dashboard/add-teacher-dialog';
 
 const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
   switch (status) {
@@ -63,7 +64,8 @@ const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
 };
 
 export default function TeachersPage() {
-  const { teachers, clearTeachers } = useData();
+  const { teachers, addTeacher, clearTeachers } = useData();
+  const [isAddTeacherDialogOpen, setIsAddTeacherDialogOpen] = useState(false);
 
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
@@ -84,6 +86,11 @@ export default function TeachersPage() {
         return prev.filter((s) => s !== subject);
       }
     });
+  };
+  
+  const handleAddTeacher = (data: any) => {
+    addTeacher(data);
+    setIsAddTeacherDialogOpen(false);
   };
 
   const filteredTeachers = useMemo(() => {
@@ -230,7 +237,7 @@ export default function TeachersPage() {
                 Export
               </span>
             </Button>
-            <Button size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+            <Button onClick={() => setIsAddTeacherDialogOpen(true)} size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                 Add Teacher
@@ -264,6 +271,11 @@ export default function TeachersPage() {
         <TabsContent value="active">{teacherTableCard}</TabsContent>
         <TabsContent value="inactive">{teacherTableCard}</TabsContent>
       </Tabs>
+       <AddTeacherDialog 
+        open={isAddTeacherDialogOpen}
+        onOpenChange={setIsAddTeacherDialogOpen}
+        onTeacherAdd={handleAddTeacher}
+      />
     </div>
   );
 }

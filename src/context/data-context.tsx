@@ -23,6 +23,7 @@ interface DataContextType {
   recentExamResults: ExamResult[];
   feesData: Fee[];
   addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => void;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => void;
   addAttendance: (attendanceData: StudentAttendance) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
   addFee: (feeData: Fee) => void;
@@ -85,6 +86,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
     setFeesData(prev => [...prev, newFee]);
   }, [students.length, recentExamResults.length]);
+
+  const addTeacher = useCallback((teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => {
+    const newTeacher: Teacher = {
+      id: `TCH-${String(teachers.length + 1).padStart(3, '0')}`,
+      ...teacherData,
+      status: 'Active',
+      avatar: `user-avatar-${(teachers.length % 3) + 6}`, // Use different avatars
+    };
+    setTeachers(prev => [...prev, newTeacher]);
+  }, [teachers.length]);
 
   const addAttendance = useCallback((data: StudentAttendance) => {
     setStudentAttendance(prev => {
@@ -160,13 +171,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     recentExamResults,
     feesData,
     addStudent,
+    addTeacher,
     addAttendance,
     addExamResult,
     addFee,
     clearStudents,
     clearTeachers,
     toggleStudentStatus,
-  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus]);
+  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
