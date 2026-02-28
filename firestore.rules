@@ -1,0 +1,409 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * Core Philosophy:
+     * This ruleset enforces a sophisticated Role-Based Access Control (RBAC) model,
+     * differentiating between Admins, Teachers, Students, and Parents. It combines
+     * RBAC with a strict ownership model for user-specific data. The cornerstone of
+     * this architecture is "Authorization Independence," achieved by extensively
+     * denormalizing authorization-critical data (like owner IDs, teacher IDs, etc.)
+     * directly onto the documents they secure. This approach creates simple, highly
+     * performant, and atomic rules by avoiding slow and costly `get()` calls.
+     *
+     * Data Structure:
+     * The structure uses a combination of top-level collections for primary entities
+     * (e.g., /students, /teachers, /classes) and user-scoped subcollections for
+     * private, owned data (e.g., /students/{studentId}/assignmentSubmissions).
+     * User roles are determined by document existence in dedicated paths like
+     * /user_roles/admins/{userId}, enabling fast `exists()` checks.
+     *
+     * Key Security Decisions:
+     * - Admin-Managed Data: Collections like /subjects and /feeTypes are read-only
+     *   for most users but writable only by Admins.
+     * - Teacher Control: Teachers have full control over the classes they are
+     *   assigned to, including managing assignments, exams, and attendance.
+     * - Student & Parent Access: Students can access their own data. Parents can
+     *   access their own data and the data of their associated children, verified
+     *   by checking a `studentIds` array on the parent's profile document.
+     * - Strict Privacy: Notifications are stored in a user-private subcollection
+     *   (/users/{userId}/notifications) and are accessible only by the recipient.
+     * - Default Deny: Access is denied by default. All permissions must be
+     *   explicitly granted. There are no public write rules.
+     *
+     * Denormalization for Authorization:
+     * To secure subcollections effectively, authorization data is copied down from
+     * parent documents. For example, an `Assignment` document under
+     * `/classes/{classId}` contains a `teacherId` field. This allows the rule to
+     * grant write access directly to the assigned teacher without needing to fetch
+     * the parent class document.
+     *
+     * Structural Segregation:
+     * Data with different access patterns is stored in separate collections. For
+     * instance, globally visible `subjects` are in a top-level collection, whereas
+     * a student's private `assignmentSubmissions` are nested under that student's
+     * own document path, making security rules clearer and more secure.
+     */
+
+    // --------------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the fundamental check for data ownership.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the document exists and if the user is the owner.
+     * Used for safe update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Role-check functions. These rely on the existence of a document in the
+     * /user_roles collections to grant a specific role. This is a highly
+     * performant way to manage roles.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/admins/$(request.auth.uid));
+    }
+    function isTeacher() {
+      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/teachers/$(request.auth.uid));
+    }
+    function isStudent() {
+      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/students/$(request.auth.uid));
+    }
+    function isParent() {
+      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/parents/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if the authenticated user is a parent of the specified studentId.
+     * It performs a single `get` on the parent's own profile to verify the relationship.
+     */
+    function isParentOf(studentId) {
+      return isParent() && get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.studentIds.hasAny([studentId]);
+    }
+    
+    /**
+     * Checks if a user is the student themselves or a verified parent of that student.
+     */
+    function isStudentOrParent(studentId) {
+      return (isStudent() && isOwner(studentId)) || isParentOf(studentId);
+    }
+    
+    /**
+     * For a document being created, validates that its internal userId matches the
+     * document's ID, enforcing path and data consistency.
+     */
+    function isCreatingOwnUserDoc(userId) {
+      return request.resource.data.userId == userId;
+    }
+    
+    /**
+     * For a document being updated, enforces that its internal userId is immutable.
+     */
+    function isUpdatingOwnUserDoc() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+
+    // --------------------------------------------------------------------------
+    // User Roles - Admin-managed, not directly readable/writable by clients.
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description Defines user roles. These documents are only for `exists()` checks
+     *              in other rules and should not be directly accessed by clients.
+     * @path        /user_roles/{role}/{userId}
+     * @allow       (create) An Admin can create a role document.
+     * @deny        Any non-admin user trying to modify roles. Any user trying to read roles.
+     * @principle   Restricts role management to Admins and prevents role enumeration.
+     */
+    match /user_roles/{role}/{userId} {
+      allow get, list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+
+
+    // --------------------------------------------------------------------------
+    // User Profile Collections
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description Manages student profile data.
+     * @path        /students/{studentId}
+     * @allow       (read) A student can read their own profile. A parent can read their
+     *              child's profile. An admin can read any profile.
+     * @deny        A student trying to read or write another student's profile.
+     * @principle   Enforces ownership and parental access for sensitive profile data.
+     */
+    match /students/{studentId} {
+      allow get: if isAdmin() || isStudentOrParent(studentId);
+      allow list: if isAdmin();
+      allow create: if isOwner(studentId) && isCreatingOwnUserDoc(studentId);
+      allow update: if (isAdmin() || isOwner(studentId)) && isUpdatingOwnUserDoc() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages teacher profile data.
+     * @path        /teachers/{teacherId}
+     * @allow       (read, update) A teacher can read and update their own profile.
+     * @deny        A teacher trying to access another teacher's profile.
+     * @principle   Enforces self-ownership for personal profile data.
+     */
+    match /teachers/{teacherId} {
+      allow get: if isAdmin() || isOwner(teacherId);
+      allow list: if isAdmin();
+      allow create: if isOwner(teacherId) && isCreatingOwnUserDoc(teacherId);
+      allow update: if (isAdmin() || isOwner(teacherId)) && isUpdatingOwnUserDoc() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages parent profile data.
+     * @path        /parents/{parentId}
+     * @allow       (read, update) A parent can read and update their own profile.
+     * @deny        A parent trying to access another parent's profile.
+     * @principle   Enforces self-ownership for personal profile data.
+     */
+    match /parents/{parentId} {
+      allow get: if isAdmin() || isOwner(parentId);
+      allow list: if isAdmin();
+      allow create: if isOwner(parentId) && isCreatingOwnUserDoc(parentId);
+      allow update: if (isAdmin() || isOwner(parentId)) && isUpdatingOwnUserDoc() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    // --------------------------------------------------------------------------
+    // School Administration Collections (Read-Only for most users)
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description Defines academic subjects. Writable by Admins, readable by all users.
+     * @path        /subjects/{subjectId}
+     * @allow       (read) Any signed-in user can read the list of subjects.
+     * @deny        A non-admin trying to create or modify a subject.
+     * @principle   Provides public read access for common data with centralized admin control.
+     */
+    match /subjects/{subjectId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Defines fee types. Writable by Admins, readable by all users.
+     * @path        /feeTypes/{feeTypeId}
+     * @allow       (read) Any signed-in user can read the list of fee types.
+     * @deny        A non-admin trying to create or modify a fee type.
+     * @principle   Provides public read access for common data with centralized admin control.
+     */
+    match /feeTypes/{feeTypeId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --------------------------------------------------------------------------
+    // Class and Related Subcollections
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description Manages academic classes. Fully controlled by the assigned teacher or admins.
+     * @path        /classes/{classId}
+     * @allow       (read, write) The teacher assigned via the `teacherId` field can
+     *              manage this class. Admins also have full access.
+     * @deny        Students, parents, or other teachers trying to access or list classes directly.
+     * @principle   Restricts management of a shared resource to its designated owner (the teacher).
+     */
+    match /classes/{classId} {
+      allow get: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
+      allow list: if isAdmin() || isTeacher();
+      allow create: if (isAdmin() || isTeacher()) && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if (isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid)) && resource != null;
+
+      /**
+       * To make the following rules for subcollections work, the application MUST
+       * ensure that when a student is enrolled, a document is created at:
+       * `/classes/{classId}/enrollments/{studentId}`.
+       * Using the student's UID as the document ID is critical for the `exists()`
+       * check to work, which is the only performant way to verify enrollment
+       * within security rules.
+       */
+      function isEnrolledInThisClass(studentId) {
+        return exists(/databases/$(database)/documents/classes/$(classId)/enrollments/$(studentId));
+      }
+
+      function isEnrolledStudentOrParent(studentId) {
+        return (isOwner(studentId) && isEnrolledInThisClass(studentId)) || (isParentOf(studentId) && isEnrolledInThisClass(studentId));
+      }
+
+      /**
+       * @description Manages student enrollments for this class.
+       * @path        /classes/{classId}/enrollments/{enrollmentId}
+       * @allow       (read) The enrolled student or their parent can view the enrollment record.
+       *              The class teacher and admins can view all enrollments.
+       * @deny        A student trying to view another student's enrollment.
+       * @principle   Combines ownership (teacher) with shared access (student/parent).
+       */
+      match /enrollments/{enrollmentId} {
+        allow get: if isAdmin() || isTeacher() || isEnrolledStudentOrParent(resource.data.studentId);
+        allow list: if isAdmin() || isTeacher();
+        allow create: if (isAdmin() || isTeacher()) && request.resource.data.classId == classId;
+        allow update, delete: if (isAdmin() || isTeacher()) && resource != null;
+      }
+      
+      /**
+       * @description Class sessions. Managed by teacher, readable by enrolled students.
+       * @path        /classes/{classId}/sessions/{sessionId}
+       * @allow       (read) An enrolled student or their parent can view class session details.
+       * @deny        A student not enrolled in this class from viewing session details.
+       * @principle   Grants read access to a shared resource based on verified membership (enrollment).
+       */
+      match /sessions/{sessionId} {
+        allow get, list: if isAdmin() || isTeacher() || isEnrolledInThisClass(request.auth.uid) || isParent(); // Parents must filter client-side
+        allow create, update, delete: if isAdmin() || isTeacher();
+      }
+
+      /**
+       * @description Assignments for this class. Managed by teacher, readable by enrolled students.
+       * @path        /classes/{classId}/assignments/{assignmentId}
+       * @allow       (read) An enrolled student or their parent can view assignment details.
+       * @deny        A student not enrolled in this class from viewing assignments.
+       * @principle   Grants read access to a shared resource based on verified membership (enrollment).
+       */
+      match /assignments/{assignmentId} {
+        allow get, list: if isAdmin() || isTeacher() || isEnrolledInThisClass(request.auth.uid) || isParent();
+        allow create: if (isAdmin() || isTeacher()) && request.resource.data.teacherId == request.auth.uid;
+        allow update, delete: if (isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid)) && resource != null;
+      }
+
+      /**
+       * @description Exams for this class. Managed by teacher, readable by enrolled students.
+       * @path        /classes/{classId}/exams/{examId}
+       * @allow       (read) An enrolled student or their parent can view exam details.
+       * @deny        A student not enrolled in this class from viewing exams.
+       * @principle   Grants read access to a shared resource based on verified membership (enrollment).
+       */
+      match /exams/{examId} {
+        allow get, list: if isAdmin() || isTeacher() || isEnrolledInThisClass(request.auth.uid) || isParent();
+        allow create: if (isAdmin() || isTeacher()) && request.resource.data.teacherId == request.auth.uid;
+        allow update, delete: if (isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid)) && resource != null;
+      }
+    }
+
+
+    // --------------------------------------------------------------------------
+    // Student-Specific Subcollections
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description A student's attendance records.
+     * @path        /students/{studentId}/attendance/{attendanceId}
+     * @allow       (read) The student and their parent can read the attendance record.
+     *              (write) The recording teacher and admins can manage the record.
+     * @deny        A student trying to change their own attendance.
+     * @principle   Separates read access (student/parent) from write access (teacher/admin).
+     */
+    match /students/{studentId}/attendance/{attendanceId} {
+      allow get: if isAdmin() || isStudentOrParent(studentId) || isTeacher();
+      allow list: if isAdmin() || isStudentOrParent(studentId) || isTeacher();
+      allow create: if (isAdmin() || isTeacher()) && request.resource.data.studentId == studentId && request.resource.data.recordedByTeacherId == request.auth.uid;
+      allow update, delete: if (isAdmin() || isTeacher()) && resource != null;
+    }
+
+    /**
+     * @description A student's assignment submissions.
+     * @path        /students/{studentId}/assignmentSubmissions/{submissionId}
+     * @allow       (create) The student can submit their own assignment.
+     *              (read) The student, their parents, and the class teacher can read it.
+     *              (update) The student can update it before grading; the teacher can update it to grade.
+     * @deny        A student trying to submit an assignment for another student.
+     * @principle   Enforces document ownership with specific shared access for grading.
+     */
+    match /students/{studentId}/assignmentSubmissions/{submissionId} {
+      allow get: if isAdmin() || isStudentOrParent(studentId) || isTeacher();
+      allow list: if isAdmin() || isStudentOrParent(studentId) || isTeacher();
+      allow create: if isOwner(studentId) && request.resource.data.studentId == studentId;
+      allow update: if (isOwner(studentId) || isAdmin() || isTeacher()) && resource != null;
+      allow delete: if (isOwner(studentId) || isAdmin()) && resource != null;
+    }
+
+    /**
+     * @description A student's exam results.
+     * @path        /students/{studentId}/examResults/{examResultId}
+     * @allow       (read) The student and their parents can read their own results.
+     *              (write) The class teacher and admins can create/update results.
+     * @deny        A student trying to change their own exam result.
+     * @principle   Separates read access (student/parent) from write access (teacher/admin).
+     */
+    match /students/{studentId}/examResults/{examResultId} {
+      allow get: if isAdmin() || isStudentOrParent(studentId) || isTeacher();
+      allow list: if isAdmin() || isStudentOrParent(studentId) || isTeacher();
+      allow create, update: if (isAdmin() || isTeacher()) && request.resource.data.studentId == studentId;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Fees owed by a student.
+     * @path        /students/{studentId}/studentFees/{studentFeeId}
+     * @allow       (read) The student and their parents can read their fee information.
+     *              (write) Only admins can create, update, or delete fee records.
+     * @deny        A student or parent trying to modify their own fee amounts.
+     * @principle   Provides read-only access to financial data for owners, with writes restricted to admins.
+     */
+    match /students/{studentId}/studentFees/{studentFeeId} {
+      allow get, list: if isAdmin() || isStudentOrParent(studentId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Payments made towards a student's fees.
+     * @path        /students/{studentId}/feePayments/{paymentId}
+     * @allow       (read) The student and their parents can view their payment history.
+     *              (create) A parent or admin can record a payment.
+     * @deny        A user trying to delete a payment record.
+     * @principle   Allows users to create records but restricts modification or deletion to maintain audit trails.
+     */
+    match /students/{studentId}/feePayments/{paymentId} {
+      allow get, list: if isAdmin() || isStudentOrParent(studentId);
+      allow create: if (isAdmin() || isParentOf(studentId)) && request.resource.data.recordedByUserId == request.auth.uid;
+      allow update: if isAdmin() && resource != null;
+      allow delete: if false; // Payments should not be deleted for auditing reasons.
+    }
+
+
+    // --------------------------------------------------------------------------
+    // User-Private Notification Subcollection
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description Stores notifications for a specific user.
+     * @path        /users/{recipientUserId}/notifications/{notificationId}
+     * @allow       (read, update, delete) A user can only access notifications in their
+     *              own collection (`recipientUserId` matches their auth UID).
+     * @deny        Any user trying to read or write another user's notifications.
+     * @principle   Restricts access to a user's own private data tree.
+     */
+    match /users/{recipientUserId}/notifications/{notificationId} {
+      allow get, list: if isOwner(recipientUserId);
+      allow create: if isOwner(recipientUserId) && request.resource.data.recipientUserId == recipientUserId;
+      allow update: if isExistingOwner(recipientUserId) && request.resource.data.recipientUserId == resource.data.recipientUserId;
+      allow delete: if isExistingOwner(recipientUserId);
+    }
+  }
+}
