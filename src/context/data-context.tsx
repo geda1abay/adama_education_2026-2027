@@ -8,7 +8,7 @@ import {
     type Student,
     type Fee,
 } from '@/lib/data';
-import { useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, setDoc, writeBatch, getDocs, updateDoc, query } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -52,12 +52,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const { user } = useUser();
 
-  const studentsQuery = useMemoFirebase(() => query(collection(firestore, 'students')), [firestore]);
+  const studentsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'students'))
+  }, [firestore, user]);
   const { data: studentsData, isLoading: studentsLoading } = useCollection<Omit<Student, 'id'>>(studentsQuery);
   const students = useMemo(() => studentsData || [], [studentsData]);
 
-  const teachersQuery = useMemoFirebase(() => query(collection(firestore, 'teachers')), [firestore]);
+  const teachersQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'teachers'))
+  }, [firestore, user]);
   const { data: teachersData, isLoading: teachersLoading } = useCollection<Omit<Teacher, 'id'>>(teachersQuery);
   const teachers = useMemo(() => teachersData || [], [teachersData]);
 
@@ -85,6 +92,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             parentName: studentData.parentName,
             mobile: studentData.mobile,
             email: studentData.email,
+            password: studentData.password, // Storing password is not secure, only for demo
             registrationId: newRegistrationId,
             status: 'Active',
             avatar: `user-avatar-${(studentCount % 5) + 1}`,
