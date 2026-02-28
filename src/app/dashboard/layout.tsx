@@ -26,21 +26,16 @@ export default function DashboardLayout({
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
 
   const isLoading = isUserLoading || isAdminRoleLoading;
+  const isAuthorized = !isLoading && !!user && !!adminRole;
 
   useEffect(() => {
-    // Wait until all loading is finished before making a decision.
-    if (isLoading) {
-      return; // Still loading, do nothing.
-    }
-
-    // After loading, if there's no user, or the user does not have an admin role, redirect.
-    if (!user || !adminRole) {
+    if (!isLoading && !isAuthorized) {
       router.push('/login');
     }
-  }, [router, user, adminRole, isLoading]);
+  }, [router, isLoading, isAuthorized]);
 
   // Show skeleton while loading, or if the user is not authorized (before the redirect happens).
-  if (isLoading || !user || !adminRole) {
+  if (isLoading || !isAuthorized) {
     return (
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-muted/40 md:block">
