@@ -4,8 +4,9 @@ import Link from "next/link"
 import { Bot, Terminal } from "lucide-react"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAuth } from "@/firebase"; // Import useAuth
-import { signInWithEmailAndPassword } from "firebase/auth"; // Import signIn
+import { useAuth, useFirestore } from "@/firebase"; // Import useAuth and useFirestore
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"; // Import sign in and create user
+import { doc, setDoc } from "firebase/firestore"; // Import firestore functions
 
 import { Button } from "@/components/ui/button"
 import {
@@ -22,8 +23,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function LoginPage() {
     const router = useRouter();
     const auth = useAuth(); // Get auth instance
+    const firestore = useFirestore(); // Get firestore instance
     const [email, setEmail] = useState('admin@example.com');
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState('151835');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -32,23 +34,35 @@ export default function LoginPage() {
         setError('');
         setIsLoading(true);
 
-        // For the demo, we only allow a specific admin user
-        if (email.toLowerCase() !== 'admin@example.com') {
-          setError('Invalid email for admin login.');
-          setIsLoading(false);
-          return;
-        }
-
         try {
+            // First, try to sign in
             await signInWithEmailAndPassword(auth, email, password);
-            // The auth state change will be caught by the layout, no need for sessionStorage
             router.push('/dashboard');
-        } catch (err: any) {
-            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        } catch (signInError: any) {
+            // If the user is not found, and it's the admin email, try to create the user
+            if (signInError.code === 'auth/user-not-found' && email.toLowerCase() === 'admin@example.com') {
+                try {
+                    console.log('Admin user not found. Attempting to create a new admin account...');
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // IMPORTANT: Create the admin role document in Firestore for authorization
+                    const adminRoleRef = doc(firestore, 'user_roles/admins', user.uid);
+                    await setDoc(adminRoleRef, { role: 'admin' });
+
+                    console.log('Admin user and role created successfully.');
+                    router.push('/dashboard'); // Redirect after successful creation
+                } catch (createError: any) {
+                    setError('Failed to create admin account. Please check console for details.');
+                    console.error('Admin creation error:', createError);
+                }
+            } else if (signInError.code === 'auth/wrong-password' || signInError.code === 'auth/invalid-credential') {
                 setError('Invalid email or password. Please try again.');
+            } else if (signInError.code === 'auth/invalid-email') {
+                setError('The email address is not a valid format.');
             } else {
                 setError('An unexpected error occurred. Please try again later.');
-                console.error(err);
+                console.error(signInError);
             }
         } finally {
             setIsLoading(false);
