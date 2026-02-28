@@ -19,7 +19,7 @@ export default function StudentDashboardLayout({
 
   const studentRoleRef = useMemoFirebase(() => {
     if (!user) return null;
-    return doc(firestore, 'user_roles/students', user.uid);
+    return doc(firestore, 'students', user.uid);
   }, [firestore, user]);
 
   const { data: studentRole, isLoading: isStudentRoleLoading } = useDoc(studentRoleRef);
@@ -64,3 +64,5 @@ export default function StudentDashboardLayout({
     </DataProvider>
   );
 }
+
+    

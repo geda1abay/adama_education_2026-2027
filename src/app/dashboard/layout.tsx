@@ -20,7 +20,7 @@ export default function DashboardLayout({
 
   const adminRoleRef = useMemoFirebase(() => {
     if (!user) return null;
-    return doc(firestore, 'user_roles/admins', user.uid);
+    return doc(firestore, 'admins', user.uid);
   }, [firestore, user]);
 
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
@@ -82,3 +82,5 @@ export default function DashboardLayout({
     </DataProvider>
   );
 }
+
+    

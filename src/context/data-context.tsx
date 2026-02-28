@@ -37,7 +37,7 @@ interface DataContextType {
   recentExamResults: ExamResult[];
   feesData: Fee[];
   addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => void;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => void;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status' | 'email'> & {email:string, password: string}) => void;
   addAttendance: (attendanceData: StudentAttendance) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
   addFee: (feeData: Fee) => void;
@@ -100,7 +100,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
 
         await setDoc(doc(firestore, 'students', newStudentId), newStudentDoc);
-        await setDoc(doc(firestore, 'user_roles/students', newStudentId), { role: 'student' });
         
         toast({ title: "Student Added", description: `${studentData.name} has been added successfully.` });
 
@@ -114,14 +113,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [auth, firestore, toast]);
 
-  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => {
-    // This requires a password, but the form doesn't collect it.
-    // For now, let's use a default password and log a warning.
-    console.warn("Using default password for teacher creation. This should be changed.");
-    const defaultPassword = "password123";
-
+  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status' | 'email'> & {email: string, password: string}) => {
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, teacherData.email, defaultPassword);
+        const userCredential = await createUserWithEmailAndPassword(auth, teacherData.email, teacherData.password);
         const newTeacherId = userCredential.user.uid;
 
         const randomId = Math.floor(Math.random() * 1000);
@@ -138,7 +132,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
 
         await setDoc(doc(firestore, 'teachers', newTeacherId), newTeacherDoc);
-        await setDoc(doc(firestore, 'user_roles/teachers', newTeacherId), { role: 'teacher' });
 
         toast({ title: "Teacher Added", description: `${teacherData.name} has been added successfully.` });
     } catch (error: any) {
@@ -204,7 +197,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const batch = writeBatch(firestore);
         studentsSnapshot.docs.forEach((studentDoc) => {
             batch.delete(doc(firestore, 'students', studentDoc.id));
-            batch.delete(doc(firestore, 'user_roles/students', studentDoc.id));
             // Note: This does not delete the user from Firebase Auth.
             // That requires the Admin SDK and a backend function.
         });
@@ -223,7 +215,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const batch = writeBatch(firestore);
         teachersSnapshot.docs.forEach((teacherDoc) => {
             batch.delete(doc(firestore, 'teachers', teacherDoc.id));
-            batch.delete(doc(firestore, 'user_roles/teachers', teacherDoc.id));
         });
         await batch.commit();
         toast({ title: "Teachers Cleared", description: "All teacher data has been removed from Firestore." });
@@ -268,3 +259,5 @@ export function useData() {
   }
   return context;
 }
+
+    

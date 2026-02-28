@@ -13,11 +13,9 @@ service cloud.firestore {
      * performant, and atomic rules by avoiding slow and costly `get()` calls.
      *
      * Data Structure:
-     * The structure uses a combination of top-level collections for primary entities
-     * (e.g., /students, /teachers, /classes) and user-scoped subcollections for
-     * private, owned data (e.g., /students/{studentId}/assignmentSubmissions).
-     * User roles are determined by document existence in dedicated paths like
-     * /user_roles/admins/{userId}, enabling fast `exists()` checks.
+     * The structure uses top-level collections for primary entities, where the
+     * existence of a document signifies a role (e.g., a doc in /admins grants admin rights).
+     * This allows for fast, single `exists()` checks for role verification.
      *
      * Key Security Decisions:
      * - Admin-Managed Data: Collections like /subjects and /feeTypes are read-only
@@ -38,12 +36,6 @@ service cloud.firestore {
      * `/classes/{classId}` contains a `teacherId` field. This allows the rule to
      * grant write access directly to the assigned teacher without needing to fetch
      * the parent class document.
-     *
-     * Structural Segregation:
-     * Data with different access patterns is stored in separate collections. For
-     * instance, globally visible `subjects` are in a top-level collection, whereas
-     * a student's private `assignmentSubmissions` are nested under that student's
-     * own document path, making security rules clearer and more secure.
      */
 
     // --------------------------------------------------------------------------
@@ -74,21 +66,21 @@ service cloud.firestore {
     }
 
     /**
-     * Role-check functions. These rely on the existence of a document in the
-     * /user_roles collections to grant a specific role. This is a highly
-     * performant way to manage roles.
+     * Role-check functions. These rely on the existence of a document in a
+     * top-level collection (e.g., /admins, /teachers) to grant a role.
+     * This is a highly performant way to manage roles.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/admins/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     function isTeacher() {
-      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/teachers/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
     function isStudent() {
-      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/students/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/students/$(request.auth.uid));
     }
     function isParent() {
-      return isSignedIn() && exists(/databases/$(database)/documents/user_roles/parents/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/parents/$(request.auth.uid));
     }
 
     /**
@@ -123,43 +115,25 @@ service cloud.firestore {
 
 
     // --------------------------------------------------------------------------
-    // User Roles - Admin-managed, not directly readable/writable by clients.
+    // User Profile & Role Collections
     // --------------------------------------------------------------------------
 
     /**
-     * @description Defines the admin role. Special rule allows the first admin
+     * @description Defines the admin role. A special rule allows the first admin
      *              ('admin@example.com') to create their own role document.
-     * @path        /user_roles/admins/{userId}
+     * @path        /admins/{userId}
      * @allow       (create) The user with email 'admin@example.com' can create their own role document.
-     * @allow       (update, delete) Existing admins can manage roles.
-     * @deny        Reading or listing roles.
+     * @allow       (read, write) Existing admins can manage roles.
      * @principle   Securely bootstraps the first admin user while restricting further role management.
      */
-    match /user_roles/admins/{userId} {
+    match /admins/{userId} {
       allow create: if request.auth.token.email == 'admin@example.com' && isOwner(userId);
-      allow update, delete: if isAdmin();
-      allow get, list: if false; // Keep roles from being enumerated.
+      allow get: if isAdmin() || isOwner(userId);
+      allow list, update, delete: if isAdmin();
     }
 
     /**
-     * @description Defines non-admin user roles. These documents are only for `exists()` checks.
-     * @path        /user_roles/{role}/{userId}
-     * @allow       (create, update, delete) Only an Admin can manage these role documents.
-     * @deny        Any non-admin user trying to modify roles. Any user trying to read roles.
-     * @principle   Restricts role management to Admins and prevents role enumeration.
-     */
-    match /user_roles/{role}/{userId} where role != 'admins' {
-      allow create, update, delete: if isAdmin();
-      allow get, list: if false;
-    }
-
-
-    // --------------------------------------------------------------------------
-    // User Profile Collections
-    // --------------------------------------------------------------------------
-
-    /**
-     * @description Manages student profile data.
+     * @description Manages student profile data. Existence of a doc here grants the 'student' role.
      * @path        /students/{studentId}
      * @allow       (read) A student can read their own profile. A parent can read their
      *              child's profile. An admin can read any profile.
@@ -176,7 +150,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages teacher profile data.
+     * @description Manages teacher profile data. Existence of a doc here grants the 'teacher' role.
      * @path        /teachers/{teacherId}
      * @allow       (read, update) A teacher can read and update their own profile.
      * @deny        A teacher trying to access another teacher's profile.
@@ -192,7 +166,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages parent profile data.
+     * @description Manages parent profile data. Existence of a doc here grants the 'parent' role.
      * @path        /parents/{parentId}
      * @allow       (read, update) A parent can read and update their own profile.
      * @deny        A parent trying to access another parent's profile.
@@ -423,3 +397,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

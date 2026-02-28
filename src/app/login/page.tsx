@@ -47,8 +47,8 @@ export default function LoginPage() {
                     const user = userCredential.user;
 
                     // This requires a security rule to allow the first admin to be created.
-                    const adminRoleRef = doc(firestore, 'user_roles/admins', user.uid);
-                    await setDoc(adminRoleRef, { role: 'admin' });
+                    const adminRoleRef = doc(firestore, 'admins', user.uid);
+                    await setDoc(adminRoleRef, { userId: user.uid, role: 'admin' });
 
                     console.log('Admin user and role created successfully.');
                     router.push('/dashboard'); // Redirect after successful creation
@@ -139,3 +139,5 @@ export default function LoginPage() {
     </div>
   )
 }
+
+    

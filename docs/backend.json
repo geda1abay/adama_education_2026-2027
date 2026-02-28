@@ -1,5 +1,28 @@
 {
   "entities": {
+    "Admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Admin",
+      "type": "object",
+      "description": "Represents an administrator user with system-wide privileges.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The user's unique ID, which must match the Firebase Auth UID."
+        },
+        "role": {
+          "type": "string",
+          "description": "The assigned role for the user.",
+          "enum": [
+            "admin"
+          ]
+        }
+      },
+      "required": [
+        "userId",
+        "role"
+      ]
+    },
     "Student": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Student",
@@ -761,43 +784,13 @@
   "firestore": {
     "structure": [
       {
-        "path": "/user_roles/admins/{userId}",
+        "path": "/admins/{userId}",
         "definition": {
-          "entityName": "UserRoleAdmin",
+          "entityName": "Admin",
           "schema": {
             "$ref": "#/backend/entities/Admin"
           },
-          "description": "Collection to establish 'Admin' role via document existence. `userId` matches Firebase Authentication `uid`."
-        }
-      },
-      {
-        "path": "/user_roles/teachers/{userId}",
-        "definition": {
-          "entityName": "UserRoleTeacher",
-          "schema": {
-            "$ref": "#/backend/entities/Teacher"
-          },
-          "description": "Collection to establish 'Teacher' role via document existence. `userId` matches Firebase Authentication `uid`."
-        }
-      },
-      {
-        "path": "/user_roles/students/{userId}",
-        "definition": {
-          "entityName": "UserRoleStudent",
-          "schema": {
-            "$ref": "#/backend/entities/Student"
-          },
-          "description": "Collection to establish 'Student' role via document existence. `userId` matches Firebase Authentication `uid`."
-        }
-      },
-      {
-        "path": "/user_roles/parents/{userId}",
-        "definition": {
-          "entityName": "UserRoleParent",
-          "schema": {
-            "$ref": "#/backend/entities/Parent"
-          },
-          "description": "Collection to establish 'Parent' role via document existence. `userId` matches Firebase Authentication `uid`."
+          "description": "Top-level collection for Admin users. Document ID is the Firebase Auth UID. Existence of a document in this collection grants admin privileges."
         }
       },
       {
@@ -1100,3 +1093,4 @@
     "reasoning": "The Firestore structure is designed to be highly secure, scalable, and debuggable by strictly adhering to the core design principles and strategic mandates. The primary goal is **Authorization Independence**, achieved through extensive denormalization of authorization-relevant fields directly into the documents where they are needed. This eliminates the need for `get()` calls in security rules, making rules atomic, simpler, and more performable.\n\n**Authorization Independence via Denormalization:**\n*   **User Profiles and Roles:** Each user type (Student, Teacher, Parent) has a dedicated top-level collection (`/students`, `/teachers`, `/parents`) where the document ID (`{studentId}`, `{teacherId}`, `{parentId}`) is the `userId` from Firebase Auth. This directly links `request.auth.uid` to the user's profile. Role-based access is managed through separate, lightweight existence collections (e.g., `/user_roles/admins/{userId}`), allowing atomic `exists()` checks without complex data retrieval.\n*   **Class-Related Entities:** For `ClassSession`, `Assignment`, and `Exam` documents, which are nested under a specific `Class` (`/classes/{classId}/...`), the `teacherId` of the parent `Class` is denormalized and stored as `classTeacherId` within the subcollection documents. This ensures that security rules for these subcollections can determine if the `request.auth.uid` matches the `classTeacherId` directly from the document being accessed, without fetching the parent `Class` document.\n*   **Student-Related Records:** For student-specific data like `Attendance`, `AssignmentSubmission`, and `ExamResult`, the records are nested under `/students/{studentId}/...`. This inherently provides `studentId` context. Additionally, for `Attendance`, `AssignmentSubmission`, and `ExamResult`, relevant IDs like `classId` and `teacherId` (from the associated `ClassSession`, `Assignment`, or `Exam`) are denormalized. For example, an `AssignmentSubmission` will contain `assignmentClassId` and `assignmentTeacherId` to allow the grading teacher to access it and the student/parent to view it without `get()` calls to other collections.\n*   **Fee Management:** `StudentFee` documents are nested under `/students/{studentId}/studentFees/{studentFeeId}`, and `FeePayment` under `/students/{studentId}/feePayments/{paymentId}`. Both include denormalized `studentId` (implicit in path) and `recordedByUserId` (for payments), allowing direct authorization checks.\n*   **Notifications:** Notifications are strictly private and stored under `/users/{recipientUserId}/notifications/{notificationId}`, where `recipientUserId` directly matches `request.auth.uid`. This provides immediate and clear authorization.\n\n**QAPs (Rules are not Filters):**\nThis structure strongly supports Query-Based Access Patterns (QAPs) by enabling efficient and secure `list` operations:\n*   **Structural Segregation:** Data with different security postures is separated into distinct collections (e.g., global `Subjects` vs. user-specific `Notifications`). This simplifies rules, as a collection's rules apply uniformly to all its documents.\n*   **Path-Based Ownership:** For student-specific data, nesting under `/students/{studentId}/...` means queries can inherently filter by `studentId == request.auth.uid` (for students) or `studentId` being one of the `studentIds` associated with the authenticated parent. This satisfies the QAP for retrieving all records for a specific student.\n*   **Denormalized IDs for Querying:** Teachers can list their classes by querying `/classes` where `teacherId == request.auth.uid`. They can then query for sessions, assignments, or exams within those classes using the `classTeacherId` field in the subcollection documents, enabling efficient server-side filtering (e.g., `db.collection('classes/{classId}/assignments').where('classTeacherId', '==', request.auth.uid)`). This ensures that queries only return data the user is authorized to see, eliminating the need for rules to act as client-side filters.\n\nOverall, this design prioritizes explicit authorization context within each document, clear structural segregation of data, and consistent access patterns. This results in security rules that are straightforward to write, easy to debug, and performant, avoiding the pitfalls of `get()` based authorization and client-side filtering."
   }
 }
+    
