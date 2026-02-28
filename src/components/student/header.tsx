@@ -3,13 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { GraduationCap, LogOut } from 'lucide-react';
+import { GraduationCap, LogOut, UserCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/context/data-context';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import type { Student } from '@/lib/data';
 import { Skeleton } from '../ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function StudentHeader() {
   const { students } = useData();
@@ -45,16 +53,35 @@ export default function StudentHeader() {
 
       <div className="ml-auto flex items-center gap-4">
         {student ? (
-            <div className="flex items-center gap-2">
-                 <Avatar className="h-9 w-9">
-                    <AvatarImage src={avatar?.imageUrl} alt={student.name} data-ai-hint={avatar?.imageHint} />
-                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col text-sm">
-                    <span className="font-semibold">{student.name}</span>
-                    <span className="text-xs text-muted-foreground">{student.class}</span>
-                </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 focus-visible:ring-0 h-12">
+                     <Avatar className="h-9 w-9">
+                        <AvatarImage src={avatar?.imageUrl} alt={student.name} data-ai-hint={avatar?.imageHint} />
+                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col text-sm items-start">
+                        <span className="font-semibold">{student.name}</span>
+                        <span className="text-xs text-muted-foreground">{student.class}</span>
+                    </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/student/dashboard/account">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
         ) : (
           <div className="flex items-center gap-2">
             <Skeleton className="h-9 w-9 rounded-full" />
@@ -64,10 +91,6 @@ export default function StudentHeader() {
             </div>
           </div>
         )}
-        <Button onClick={handleLogout} variant="outline" size="sm">
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-        </Button>
       </div>
     </header>
   );
