@@ -29,63 +29,65 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Helper to ensure role exists and then redirect
+    const ensureAdminRoleAndRedirect = async (userId: string) => {
+        const adminRoleRef = doc(firestore, 'admins', userId);
+        try {
+            const adminRoleSnap = await getDoc(adminRoleRef);
+            if (!adminRoleSnap.exists()) {
+                console.log("Admin role document missing, creating...");
+                await setDoc(adminRoleRef, { userId: userId, role: 'admin' });
+                // Verify creation
+                const finalCheck = await getDoc(adminRoleRef);
+                if (!finalCheck.exists()) {
+                    throw new Error("Failed to create and verify admin role in database.");
+                }
+                console.log("Admin role created and verified.");
+            }
+            router.push('/dashboard');
+        } catch (e) {
+            console.error("Role verification/creation failed:", e);
+            setError("An error occurred verifying admin permissions. Please try again.");
+            setIsLoading(false); // Make sure to stop loading indicator on error
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
+        // Only allow admin@example.com to attempt login here
+        if (email.toLowerCase() !== 'admin@example.com') {
+            setError("This login is for administrators only.");
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-
-            // After ANY successful login for the admin email, we ensure the role document exists in Firestore.
-            // This makes the login process idempotent and resilient.
-            if (user.email?.toLowerCase() === 'admin@example.com') {
-                const adminRoleRef = doc(firestore, 'admins', user.uid);
-                const adminRoleSnap = await getDoc(adminRoleRef);
-                if (!adminRoleSnap.exists()) {
-                    console.log('Admin auth user exists, but role document is missing. Creating it now...');
-                    // This is safe because our security rules only allow this for the admin's UID.
-                    await setDoc(adminRoleRef, { userId: user.uid, role: 'admin' });
-                    console.log('Admin role document created.');
-                }
-            }
-
-            router.push('/dashboard');
+            await ensureAdminRoleAndRedirect(userCredential.user.uid);
         } catch (signInError: any) {
-            // For the special admin@example.com case, if sign-in fails, we attempt to create the account.
-            // `auth/invalid-credential` is the modern error for both "user not found" and "wrong password".
-            if (email.toLowerCase() === 'admin@example.com' && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
+            if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
+                console.log('Admin user not found. Attempting to create a new admin account...');
                 try {
-                    console.log('Admin user not found or credential invalid. Attempting to create a new admin account...');
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
-
-                    // This requires a security rule to allow the first admin to be created.
-                    const adminRoleRef = doc(firestore, 'admins', user.uid);
-                    await setDoc(adminRoleRef, { userId: user.uid, role: 'admin' });
-
-                    console.log('Admin user and role created successfully.');
-                    router.push('/dashboard'); // Redirect after successful creation
+                    // After creating the user, ensure the role exists and redirect
+                    await ensureAdminRoleAndRedirect(userCredential.user.uid);
                 } catch (createError: any) {
-                    // If creating the user fails because the email is already in use,
-                    // it means the admin account exists but the password was wrong.
                     if (createError.code === 'auth/email-already-in-use') {
                         setError('Invalid password for admin account. Please try again.');
                     } else {
                         setError('Failed to create admin account. Please check console for details.');
                         console.error('Admin creation error:', createError);
                     }
+                    setIsLoading(false);
                 }
-            } else if (signInError.code === 'auth/invalid-email') {
-                setError('The email address is not a valid format.');
             } else {
-                // For any other error, including invalid-credential on a non-admin account
-                setError('Invalid email or password. Please try again.');
+                setError('An unexpected error occurred during login.');
                 console.error(signInError);
+                setIsLoading(false);
             }
-        } finally {
-            setIsLoading(false);
         }
     };
 
