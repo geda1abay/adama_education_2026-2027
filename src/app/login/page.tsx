@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth, useFirestore } from "@/firebase"; // Import useAuth and useFirestore
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"; // Import sign in and create user
-import { doc, setDoc } from "firebase/firestore"; // Import firestore functions
+import { doc, setDoc, getDoc } from "firebase/firestore"; // Import firestore functions
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,7 +35,22 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // After ANY successful login for the admin email, we ensure the role document exists in Firestore.
+            // This makes the login process idempotent and resilient.
+            if (user.email?.toLowerCase() === 'admin@example.com') {
+                const adminRoleRef = doc(firestore, 'admins', user.uid);
+                const adminRoleSnap = await getDoc(adminRoleRef);
+                if (!adminRoleSnap.exists()) {
+                    console.log('Admin auth user exists, but role document is missing. Creating it now...');
+                    // This is safe because our security rules only allow this for the admin's UID.
+                    await setDoc(adminRoleRef, { userId: user.uid, role: 'admin' });
+                    console.log('Admin role document created.');
+                }
+            }
+
             router.push('/dashboard');
         } catch (signInError: any) {
             // For the special admin@example.com case, if sign-in fails, we attempt to create the account.
@@ -139,5 +154,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
-    
