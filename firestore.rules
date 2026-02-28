@@ -127,16 +127,30 @@ service cloud.firestore {
     // --------------------------------------------------------------------------
 
     /**
-     * @description Defines user roles. These documents are only for `exists()` checks
-     *              in other rules and should not be directly accessed by clients.
+     * @description Defines the admin role. Special rule allows the first admin
+     *              ('admin@example.com') to create their own role document.
+     * @path        /user_roles/admins/{userId}
+     * @allow       (create) The user with email 'admin@example.com' can create their own role document.
+     * @allow       (update, delete) Existing admins can manage roles.
+     * @deny        Reading or listing roles.
+     * @principle   Securely bootstraps the first admin user while restricting further role management.
+     */
+    match /user_roles/admins/{userId} {
+      allow create: if request.auth.token.email == 'admin@example.com' && isOwner(userId);
+      allow update, delete: if isAdmin();
+      allow get, list: if false; // Keep roles from being enumerated.
+    }
+
+    /**
+     * @description Defines non-admin user roles. These documents are only for `exists()` checks.
      * @path        /user_roles/{role}/{userId}
-     * @allow       (create) An Admin can create a role document.
+     * @allow       (create, update, delete) Only an Admin can manage these role documents.
      * @deny        Any non-admin user trying to modify roles. Any user trying to read roles.
      * @principle   Restricts role management to Admins and prevents role enumeration.
      */
-    match /user_roles/{role}/{userId} {
-      allow get, list: if false;
+    match /user_roles/{role}/{userId} where role != 'admins' {
       allow create, update, delete: if isAdmin();
+      allow get, list: if false;
     }
 
 
@@ -155,7 +169,8 @@ service cloud.firestore {
     match /students/{studentId} {
       allow get: if isAdmin() || isStudentOrParent(studentId);
       allow list: if isAdmin();
-      allow create: if isOwner(studentId) && isCreatingOwnUserDoc(studentId);
+      // Allow admin to create students, not just the user themselves.
+      allow create: if isAdmin() || (isOwner(studentId) && isCreatingOwnUserDoc(studentId));
       allow update: if (isAdmin() || isOwner(studentId)) && isUpdatingOwnUserDoc() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
@@ -170,7 +185,8 @@ service cloud.firestore {
     match /teachers/{teacherId} {
       allow get: if isAdmin() || isOwner(teacherId);
       allow list: if isAdmin();
-      allow create: if isOwner(teacherId) && isCreatingOwnUserDoc(teacherId);
+       // Allow admin to create teachers.
+      allow create: if isAdmin() || (isOwner(teacherId) && isCreatingOwnUserDoc(teacherId));
       allow update: if (isAdmin() || isOwner(teacherId)) && isUpdatingOwnUserDoc() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }

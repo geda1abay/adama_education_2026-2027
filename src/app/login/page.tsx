@@ -35,33 +35,38 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            // First, try to sign in
             await signInWithEmailAndPassword(auth, email, password);
             router.push('/dashboard');
         } catch (signInError: any) {
-            // If the user is not found, and it's the admin email, try to create the user
-            if (signInError.code === 'auth/user-not-found' && email.toLowerCase() === 'admin@example.com') {
+            // For the special admin@example.com case, if sign-in fails, we attempt to create the account.
+            // `auth/invalid-credential` is the modern error for both "user not found" and "wrong password".
+            if (email.toLowerCase() === 'admin@example.com' && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
                 try {
-                    console.log('Admin user not found. Attempting to create a new admin account...');
+                    console.log('Admin user not found or credential invalid. Attempting to create a new admin account...');
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
-                    // IMPORTANT: Create the admin role document in Firestore for authorization
+                    // This requires a security rule to allow the first admin to be created.
                     const adminRoleRef = doc(firestore, 'user_roles/admins', user.uid);
                     await setDoc(adminRoleRef, { role: 'admin' });
 
                     console.log('Admin user and role created successfully.');
                     router.push('/dashboard'); // Redirect after successful creation
                 } catch (createError: any) {
-                    setError('Failed to create admin account. Please check console for details.');
-                    console.error('Admin creation error:', createError);
+                    // If creating the user fails because the email is already in use,
+                    // it means the admin account exists but the password was wrong.
+                    if (createError.code === 'auth/email-already-in-use') {
+                        setError('Invalid password for admin account. Please try again.');
+                    } else {
+                        setError('Failed to create admin account. Please check console for details.');
+                        console.error('Admin creation error:', createError);
+                    }
                 }
-            } else if (signInError.code === 'auth/wrong-password' || signInError.code === 'auth/invalid-credential') {
-                setError('Invalid email or password. Please try again.');
             } else if (signInError.code === 'auth/invalid-email') {
                 setError('The email address is not a valid format.');
             } else {
-                setError('An unexpected error occurred. Please try again later.');
+                // For any other error, including invalid-credential on a non-admin account
+                setError('Invalid email or password. Please try again.');
                 console.error(signInError);
             }
         } finally {
