@@ -31,7 +31,7 @@ export default function StudentDashboardLayout({
     if (!isLoading && !isAuthorized) {
       router.push('/student/login');
     }
-  }, [router, isLoading, isAuthorized]);
+  }, [isLoading, isAuthorized]);
 
   if (isLoading || !isAuthorized) {
     return (
@@ -64,5 +64,3 @@ export default function StudentDashboardLayout({
     </DataProvider>
   );
 }
-
-    

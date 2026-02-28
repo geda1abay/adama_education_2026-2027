@@ -32,7 +32,7 @@ export default function DashboardLayout({
     if (!isLoading && !isAuthorized) {
       router.push('/login');
     }
-  }, [router, isLoading, isAuthorized]);
+  }, [isLoading, isAuthorized]);
 
   // Show skeleton while loading, or if the user is not authorized (before the redirect happens).
   if (isLoading || !isAuthorized) {
