@@ -36,7 +36,7 @@ export default function LoginPage() {
             const adminRoleSnap = await getDoc(adminRoleRef);
             if (!adminRoleSnap.exists()) {
                 console.log("Admin role document missing, creating...");
-                await setDoc(adminRoleRef, { userId: userId, role: 'admin' });
+                await setDoc(adminRoleRef, { userId: userId, role: 'admin', email: email.toLowerCase() });
                 // Verify creation
                 const finalCheck = await getDoc(adminRoleRef);
                 if (!finalCheck.exists()) {

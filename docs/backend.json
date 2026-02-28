@@ -16,11 +16,17 @@
           "enum": [
             "admin"
           ]
+        },
+        "email": {
+          "type": "string",
+          "description": "The admin user's email address.",
+          "format": "email"
         }
       },
       "required": [
         "userId",
-        "role"
+        "role",
+        "email"
       ]
     },
     "Student": {
