@@ -120,16 +120,16 @@ service cloud.firestore {
 
     /**
      * @description Defines the admin role. A special rule allows the first admin
-     *              ('gedaabay@gmail.com') to create their own role document by
+     *              ('gedaabay8@gmail.com') to create their own role document by
      *              verifying the email in the document data, avoiding auth token
      *              race conditions.
      * @path        /admins/{userId}
-     * @allow       (create) The user with email 'gedaabay@gmail.com' can create their own role document.
+     * @allow       (create) The user with email 'gedaabay8@gmail.com' can create their own role document.
      * @allow       (read, write) Existing admins can manage roles.
      * @principle   Securely bootstraps the first admin user while restricting further role management.
      */
     match /admins/{userId} {
-      allow create: if request.resource.data.email == 'gedaabay@gmail.com' && isOwner(userId);
+      allow create: if request.resource.data.email == 'gedaabay8@gmail.com' && isOwner(userId);
       allow get: if isSignedIn();
       allow list, update, delete: if isAdmin();
     }
@@ -399,5 +399,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
