@@ -24,7 +24,7 @@ export default function LoginPage() {
     const router = useRouter();
     const auth = useAuth(); // Get auth instance
     const firestore = useFirestore(); // Get firestore instance
-    const [email, setEmail] = useState('admin@example.com');
+    const [email, setEmail] = useState('gedaabay@gmail.com');
     const [password, setPassword] = useState('151835');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -57,8 +57,8 @@ export default function LoginPage() {
         setError('');
         setIsLoading(true);
 
-        // Only allow admin@example.com to attempt login here
-        if (email.toLowerCase() !== 'admin@example.com') {
+        // Only allow gedaabay@gmail.com to attempt login here
+        if (email.toLowerCase() !== 'gedaabay@gmail.com') {
             setError("This login is for administrators only.");
             setIsLoading(false);
             return;
@@ -114,7 +114,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="gedaabay@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
