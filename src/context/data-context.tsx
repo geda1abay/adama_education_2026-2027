@@ -8,7 +8,7 @@ import {
     type Student,
     type Fee,
 } from '@/lib/data';
-import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, setDoc, writeBatch, getDocs, updateDoc, query } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -36,8 +36,8 @@ interface DataContextType {
   studentAttendance: StudentAttendance[];
   recentExamResults: ExamResult[];
   feesData: Fee[];
-  addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => void;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status' | 'email'> & {email:string, password: string}) => void;
+  addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'> & { password: string }) => void;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'> & { password: string}) => void;
   addAttendance: (attendanceData: StudentAttendance) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
   addFee: (feeData: Fee) => void;
@@ -73,14 +73,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
 
-  const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
+  const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'> & { password: string }) => {
     try {
         // NOTE: Creating users on the client is not recommended for production.
         // This should be moved to a secure backend (e.g., Cloud Function).
         const userCredential = await createUserWithEmailAndPassword(auth, studentData.email, studentData.password);
         const newStudentId = userCredential.user.uid;
         
-        // Use a random number for demo purposes to avoid dependency on students.length
         const randomId = Math.floor(Math.random() * 10000);
         const newRegistrationId = `Hgr/${String(randomId).padStart(4, '0')}/24`;
         
@@ -93,27 +92,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
             parentName: studentData.parentName,
             mobile: studentData.mobile,
             email: studentData.email,
-            password: studentData.password, // Storing password is not secure, only for demo
             registrationId: newRegistrationId,
             status: 'Active',
             avatar: `user-avatar-${(randomId % 5) + 1}`,
         };
 
-        await setDoc(doc(firestore, 'students', newStudentId), newStudentDoc);
+        const studentRef = doc(firestore, 'students', newStudentId);
+        setDocumentNonBlocking(studentRef, newStudentDoc, {});
         
         toast({ title: "Student Added", description: `${studentData.name} has been added successfully.` });
 
     } catch (error: any) {
         console.error("Error adding student:", error);
-        toast({
-            variant: "destructive",
-            title: "Error adding student",
-            description: error.message || 'An unknown error occurred.'
-        });
+         if (error.code === 'auth/email-already-in-use') {
+             toast({
+                variant: "destructive",
+                title: "Error adding student",
+                description: "This email is already in use by another account."
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error adding student",
+                description: error.message || 'An unknown error occurred.'
+            });
+        }
     }
   }, [auth, firestore, toast]);
 
-  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status' | 'email'> & {email: string, password: string}) => {
+  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'> & { password: string }) => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, teacherData.email, teacherData.password);
         const newTeacherId = userCredential.user.uid;
@@ -131,16 +138,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
             avatar: `user-avatar-${(randomId % 3) + 6}`,
         };
 
-        await setDoc(doc(firestore, 'teachers', newTeacherId), newTeacherDoc);
+        const teacherRef = doc(firestore, 'teachers', newTeacherId);
+        setDocumentNonBlocking(teacherRef, newTeacherDoc, {});
 
         toast({ title: "Teacher Added", description: `${teacherData.name} has been added successfully.` });
     } catch (error: any) {
         console.error("Error adding teacher:", error);
-        toast({
-            variant: "destructive",
-            title: "Error adding teacher",
-            description: error.message || 'An unknown error occurred.'
-        });
+        if (error.code === 'auth/email-already-in-use') {
+             toast({
+                variant: "destructive",
+                title: "Error adding teacher",
+                description: "This email is already in use by another account."
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error adding teacher",
+                description: error.message || 'An unknown error occurred.'
+            });
+        }
     }
   }, [auth, firestore, toast]);
 
@@ -194,17 +210,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     console.log("Clearing all students...");
     try {
         const studentsSnapshot = await getDocs(collection(firestore, 'students'));
-        const batch = writeBatch(firestore);
         studentsSnapshot.docs.forEach((studentDoc) => {
-            batch.delete(doc(firestore, 'students', studentDoc.id));
+            deleteDocumentNonBlocking(doc(firestore, 'students', studentDoc.id));
             // Note: This does not delete the user from Firebase Auth.
             // That requires the Admin SDK and a backend function.
         });
-        await batch.commit();
-        toast({ title: "Students Cleared", description: "All student data has been removed from Firestore." });
+        toast({ title: "Students Cleared", description: "All student data is being removed from Firestore." });
     } catch (error: any) {
         console.error("Error clearing students:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not clear students." });
+        const permissionError = new FirestorePermissionError({ operation: 'list', path: 'students' });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: "destructive", title: "Error", description: "Could not list students to clear them." });
     }
   }, [firestore, toast]);
 
@@ -212,15 +228,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     console.log("Clearing all teachers...");
     try {
         const teachersSnapshot = await getDocs(collection(firestore, 'teachers'));
-        const batch = writeBatch(firestore);
         teachersSnapshot.docs.forEach((teacherDoc) => {
-            batch.delete(doc(firestore, 'teachers', teacherDoc.id));
+            deleteDocumentNonBlocking(doc(firestore, 'teachers', teacherDoc.id));
         });
-        await batch.commit();
         toast({ title: "Teachers Cleared", description: "All teacher data has been removed from Firestore." });
     } catch (error: any) {
         console.error("Error clearing teachers:", error);
-         toast({ variant: "destructive", title: "Error", description: "Could not clear teachers." });
+        const permissionError = new FirestorePermissionError({ operation: 'list', path: 'teachers' });
+        errorEmitter.emit('permission-error', permissionError);
+         toast({ variant: "destructive", title: "Error", description: "Could not list teachers to clear them." });
     }
   }, [firestore, toast]);
 
@@ -259,5 +275,3 @@ export function useData() {
   }
   return context;
 }
-
-    
