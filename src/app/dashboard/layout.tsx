@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
 import SidebarNav from '@/components/layout/sidebar-nav';
 import { DataProvider } from '@/context/data-context';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'; // Import firebase hooks
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -24,45 +24,51 @@ export default function DashboardLayout({
   }, [firestore, user]);
 
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
-  
+
   const isLoading = isUserLoading || isAdminRoleLoading;
-  const isAuthorized = !isLoading && user && adminRole;
 
   useEffect(() => {
-    if (!isLoading && !isAuthorized) {
+    // Wait until all loading is finished before making a decision.
+    if (isLoading) {
+      return; // Still loading, do nothing.
+    }
+
+    // After loading, if there's no user, or the user does not have an admin role, redirect.
+    if (!user || !adminRole) {
       router.push('/login');
     }
-  }, [router, isLoading, isAuthorized]);
+  }, [router, user, adminRole, isLoading]);
 
-  if (isLoading || !isAuthorized) {
+  // Show skeleton while loading, or if the user is not authorized (before the redirect happens).
+  if (isLoading || !user || !adminRole) {
     return (
-        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-            <div className="hidden border-r bg-muted/40 md:block">
-                <div className="flex h-full max-h-screen flex-col gap-2">
-                    <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-                        <Skeleton className="h-6 w-32" />
-                    </div>
-                    <div className="flex-1">
-                        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-                            <Skeleton className="h-8 w-full" />
-                            <Skeleton className="h-8 w-full mt-2" />
-                            <Skeleton className="h-8 w-full mt-2" />
-                        </nav>
-                    </div>
-                </div>
+      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+        <div className="hidden border-r bg-muted/40 md:block">
+          <div className="flex h-full max-h-screen flex-col gap-2">
+            <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+              <Skeleton className="h-6 w-32" />
             </div>
-            <div className="flex flex-col">
-                <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <Skeleton className="h-8 w-48 ml-auto" />
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                </header>
-                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-64 w-full" />
-                </main>
+            <div className="flex-1">
+              <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full mt-2" />
+                <Skeleton className="h-8 w-full mt-2" />
+              </nav>
             </div>
+          </div>
         </div>
+        <div className="flex flex-col">
+          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-8 w-48 ml-auto" />
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </header>
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </main>
+        </div>
+      </div>
     );
   }
 
@@ -82,5 +88,3 @@ export default function DashboardLayout({
     </DataProvider>
   );
 }
-
-    
