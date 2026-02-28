@@ -31,11 +31,11 @@ export default function StudentLoginPage() {
 
         const student = STUDENTS.find(s => s.email.toLowerCase() === email.toLowerCase());
 
-        if (student && password === '1515') {
+        if (student && password === student.password) {
             sessionStorage.setItem('studentId', student.id); // Store the internal ID
             router.push('/student/dashboard');
         } else {
-            setError('Invalid Email or Password. The password for all students is 1515.');
+            setError('Invalid email or password. Please try again.');
         }
     }
 
@@ -81,7 +81,7 @@ export default function StudentLoginPage() {
                 <Link
                   href="#"
                   className="ml-auto inline-block text-sm underline"
-                  onClick={(e) => { e.preventDefault(); alert("The password is '1515' for all students for this demo."); }}
+                  onClick={(e) => { e.preventDefault(); alert("Please contact the administration to reset your password."); }}
                 >
                   Forgot your password?
                 </Link>

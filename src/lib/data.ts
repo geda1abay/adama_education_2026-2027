@@ -9,6 +9,7 @@ export type Student = {
   parentName: string;
   mobile: string;
   email: string;
+  password: string;
   avatar: string;
   status: 'Active' | 'Inactive';
 };
@@ -176,6 +177,7 @@ export const STUDENTS: Student[] = [
     parentName: 'Kebede Alemu',
     mobile: '+251 912 345 678',
     email: 'abebe.k@example.com',
+    password: 'password123',
     avatar: 'user-avatar-1',
     status: 'Active',
   },
@@ -187,6 +189,7 @@ export const STUDENTS: Student[] = [
     parentName: 'Tadesse Lemma',
     mobile: '+251 911 223 344',
     email: 'birtukan.t@example.com',
+    password: 'password123',
     avatar: 'user-avatar-2',
     status: 'Active',
   },
@@ -198,6 +201,7 @@ export const STUDENTS: Student[] = [
     parentName: 'Dibaba Kenenisa',
     mobile: '+251 922 556 677',
     email: 'chala.d@example.com',
+    password: 'password123',
     avatar: 'user-avatar-3',
     status: 'Inactive',
   },
