@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { GraduationCap, LogOut, UserCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/context/data-context';
+import { useUser, useAuth } from '@/firebase'; // Import firebase hooks
+import { signOut } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import type { Student } from '@/lib/data';
 import { Skeleton } from '../ui/skeleton';
 import {
   DropdownMenu,
@@ -21,25 +22,22 @@ import {
 
 export default function StudentHeader() {
   const { students } = useData();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const router = useRouter();
-  const [student, setStudent] = useState<Student | null>(null);
 
-  useEffect(() => {
-    const studentId = sessionStorage.getItem('studentId');
-    if (studentId) {
-      const currentStudent = students.find(s => s.id === studentId);
-      if (currentStudent) {
-        setStudent(currentStudent);
-      }
-    }
-  }, [students]);
+  const student = useMemo(() => {
+    if (!user) return null;
+    return students.find(s => s.id === user.uid) ?? null;
+  }, [students, user]);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('studentId');
+  const handleLogout = async () => {
+    await signOut(auth);
     router.push('/student/login');
   };
 
   const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
+  const isLoading = isUserLoading || students.length === 0;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
@@ -52,7 +50,15 @@ export default function StudentHeader() {
         </Link>
 
       <div className="ml-auto flex items-center gap-4">
-        {student ? (
+        {isLoading ? (
+            <div className="flex items-center gap-2">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <div className='flex flex-col gap-1'>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-16" />
+                </div>
+            </div>
+        ) : student ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 focus-visible:ring-0 h-12">
@@ -82,15 +88,7 @@ export default function StudentHeader() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-9 w-9 rounded-full" />
-            <div className='flex flex-col gap-1'>
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          </div>
-        )}
+        ) : null}
       </div>
     </header>
   );

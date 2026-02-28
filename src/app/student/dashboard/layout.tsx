@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { DataProvider } from '@/context/data-context';
 import StudentHeader from '@/components/student/header';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'; // Import firebase hooks
+import { doc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentDashboardLayout({
   children,
@@ -11,19 +14,43 @@ export default function StudentDashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const studentRoleRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'user_roles/students', user.uid);
+  }, [firestore, user]);
+
+  const { data: studentRole, isLoading: isStudentRoleLoading } = useDoc(studentRoleRef);
+
+  const isLoading = isUserLoading || isStudentRoleLoading;
+  const isAuthorized = !isLoading && user && studentRole;
 
   useEffect(() => {
-    const studentId = sessionStorage.getItem('studentId');
-    if (studentId) {
-      setIsAuthorized(true);
-    } else {
+    if (!isLoading && !isAuthorized) {
       router.push('/student/login');
     }
-  }, [router]);
+  }, [router, isLoading, isAuthorized]);
 
-  if (!isAuthorized) {
-    return null; // Or a loading spinner
+  if (isLoading || !isAuthorized) {
+    return (
+        <div className="min-h-screen w-full bg-background">
+            <header className="flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
+                <Skeleton className="h-6 w-48" />
+                <div className="ml-auto flex items-center gap-4">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div className="flex flex-col gap-1">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-16" />
+                    </div>
+                </div>
+            </header>
+            <main className="p-4 lg:p-6">
+                <Skeleton className="h-64 w-full" />
+            </main>
+        </div>
+    );
   }
 
   return (

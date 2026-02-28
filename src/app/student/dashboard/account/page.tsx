@@ -1,28 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useData } from '@/context/data-context';
+import { useUser } from '@/firebase'; // Import useUser
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import type { Student } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useMemo } from 'react';
 
 export default function StudentAccountPage() {
   const { students } = useData();
-  const [student, setStudent] = useState<Student | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isUserLoading } = useUser();
 
-  useEffect(() => {
-    const studentId = sessionStorage.getItem('studentId');
-    if (studentId) {
-      const currentStudent = students.find(s => s.id === studentId);
-      if (currentStudent) {
-        setStudent(currentStudent);
-      }
-    }
-    setIsLoading(false);
-  }, [students]);
+  const student = useMemo(() => {
+    if (!user) return null;
+    return students.find(s => s.id === user.uid) ?? null;
+  }, [students, user]);
+  
+  const isLoading = isUserLoading || students.length === 0;
 
   const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
 

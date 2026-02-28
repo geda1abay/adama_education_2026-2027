@@ -4,6 +4,8 @@ import Link from "next/link"
 import { Bot, Terminal } from "lucide-react"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/firebase"; // Import useAuth
+import { signInWithEmailAndPassword } from "firebase/auth"; // Import signIn
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,19 +21,37 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
     const router = useRouter();
+    const auth = useAuth(); // Get auth instance
+    const [email, setEmail] = useState('admin@example.com');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsLoading(true);
 
-        // For this demo, we'll just check the password.
-        if (password === '151835') {
-            sessionStorage.setItem('isAdmin', 'true');
+        // For the demo, we only allow a specific admin user
+        if (email.toLowerCase() !== 'admin@example.com') {
+          setError('Invalid email for admin login.');
+          setIsLoading(false);
+          return;
+        }
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // The auth state change will be caught by the layout, no need for sessionStorage
             router.push('/dashboard');
-        } else {
-            setError('Invalid password. Please try again.');
+        } catch (err: any) {
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Invalid email or password. Please try again.');
+            } else {
+                setError('An unexpected error occurred. Please try again later.');
+                console.error(err);
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -59,8 +79,10 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 placeholder="admin@example.com"
-                defaultValue="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="grid gap-2">
@@ -73,10 +95,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)} 
                 required 
+                disabled={isLoading}
               />
             </div>
-            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
-            Login
+            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isLoading}>
+              {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">

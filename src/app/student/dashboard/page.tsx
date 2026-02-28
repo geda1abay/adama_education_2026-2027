@@ -1,30 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useData } from '@/context/data-context';
+import { useUser } from '@/firebase'; // Import useUser
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { Student } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useMemo } from 'react';
 
 export default function StudentDashboardPage() {
   const { students, recentExamResults } = useData();
-  const [student, setStudent] = useState<Student | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isUserLoading } = useUser();
 
-  useEffect(() => {
-    const studentId = sessionStorage.getItem('studentId');
-    // The auth check is now in the layout, so we just need to get the student data
-    if (studentId) {
-      const currentStudent = students.find(s => s.id === studentId);
-      if (currentStudent) {
-        setStudent(currentStudent);
-      }
-    }
-    setIsLoading(false);
-  }, [students]);
-
+  const student = useMemo(() => {
+    if (!user) return null;
+    return students.find(s => s.id === user.uid) ?? null;
+  }, [students, user]);
+  
+  const isLoading = isUserLoading || students.length === 0;
 
   if (isLoading) {
     return (
@@ -67,7 +60,6 @@ export default function StudentDashboardPage() {
   }
 
   if (!student) {
-    // This case should be handled by the redirect in the layout, but as a fallback.
     return (
         <div className="flex items-center justify-center h-[80vh]">
             <Card>

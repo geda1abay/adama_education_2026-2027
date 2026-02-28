@@ -2,16 +2,30 @@
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 import { 
-    STUDENTS, 
-    TEACHERS,
     STUDENT_ATTENDANCE,
     RECENT_EXAM_RESULTS,
     FEES_DATA,
     type Student,
     type Fee,
 } from '@/lib/data';
+import { useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, setDoc, writeBatch, getDocs, updateDoc, query } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-type Teacher = (typeof TEACHERS)[number];
+
+// The Teacher type from data.ts is different from the entity. Let's define it.
+type Teacher = {
+  id: string;
+  name: string;
+  subject: string;
+  mobile: string;
+  email: string;
+  avatar: string;
+  status: 'Active' | 'Inactive';
+};
+
 type StudentAttendance = (typeof STUDENT_ATTENDANCE)[number];
 type ExamResult = (typeof RECENT_EXAM_RESULTS)[number];
 
@@ -35,67 +49,98 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [students, setStudents] = useState<Student[]>(STUDENTS);
-  const [teachers, setTeachers] = useState<Teacher[]>(TEACHERS);
+  const firestore = useFirestore();
+  const auth = useAuth();
+  const { toast } = useToast();
+
+  const studentsQuery = useMemoFirebase(() => query(collection(firestore, 'students')), [firestore]);
+  const { data: studentsData, isLoading: studentsLoading } = useCollection<Omit<Student, 'id'>>(studentsQuery);
+  const students = useMemo(() => studentsData || [], [studentsData]);
+
+  const teachersQuery = useMemoFirebase(() => query(collection(firestore, 'teachers')), [firestore]);
+  const { data: teachersData, isLoading: teachersLoading } = useCollection<Omit<Teacher, 'id'>>(teachersQuery);
+  const teachers = useMemo(() => teachersData || [], [teachersData]);
+
+  // Keep mock data for these for now
   const [studentAttendance, setStudentAttendance] = useState<StudentAttendance[]>(STUDENT_ATTENDANCE);
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
 
-  const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
-    const newStudentId = `STU-${String(students.length + 1).padStart(3, '0')}`;
-    const newRegistrationId = `Hgr/${String(students.length + 1000).padStart(4, '0')}/24`;
-    const newStudent: Student = {
-      id: newStudentId,
-      registrationId: newRegistrationId,
-      ...studentData,
-      status: 'Active',
-      avatar: `user-avatar-${(students.length % 5) + 1}`,
-    };
-    setStudents(prev => [...prev, newStudent]);
+  const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
+    try {
+        // NOTE: Creating users on the client is not recommended for production.
+        // This should be moved to a secure backend (e.g., Cloud Function).
+        const userCredential = await createUserWithEmailAndPassword(auth, studentData.email, studentData.password);
+        const newStudentId = userCredential.user.uid;
+        
+        const studentCount = students.length;
+        const newRegistrationId = `Hgr/${String(studentCount + 1000).padStart(4, '0')}/24`;
+        
+        const newStudentDoc = {
+            userId: newStudentId,
+            firstName: studentData.name.split(' ')[0] || '',
+            lastName: studentData.name.split(' ')[1] || '',
+            name: studentData.name, // Keeping full name for compatibility
+            class: studentData.class,
+            parentName: studentData.parentName,
+            mobile: studentData.mobile,
+            email: studentData.email,
+            registrationId: newRegistrationId,
+            status: 'Active',
+            avatar: `user-avatar-${(studentCount % 5) + 1}`,
+        };
 
-    // Add attendance for the new student for one year
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const newAttendance: StudentAttendance[] = months.map((month, monthIndex) => {
-      const studentIdNum = parseInt(newStudentId.split('-')[1]);
-      const daysPresent = 18 + ((studentIdNum + monthIndex) % 5);
-      return {
-        studentId: newStudentId,
-        month,
-        daysPresent,
-        totalDays: 22,
-      };
-    });
-    setStudentAttendance(prev => [...prev, ...newAttendance]);
+        await setDoc(doc(firestore, 'students', newStudentId), newStudentDoc);
+        await setDoc(doc(firestore, 'user_roles/students', newStudentId), { role: 'student' });
+        
+        toast({ title: "Student Added", description: `${studentData.name} has been added successfully.` });
 
-    // Add a placeholder exam result
-    const newExamResult: ExamResult = {
-        id: `EXAM-${String(recentExamResults.length + 1).padStart(3, '0')}`,
-        studentId: newStudentId,
-        subject: 'Mathematics',
-        score: 'N/A',
-        grade: 'N/A',
-    };
-    setRecentExamResults(prev => [newExamResult, ...prev]);
+    } catch (error: any) {
+        console.error("Error adding student:", error);
+        toast({
+            variant: "destructive",
+            title: "Error adding student",
+            description: error.message || 'An unknown error occurred.'
+        });
+    }
+  }, [auth, firestore, students.length, toast]);
 
-    // Add a fee record
-    const newFee: Fee = {
-        studentId: newStudentId,
-        amount: 1200,
-        dueDate: '2024-08-15',
-        status: 'Due',
-    };
-    setFeesData(prev => [...prev, newFee]);
-  }, [students.length, recentExamResults.length]);
+  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => {
+    // This requires a password, but the form doesn't collect it.
+    // For now, let's use a default password and log a warning.
+    console.warn("Using default password for teacher creation. This should be changed.");
+    const defaultPassword = "password123";
 
-  const addTeacher = useCallback((teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => {
-    const newTeacher: Teacher = {
-      id: `TCH-${String(teachers.length + 1).padStart(3, '0')}`,
-      ...teacherData,
-      status: 'Active',
-      avatar: `user-avatar-${(teachers.length % 3) + 6}`, // Use different avatars
-    };
-    setTeachers(prev => [...prev, newTeacher]);
-  }, [teachers.length]);
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, teacherData.email, defaultPassword);
+        const newTeacherId = userCredential.user.uid;
+
+        const teacherCount = teachers.length;
+        const newTeacherDoc = {
+            userId: newTeacherId,
+            firstName: teacherData.name.split(' ')[0] || '',
+            lastName: teacherData.name.split(' ')[1] || '',
+            name: teacherData.name,
+            subject: teacherData.subject,
+            mobile: teacherData.mobile,
+            email: teacherData.email,
+            status: 'Active',
+            avatar: `user-avatar-${(teacherCount % 3) + 6}`,
+        };
+
+        await setDoc(doc(firestore, 'teachers', newTeacherId), newTeacherDoc);
+        await setDoc(doc(firestore, 'user_roles/teachers', newTeacherId), { role: 'teacher' });
+
+        toast({ title: "Teacher Added", description: `${teacherData.name} has been added successfully.` });
+    } catch (error: any) {
+        console.error("Error adding teacher:", error);
+        toast({
+            variant: "destructive",
+            title: "Error adding teacher",
+            description: error.message || 'An unknown error occurred.'
+        });
+    }
+  }, [auth, firestore, teachers.length, toast]);
 
   const addAttendance = useCallback((data: StudentAttendance) => {
     setStudentAttendance(prev => {
@@ -143,26 +188,50 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const clearStudents = useCallback(() => {
-    setStudents([]);
-    setStudentAttendance([]);
-    setRecentExamResults([]);
-    setFeesData([]);
-  }, []);
+  const clearStudents = useCallback(async () => {
+    console.log("Clearing all students...");
+    try {
+        const studentsSnapshot = await getDocs(collection(firestore, 'students'));
+        const batch = writeBatch(firestore);
+        studentsSnapshot.docs.forEach((studentDoc) => {
+            batch.delete(doc(firestore, 'students', studentDoc.id));
+            batch.delete(doc(firestore, 'user_roles/students', studentDoc.id));
+            // Note: This does not delete the user from Firebase Auth.
+            // That requires the Admin SDK and a backend function.
+        });
+        await batch.commit();
+        toast({ title: "Students Cleared", description: "All student data has been removed from Firestore." });
+    } catch (error: any) {
+        console.error("Error clearing students:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not clear students." });
+    }
+  }, [firestore, toast]);
 
-  const clearTeachers = useCallback(() => {
-    setTeachers([]);
-  }, []);
+  const clearTeachers = useCallback(async () => {
+    console.log("Clearing all teachers...");
+    try {
+        const teachersSnapshot = await getDocs(collection(firestore, 'teachers'));
+        const batch = writeBatch(firestore);
+        teachersSnapshot.docs.forEach((teacherDoc) => {
+            batch.delete(doc(firestore, 'teachers', teacherDoc.id));
+            batch.delete(doc(firestore, 'user_roles/teachers', teacherDoc.id));
+        });
+        await batch.commit();
+        toast({ title: "Teachers Cleared", description: "All teacher data has been removed from Firestore." });
+    } catch (error: any) {
+        console.error("Error clearing teachers:", error);
+         toast({ variant: "destructive", title: "Error", description: "Could not clear teachers." });
+    }
+  }, [firestore, toast]);
 
   const toggleStudentStatus = useCallback((studentId: string) => {
-    setStudents(prev => 
-      prev.map(student => 
-        student.id === studentId 
-          ? { ...student, status: student.status === 'Active' ? 'Inactive' : 'Active' }
-          : student
-      )
-    );
-  }, []);
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    const newStatus = student.status === 'Active' ? 'Inactive' : 'Active';
+    const studentRef = doc(firestore, 'students', studentId);
+    updateDocumentNonBlocking(studentRef, { status: newStatus });
+  }, [firestore, students]);
 
   const value = useMemo(() => ({
     students,

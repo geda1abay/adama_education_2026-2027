@@ -4,6 +4,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { GraduationCap, Terminal } from "lucide-react"
+import { useAuth } from "@/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,27 +17,35 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { STUDENTS } from "@/lib/data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 export default function StudentLoginPage() {
     const router = useRouter();
+    const auth = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsLoading(true);
 
-        const student = STUDENTS.find(s => s.email.toLowerCase() === email.toLowerCase());
-
-        if (student && password === student.password) {
-            sessionStorage.setItem('studentId', student.id); // Store the internal ID
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // Auth state change will be picked up by the layout
             router.push('/student/dashboard');
-        } else {
-            setError('Invalid email or password. Please try again.');
+        } catch (err: any) {
+             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Invalid email or password. Please try again.');
+            } else {
+                setError('An unexpected error occurred. Please try again later.');
+                console.error(err);
+            }
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -73,6 +83,7 @@ export default function StudentLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="grid gap-2">
@@ -91,10 +102,12 @@ export default function StudentLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)} 
-                required />
+                required 
+                disabled={isLoading}
+                />
             </div>
-                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
-                Login
+                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
           </form>
           <div className="mt-4 text-center text-sm">

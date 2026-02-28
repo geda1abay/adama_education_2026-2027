@@ -1,27 +1,13 @@
 'use client';
 import {
   Bell,
-  Home,
-  LineChart,
-  Package,
-  Package2,
   PanelLeft,
   Search,
-  ShoppingCart,
-  Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,24 +25,25 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import SidebarNav from './sidebar-nav';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth } from '@/firebase'; // Import useAuth
+import { signOut } from 'firebase/auth'; // Import signOut
 
 export default function Header() {
   const router = useRouter();
+  const auth = useAuth(); // Get auth instance
   const userProfileAvatar = PlaceHolderImages.find(
     (img) => img.id === 'user-profile-avatar'
   );
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('isAdmin');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
   };
 
   return (
@@ -69,7 +56,7 @@ export default function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="sm:max-w-xs p-0">
-          <SheetHeader className="sr-only">
+          <SheetHeader>
             <SheetTitle>Menu</SheetTitle>
             <SheetDescription>
               Main navigation menu for the dashboard.
