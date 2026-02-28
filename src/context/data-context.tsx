@@ -80,8 +80,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const userCredential = await createUserWithEmailAndPassword(auth, studentData.email, studentData.password);
         const newStudentId = userCredential.user.uid;
         
-        const studentCount = students.length;
-        const newRegistrationId = `Hgr/${String(studentCount + 1000).padStart(4, '0')}/24`;
+        // Use a random number for demo purposes to avoid dependency on students.length
+        const randomId = Math.floor(Math.random() * 10000);
+        const newRegistrationId = `Hgr/${String(randomId).padStart(4, '0')}/24`;
         
         const newStudentDoc = {
             userId: newStudentId,
@@ -95,7 +96,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             password: studentData.password, // Storing password is not secure, only for demo
             registrationId: newRegistrationId,
             status: 'Active',
-            avatar: `user-avatar-${(studentCount % 5) + 1}`,
+            avatar: `user-avatar-${(randomId % 5) + 1}`,
         };
 
         await setDoc(doc(firestore, 'students', newStudentId), newStudentDoc);
@@ -111,7 +112,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             description: error.message || 'An unknown error occurred.'
         });
     }
-  }, [auth, firestore, students.length, toast]);
+  }, [auth, firestore, toast]);
 
   const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => {
     // This requires a password, but the form doesn't collect it.
@@ -123,7 +124,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const userCredential = await createUserWithEmailAndPassword(auth, teacherData.email, defaultPassword);
         const newTeacherId = userCredential.user.uid;
 
-        const teacherCount = teachers.length;
+        const randomId = Math.floor(Math.random() * 1000);
         const newTeacherDoc = {
             userId: newTeacherId,
             firstName: teacherData.name.split(' ')[0] || '',
@@ -133,7 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             mobile: teacherData.mobile,
             email: teacherData.email,
             status: 'Active',
-            avatar: `user-avatar-${(teacherCount % 3) + 6}`,
+            avatar: `user-avatar-${(randomId % 3) + 6}`,
         };
 
         await setDoc(doc(firestore, 'teachers', newTeacherId), newTeacherDoc);
@@ -148,7 +149,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             description: error.message || 'An unknown error occurred.'
         });
     }
-  }, [auth, firestore, teachers.length, toast]);
+  }, [auth, firestore, toast]);
 
   const addAttendance = useCallback((data: StudentAttendance) => {
     setStudentAttendance(prev => {
