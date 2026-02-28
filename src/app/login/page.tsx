@@ -45,7 +45,7 @@ export default function LoginPage() {
                 console.log("Admin role created and verified.");
             }
             router.push('/dashboard');
-        } catch (e) {
+        } catch (e: any) {
             console.error("Role verification/creation failed:", e);
             setError("An error occurred verifying admin permissions. Please try again.");
             setIsLoading(false); // Make sure to stop loading indicator on error
@@ -66,13 +66,14 @@ export default function LoginPage() {
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            await userCredential.user.getIdToken(true); // Force token refresh
             await ensureAdminRoleAndRedirect(userCredential.user.uid);
         } catch (signInError: any) {
             if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
                 console.log('Admin user not found. Attempting to create a new admin account...');
                 try {
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    // After creating the user, ensure the role exists and redirect
+                    await userCredential.user.getIdToken(true); // Force token refresh for new user
                     await ensureAdminRoleAndRedirect(userCredential.user.uid);
                 } catch (createError: any) {
                     if (createError.code === 'auth/email-already-in-use') {
@@ -84,7 +85,7 @@ export default function LoginPage() {
                     setIsLoading(false);
                 }
             } else {
-                setError('An unexpected error occurred during login.');
+                setError(signInError.message || 'An unexpected error occurred during login.');
                 console.error(signInError);
                 setIsLoading(false);
             }
