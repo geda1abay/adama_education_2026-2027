@@ -28,6 +28,7 @@ interface DataContextType {
   addFee: (feeData: Fee) => void;
   clearStudents: () => void;
   clearTeachers: () => void;
+  toggleStudentStatus: (studentId: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -41,7 +42,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
     const newStudentId = `STU-${String(students.length + 1).padStart(3, '0')}`;
-    const newRegistrationId = `Hgr/${String(students.length).padStart(4, '0')}/24`;
+    const newRegistrationId = `Hgr/${String(students.length + 1000).padStart(4, '0')}/24`;
     const newStudent: Student = {
       id: newStudentId,
       registrationId: newRegistrationId,
@@ -142,6 +143,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setTeachers([]);
   }, []);
 
+  const toggleStudentStatus = useCallback((studentId: string) => {
+    setStudents(prev => 
+      prev.map(student => 
+        student.id === studentId 
+          ? { ...student, status: student.status === 'Active' ? 'Inactive' : 'Active' }
+          : student
+      )
+    );
+  }, []);
+
   const value = useMemo(() => ({
     students,
     teachers,
@@ -154,7 +165,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addFee,
     clearStudents,
     clearTeachers,
-  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addAttendance, addExamResult, addFee, clearStudents, clearTeachers]);
+    toggleStudentStatus,
+  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

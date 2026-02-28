@@ -65,7 +65,7 @@ const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
 };
 
 export default function StudentsPage() {
-  const { students, addStudent, clearStudents } = useData();
+  const { students, addStudent, clearStudents, toggleStudentStatus } = useData();
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const router = useRouter();
 
@@ -185,7 +185,11 @@ export default function StudentsPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id}`)}>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleStudentStatus(student.id)}>
+                          {student.status === 'Active' ? 'Make Inactive' : 'Make Active'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
