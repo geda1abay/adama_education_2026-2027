@@ -70,7 +70,7 @@ interface DataContextType {
   // Mutation functions
   addStudent: (studentData: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address' | 'classes'> & { password?: string; classes: string }) => Promise<void>;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string; classes?: string }) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
   addAttendance: (attendanceData: Omit<Attendance, 'id'>) => Promise<void>;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => Promise<void>;
@@ -91,20 +91,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const { firestore, auth } = useFirebase();
   const { user: firebaseUser, isUserLoading } = useUser();
 
+  // --- User Profile Derivation ---
+  const [currentStudent, setCurrentStudent] = useState<WithId<Student> | null>(null);
+  const [currentTeacher, setCurrentTeacher] = useState<WithId<Teacher> | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   // --- Data Fetching ---
-  const studentsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'students') : null, [firestore]);
+  const studentsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'students') : null, [firestore, isAdmin]);
   const { data: students, isLoading: isStudentsLoading } = useCollection<Student>(studentsQuery);
 
-  const teachersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teachers') : null, [firestore]);
+  const teachersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'teachers') : null, [firestore, isAdmin]);
   const { data: teachers, isLoading: isTeachersLoading } = useCollection<Teacher>(teachersQuery);
 
-  const feesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'studentFees') : null, [firestore]);
+  // NOTE: These are querying root collections. For a production app with many students,
+  // this would be inefficient. A better approach would be to use collectionGroup queries
+  // with appropriate indexes, or fetch this data on-demand for specific students.
+  // For this MVP, we are keeping them as admin-only root queries.
+  const feesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'studentFees') : null, [firestore, isAdmin]);
   const { data: feesData, isLoading: isFeesLoading } = useCollection<StudentFee>(feesQuery);
 
-  const attendanceQuery = useMemoFirebase(() => firestore ? collection(firestore, 'attendance') : null, [firestore]);
+  const attendanceQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'attendance') : null, [firestore, isAdmin]);
   const { data: studentAttendance, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
 
-  const examResultsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'examResults') : null, [firestore]);
+  const examResultsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'examResults') : null, [firestore, isAdmin]);
   const { data: recentExamResults, isLoading: isExamResultsLoading } = useCollection<ExamResult>(examResultsQuery);
 
   // --- Settings Fetching ---
@@ -117,53 +126,56 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const appearanceDoc = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'appearance') : null, [firestore]);
   const { data: appearance } = useDoc<Appearance>(appearanceDoc);
   
-
-  // --- User Profile Derivation ---
-  const [currentStudent, setCurrentStudent] = useState<WithId<Student> | null>(null);
-  const [currentTeacher, setCurrentTeacher] = useState<WithId<Teacher> | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  
   useEffect(() => {
-    const checkAdmin = async () => {
-      if(firebaseUser && firestore) {
+    const checkAndSetRoles = async () => {
+      if (firebaseUser && firestore) {
         const adminDocRef = doc(firestore, 'admins', firebaseUser.uid);
         const adminDoc = await getDoc(adminDocRef);
-        setIsAdmin(adminDoc.exists());
+        let isAdminUser = adminDoc.exists();
+
+        // If the user is the designated first admin and their role doc doesn't exist, create it.
+        // This handles both initial login and subsequent page loads.
+        if (!isAdminUser && firebaseUser.email === 'gedaabay8@gmail.com') {
+          try {
+            await setDoc(adminDocRef, {
+              userId: firebaseUser.uid,
+              role: 'admin',
+              email: firebaseUser.email,
+            });
+            isAdminUser = true; // The role is now established.
+          } catch (e) {
+            console.error("Failed to bootstrap admin user:", e);
+          }
+        }
+        
+        setIsAdmin(isAdminUser);
+
+        // Set the appropriate profile based on the role
+        if (isAdminUser) {
+          setCurrentStudent(null);
+          setCurrentTeacher(null);
+        } else {
+          setCurrentStudent(students?.find(s => s.id === firebaseUser.uid) || null);
+          setCurrentTeacher(teachers?.find(t => t.id === firebaseUser.uid) || null);
+        }
+
       } else {
+        // No user, reset all roles and profiles
         setIsAdmin(false);
+        setCurrentStudent(null);
+        setCurrentTeacher(null);
       }
     };
-    checkAdmin();
+    checkAndSetRoles();
+  }, [firebaseUser, firestore, students, teachers]);
 
-    if (firebaseUser) {
-      setCurrentStudent(students?.find(s => s.id === firebaseUser.uid) || null);
-      setCurrentTeacher(teachers?.find(t => t.id === firebaseUser.uid) || null);
-    } else {
-      setCurrentStudent(null);
-      setCurrentTeacher(null);
-    }
-  }, [firebaseUser, students, teachers, firestore]);
 
   // --- Auth Functions ---
   const adminLogin = async (email: string, password: string): Promise<boolean> => {
-    if (!auth || !firestore) return false;
+    if (!auth) return false;
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // After successful login, ensure the admin document exists.
-      // This is part of the bootstrapping process for the first admin.
-      const adminDocRef = doc(firestore, 'admins', user.uid);
-      const adminDoc = await getDoc(adminDocRef);
-
-      if (!adminDoc.exists() && user.email === 'gedaabay8@gmail.com') {
-        // The security rules allow the first admin to create their own document.
-        await setDoc(adminDocRef, {
-          userId: user.uid,
-          role: 'admin',
-          email: user.email,
-        });
-      }
+      // The useEffect hook now handles checking and creating the admin role doc.
+      await signInWithEmailAndPassword(auth, email, password);
       return true;
     } catch (error) {
       console.error("Admin login failed:", error);
@@ -239,7 +251,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [firestore, toast]);
   
-  const addTeacher = useCallback(async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string }) => {
+  const addTeacher = useCallback(async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string; classes?: string }) => {
     if (!auth || !firestore || !data.password) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
@@ -254,7 +266,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         hireDate: new Date().toISOString(), // Placeholder
         qualification: 'Not specified', // Placeholder
         address: 'Not specified', // Placeholder
-        classes: data.classes.split(',').map(c => c.trim()),
       };
       await setDoc(doc(firestore, 'teachers', userCredential.user.uid), teacherDoc);
       toast({ title: 'Teacher Added', description: `${data.firstName} has been created.` });
