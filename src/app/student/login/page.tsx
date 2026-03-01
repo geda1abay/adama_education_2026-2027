@@ -15,10 +15,14 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useData } from "@/context/data-context";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function StudentLoginPage() {
     const router = useRouter();
+    const { loginStudent } = useData();
+    const { toast } = useToast();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +30,19 @@ export default function StudentLoginPage() {
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        router.push('/student/dashboard');
+        
+        const success = loginStudent(email, password);
+
+        if (success) {
+            router.push('/student/dashboard');
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Invalid email or password. Please try again.',
+            });
+            setIsLoading(false);
+        }
     }
 
   return (

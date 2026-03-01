@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { GraduationCap, LogOut, UserCircle } from 'lucide-react';
@@ -19,15 +18,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function StudentHeader() {
-  const { students } = useData();
+  const { currentUser: student, students, logoutStudent } = useData();
   const router = useRouter();
 
-  // Since there is no auth, let's just display the first student as the "logged in" user for the portal
-  const student = useMemo(() => {
-    return students.length > 0 ? students[0] : null;
-  }, [students]);
-
   const handleLogout = () => {
+    logoutStudent();
     router.push('/student/login');
   };
 

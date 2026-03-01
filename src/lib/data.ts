@@ -11,6 +11,7 @@ export type Student = {
   email: string;
   avatar: string;
   status: 'Active' | 'Inactive';
+  password: string;
 };
 
 export type Fee = {
@@ -178,6 +179,7 @@ export const STUDENTS: Student[] = [
     email: 'abebe.k@example.com',
     avatar: 'user-avatar-1',
     status: 'Active',
+    password: 'password123',
   },
   {
     id: 'STU-002',
@@ -189,6 +191,7 @@ export const STUDENTS: Student[] = [
     email: 'birtukan.t@example.com',
     avatar: 'user-avatar-2',
     status: 'Active',
+    password: 'password123',
   },
   {
     id: 'STU-003',
@@ -200,6 +203,7 @@ export const STUDENTS: Student[] = [
     email: 'chala.d@example.com',
     avatar: 'user-avatar-3',
     status: 'Inactive',
+    password: 'password123',
   },
 ];
 

@@ -29,6 +29,7 @@ const studentSchema = z.object({
   class: z.string().min(1, { message: 'Class is required.' }),
   parentName: z.string().min(2, { message: 'Parent name must be at least 2 characters.' }),
   mobile: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -48,6 +49,7 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
       class: '',
       parentName: '',
       mobile: '',
+      password: '',
     },
   });
 
@@ -127,6 +129,19 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
                   <FormLabel>Mobile</FormLabel>
                   <FormControl>
                     <Input placeholder="+1 123 456 7890" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -42,6 +42,9 @@ interface DataContextType {
   clearStudents: () => void;
   clearTeachers: () => void;
   toggleStudentStatus: (studentId: string) => void;
+  currentUser: Student | null;
+  loginStudent: (email: string, password: string) => boolean;
+  logoutStudent: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -54,6 +57,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [studentAttendance, setStudentAttendance] = useState<StudentAttendance[]>(STUDENT_ATTENDANCE);
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
+  const [currentUser, setCurrentUser] = useState<Student | null>(null);
 
   const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
     const randomId = Math.floor(Math.random() * 10000);
@@ -70,6 +74,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         email: studentData.email,
         status: 'Active',
         avatar: `user-avatar-${(students.length % 5) + 1}`,
+        password: studentData.password,
     };
 
     setStudents(prev => [...prev, newStudent]);
@@ -163,6 +168,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const loginStudent = useCallback((email: string, password: string): boolean => {
+    const student = students.find(s => s.email === email && s.password === password);
+    if (student) {
+      setCurrentUser(student);
+      return true;
+    }
+    return false;
+  }, [students]);
+
+  const logoutStudent = useCallback(() => {
+    setCurrentUser(null);
+  }, []);
+
   const value = useMemo(() => ({
     students,
     teachers,
@@ -177,7 +195,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     clearStudents,
     clearTeachers,
     toggleStudentStatus,
-  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus]);
+    currentUser,
+    loginStudent,
+    logoutStudent,
+  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, loginStudent, logoutStudent]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

@@ -1,21 +1,17 @@
 'use client';
 
+import Link from 'next/link';
 import { useData } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
 
 export default function StudentDashboardPage() {
-  const { students, recentExamResults } = useData();
-
-  // Since there is no auth, let's just display the first student as the "logged in" user for the portal
-  const student = useMemo(() => {
-    return students.length > 0 ? students[0] : null;
-  }, [students]);
+  const { currentUser: student, recentExamResults, students } = useData();
   
-  const isLoading = students.length === 0;
+  const isLoading = students.length === 0 && !student;
 
   if (isLoading) {
     return (
@@ -62,9 +58,14 @@ export default function StudentDashboardPage() {
         <div className="flex items-center justify-center h-[80vh]">
             <Card>
                 <CardHeader>
-                    <CardTitle>No Student Data</CardTitle>
-                    <CardDescription>Could not find student information.</CardDescription>
+                    <CardTitle>Not Logged In</CardTitle>
+                    <CardDescription>Please log in to view your dashboard.</CardDescription>
                 </CardHeader>
+                <CardContent>
+                    <Link href="/student/login">
+                        <Button>Go to Login</Button>
+                    </Link>
+                </CardContent>
             </Card>
         </div>
     )
