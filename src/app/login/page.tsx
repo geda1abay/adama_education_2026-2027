@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
     const router = useRouter();
-    const [email, setEmail] = useState('gedaabay8@gmail.com');
+    const [email, setEmail] = useState('gedaabay@gmail.com');
     const [password, setPassword] = useState('151835');
     const [isLoading, setIsLoading] = useState(false);
 
