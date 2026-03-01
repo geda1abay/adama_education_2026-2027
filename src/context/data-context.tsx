@@ -2,7 +2,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { 
     useFirebase, 
@@ -19,17 +18,18 @@ import {
     addDoc,
     setDoc,
     deleteDoc,
-    getDoc
+    getDoc,
 } from 'firebase/firestore';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
+    User,
 } from 'firebase/auth';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-import {
+import type {
     Student,
     Teacher,
     StudentFee,
@@ -41,7 +41,7 @@ import {
 } from '@/lib/data';
 
 interface DataContextType {
-  // Data collections
+  // Data collections - provides the correct slice of data based on role
   students: WithId<Student>[] | null;
   teachers: WithId<Teacher>[] | null;
   studentAttendance: WithId<Attendance>[] | null;
@@ -49,14 +49,15 @@ interface DataContextType {
   feesData: WithId<StudentFee>[] | null;
 
   // Loading state
-  isLoading: boolean;
-  isUserLoading: boolean;
+  isLoading: boolean; // A single, reliable loading flag for the UI
+  isUserLoading: boolean; // For handling auth-related redirects
 
-  // Current user profiles
-  firebaseUser: any; // Firebase user object
+  // Current user profiles and role
+  firebaseUser: User | null;
   currentStudent: WithId<Student> | null;
   currentTeacher: WithId<Teacher> | null;
   isAdmin: boolean;
+  userRole: 'admin' | 'teacher' | 'student' | null;
 
   // Settings
   adminProfile: WithId<AdminProfile> | null;
@@ -89,84 +90,101 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  const router = useRouter();
   const { firestore, auth } = useFirebase();
   const { user: firebaseUser, isUserLoading: isAuthLoading } = useUser();
 
   // --- Role & Profile State ---
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<'admin' | 'teacher' | 'student' | null>(null);
   const [isRoleLoading, setIsRoleLoading] = useState(true);
-
-  // --- Admin: School-wide Data Fetching ---
-  const adminStudentsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'students') : null, [firestore, isAdmin]);
-  const { data: students, isLoading: isStudentsLoading } = useCollection<Student>(adminStudentsQuery);
-
-  const adminTeachersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'teachers') : null, [firestore, isAdmin]);
-  const { data: teachers, isLoading: isTeachersLoading } = useCollection<Teacher>(adminTeachersQuery);
-
-  const adminFeesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'studentFees') : null, [firestore, isAdmin]);
-  const { data: feesData, isLoading: isFeesLoading } = useCollection<StudentFee>(adminFeesQuery);
-
-  const adminAttendanceQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'attendance') : null, [firestore, isAdmin]);
-  const { data: studentAttendance, isLoading: isAttendanceLoading } = useCollection<Attendance>(adminAttendanceQuery);
-
-  const adminExamResultsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'examResults') : null, [firestore, isAdmin]);
-  const { data: adminRecentExamResults, isLoading: isExamResultsLoading } = useCollection<ExamResult>(adminExamResultsQuery);
-  
-  // --- Admin: Settings Fetching ---
-  const adminProfileDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'adminProfile') : null, [firestore, isAdmin]);
-  const { data: adminProfile, isLoading: isAdminProfileLoading } = useDoc<AdminProfile>(adminProfileDoc);
-  
-  const schoolInfoDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'schoolInfo') : null, [firestore, isAdmin]);
-  const { data: schoolInfo, isLoading: isSchoolInfoLoading } = useDoc<SchoolInfo>(schoolInfoDoc);
-  
-  const appearanceDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'appearance') : null, [firestore, isAdmin]);
-  const { data: appearance, isLoading: isAppearanceLoading } = useDoc<Appearance>(appearanceDoc);
-  
-  // --- User-Specific: Profile & Data Fetching ---
-  const studentProfileRef = useMemoFirebase(() => (firestore && firebaseUser && !isAuthLoading && !isAdmin && !isRoleLoading) ? doc(firestore, 'students', firebaseUser.uid) : null, [firestore, firebaseUser, isAuthLoading, isAdmin, isRoleLoading]);
-  const { data: currentStudent, isLoading: isStudentProfileLoading } = useDoc<Student>(studentProfileRef);
-  
-  const teacherProfileRef = useMemoFirebase(() => (firestore && firebaseUser && !isAuthLoading && !isAdmin && !isRoleLoading) ? doc(firestore, 'teachers', firebaseUser.uid) : null, [firestore, firebaseUser, isAuthLoading, isAdmin, isRoleLoading]);
-  const { data: currentTeacher, isLoading: isTeacherProfileLoading } = useDoc<Teacher>(teacherProfileRef);
-
-  const studentExamResultsQuery = useMemoFirebase(() => (firestore && currentStudent) ? collection(firestore, 'students', currentStudent.id, 'examResults') : null, [firestore, currentStudent]);
-  const { data: studentExamResults, isLoading: isStudentExamResultsLoading } = useCollection<ExamResult>(studentExamResultsQuery);
 
   // --- Role Determination Effect ---
   useEffect(() => {
-    setIsRoleLoading(true);
-    if (isAuthLoading || !firestore) {
-      return; // Wait for auth and firestore to be ready
-    }
-    if (!firebaseUser) {
-      setIsAdmin(false);
+    if (isAuthLoading) return;
+    
+    if (!firebaseUser || !firestore) {
+      setUserRole(null);
       setIsRoleLoading(false);
       return;
     }
-    const checkAdmin = async () => {
-      const adminRef = doc(firestore, 'admins', firebaseUser.uid);
-      try {
-        const adminDoc = await getDoc(adminRef);
-        setIsAdmin(adminDoc.exists());
-      } catch (e) {
-        console.error("Error checking admin status", e);
-        setIsAdmin(false);
-      } finally {
+
+    setIsRoleLoading(true);
+    const checkUserRole = async (user: User) => {
+      const adminRef = doc(firestore, 'admins', user.uid);
+      const adminDoc = await getDoc(adminRef);
+      if (adminDoc.exists()) {
+        setUserRole('admin');
         setIsRoleLoading(false);
+        return;
       }
+
+      const teacherRef = doc(firestore, 'teachers', user.uid);
+      const teacherDoc = await getDoc(teacherRef);
+      if (teacherDoc.exists()) {
+        setUserRole('teacher');
+        setIsRoleLoading(false);
+        return;
+      }
+      
+      const studentRef = doc(firestore, 'students', user.uid);
+      const studentDoc = await getDoc(studentRef);
+      if (studentDoc.exists()) {
+        setUserRole('student');
+        setIsRoleLoading(false);
+        return;
+      }
+      
+      setUserRole(null);
+      setIsRoleLoading(false);
     };
-    checkAdmin();
+
+    checkUserRole(firebaseUser);
   }, [firebaseUser, isAuthLoading, firestore]);
 
+  // --- Data Fetching ---
+  const isAdmin = userRole === 'admin';
+  const isTeacher = userRole === 'teacher';
+  const isStudent = userRole === 'student';
+
+  // Admin Data
+  const adminStudentsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'students') : null, [firestore, isAdmin]);
+  const { data: adminStudents, isLoading: isAdminStudentsLoading } = useCollection<Student>(adminStudentsQuery);
+  const adminTeachersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'teachers') : null, [firestore, isAdmin]);
+  const { data: adminTeachers, isLoading: isAdminTeachersLoading } = useCollection<Teacher>(adminTeachersQuery);
+  const allFeesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'studentFees') : null, [firestore, isAdmin]);
+  const { data: allFeesData, isLoading: isAllFeesLoading } = useCollection<StudentFee>(allFeesQuery);
+  const allAttendanceQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'attendance') : null, [firestore, isAdmin]);
+  const { data: allAttendance, isLoading: isAllAttendanceLoading } = useCollection<Attendance>(allAttendanceQuery);
+  const allExamResultsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'examResults') : null, [firestore, isAdmin]);
+  const { data: allExamResults, isLoading: isAllExamResultsLoading } = useCollection<ExamResult>(allExamResultsQuery);
+
+  // Student Data
+  const studentProfileRef = useMemoFirebase(() => (firestore && isStudent && firebaseUser) ? doc(firestore, 'students', firebaseUser.uid) : null, [firestore, isStudent, firebaseUser]);
+  const { data: currentStudent, isLoading: isStudentProfileLoading } = useDoc<Student>(studentProfileRef);
+  const studentExamResultsQuery = useMemoFirebase(() => (firestore && currentStudent) ? collection(firestore, 'students', currentStudent.id, 'examResults') : null, [firestore, currentStudent]);
+  const { data: studentExamResultsData, isLoading: isStudentExamResultsLoading } = useCollection<ExamResult>(studentExamResultsQuery);
+
+  // Teacher Data
+  const teacherProfileRef = useMemoFirebase(() => (firestore && isTeacher && firebaseUser) ? doc(firestore, 'teachers', firebaseUser.uid) : null, [firestore, isTeacher, firebaseUser]);
+  const { data: currentTeacher, isLoading: isTeacherProfileLoading } = useDoc<Teacher>(teacherProfileRef);
+  const teacherStudentsQuery = useMemoFirebase(() => (firestore && isTeacher) ? collection(firestore, 'students') : null, [firestore, isTeacher]);
+  const { data: teacherStudents, isLoading: isTeacherStudentsLoading } = useCollection<Student>(teacherStudentsQuery);
+
+  // Settings Data (Admin only)
+  const adminProfileDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'adminProfile') : null, [firestore, isAdmin]);
+  const { data: adminProfile, isLoading: isAdminProfileLoading } = useDoc<AdminProfile>(adminProfileDoc);
+  const schoolInfoDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'schoolInfo') : null, [firestore, isAdmin]);
+  const { data: schoolInfo, isLoading: isSchoolInfoLoading } = useDoc<SchoolInfo>(schoolInfoDoc);
+  const appearanceDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'appearance') : null, [firestore, isAdmin]);
+  const { data: appearance, isLoading: isAppearanceLoading } = useDoc<Appearance>(appearanceDoc);
+  
   // --- Auth Functions ---
   const adminLogin = useCallback(async (email: string, password: string): Promise<boolean> => {
     if (!auth || !firestore) return false;
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // Ensure admin doc exists for the first-time special admin
       const adminDocRef = doc(firestore, 'admins', userCredential.user.uid);
       const adminDocSnap = await getDoc(adminDocRef);
+      // Bootstrap the first admin if their document doesn't exist
       if (!adminDocSnap.exists() && userCredential.user.email === 'gedaabay8@gmail.com') {
         await setDoc(adminDocRef, {
           userId: userCredential.user.uid,
@@ -206,10 +224,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     if (auth) {
       await signOut(auth);
-      // State will reset automatically due to onAuthStateChanged in useUser
-      router.push('/login');
     }
-  }, [auth, router]);
+  }, [auth]);
 
   // --- Mutation Functions ---
   const addStudent = useCallback(async (data: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => {
@@ -225,10 +241,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         gradeLevel: data.gradeLevel,
         contactPhone: data.contactPhone,
         enrollmentDate: new Date().toISOString(),
-        dateOfBirth: new Date().toISOString(),
-        gender: 'Not specified',
-        address: 'Not specified',
-        parentIds: [],
+        dateOfBirth: new Date().toISOString(), // Default value
+        gender: 'Not specified', // Default value
+        address: 'Not specified', // Default value
+        parentIds: [], // Default value
       };
       const studentDocRef = doc(firestore, 'students', userCredential.user.uid);
       setDoc(studentDocRef, studentDocData)
@@ -261,7 +277,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!auth || !firestore || !data.password) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
-      const teacherDocData: Omit<Teacher, 'id'> & { id: string } = {
+      const teacherDocData: Teacher = {
         id: userCredential.user.uid,
         userId: userCredential.user.uid,
         firstName: data.firstName,
@@ -330,7 +346,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
   }, [firestore]);
 
-  // --- Settings Mutations ---
   const updateSetting = useCallback(async (docId: string, data: any) => {
       if (!firestore) return;
       const docRef = doc(firestore, 'settings', docId);
@@ -350,7 +365,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if(appearance) updateSetting('appearance', { darkMode: !appearance.darkMode });
   }, [appearance, updateSetting]);
 
-  // --- UI Effects ---
   useEffect(() => {
     if (typeof window !== 'undefined' && appearance) {
         document.documentElement.classList.toggle('dark', appearance.darkMode);
@@ -360,31 +374,58 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [appearance]);
 
-  // --- Combined Loading & Data Logic ---
-  const isUserLoading = isAuthLoading || isRoleLoading || isStudentProfileLoading || isTeacherProfileLoading;
+  // --- Combined Loading State ---
+  const isLoading = useMemo(() => {
+    if (isAuthLoading || isRoleLoading) return true;
+    if (isAdmin) return isAdminStudentsLoading || isAdminTeachersLoading || isAllFeesLoading || isAllAttendanceLoading || isAllExamResultsLoading || isAdminProfileLoading || isSchoolInfoLoading || isAppearanceLoading;
+    if (isStudent) return isStudentProfileLoading || isStudentExamResultsLoading;
+    if (isTeacher) return isTeacherProfileLoading || isTeacherStudentsLoading;
+    return false;
+  }, [
+    isAuthLoading, isRoleLoading, isAdmin, isStudent, isTeacher,
+    isAdminStudentsLoading, isAdminTeachersLoading, isAllFeesLoading, isAllAttendanceLoading, isAllExamResultsLoading, isAdminProfileLoading, isSchoolInfoLoading, isAppearanceLoading,
+    isStudentProfileLoading, isStudentExamResultsLoading,
+    isTeacherProfileLoading, isTeacherStudentsLoading
+  ]);
   
-  // Conditionally select which exam results to show
-  const recentExamResults = isAdmin ? adminRecentExamResults : studentExamResults;
-  
-  const isLoading = isAdmin 
-    ? (isStudentsLoading || isTeachersLoading || isFeesLoading || isAttendanceLoading || isExamResultsLoading || isAdminProfileLoading || isSchoolInfoLoading || isAppearanceLoading)
-    : isStudentExamResultsLoading;
-
+  // --- Memoized Context Value ---
   const value = useMemo(() => ({
-    students, teachers, feesData, studentAttendance, recentExamResults,
-    isLoading, isUserLoading,
-    firebaseUser, currentStudent, currentTeacher, isAdmin,
-    adminProfile, schoolInfo, appearance,
-    adminLogin, loginStudent, loginTeacher, logout,
-    addStudent, deleteStudent, addTeacher, deleteTeacher, addAttendance, addExamResult, addFee,
-    updateAdminProfile, updateSchoolInfo, setTheme, toggleDarkMode
+    students: isAdmin ? adminStudents : teacherStudents,
+    teachers: isAdmin ? adminTeachers : null,
+    studentAttendance: allAttendance,
+    recentExamResults: isAdmin ? allExamResults : studentExamResultsData,
+    feesData: allFeesData,
+    isLoading,
+    isUserLoading: isAuthLoading || isRoleLoading,
+    firebaseUser,
+    currentStudent,
+    currentTeacher,
+    isAdmin,
+    userRole,
+    adminProfile,
+    schoolInfo,
+    appearance,
+    adminLogin,
+    loginStudent,
+    loginTeacher,
+    logout,
+    addStudent,
+    deleteStudent,
+    addTeacher,
+    deleteTeacher,
+    addAttendance,
+    addExamResult,
+    addFee,
+    updateAdminProfile,
+    updateSchoolInfo,
+    setTheme,
+    toggleDarkMode,
   }), [
-    students, teachers, feesData, studentAttendance, recentExamResults,
-    isLoading, isUserLoading,
-    firebaseUser, currentStudent, currentTeacher, isAdmin,
+    adminStudents, teacherStudents, adminTeachers, allAttendance, allExamResults, studentExamResultsData, allFeesData,
+    isLoading, isAuthLoading, isRoleLoading,
+    firebaseUser, currentStudent, currentTeacher, isAdmin, userRole,
     adminProfile, schoolInfo, appearance,
     adminLogin, loginStudent, loginTeacher, logout,
-// useCallback ensures these don't change on every render
     addStudent, deleteStudent, addTeacher, deleteTeacher, addAttendance, addExamResult, addFee,
     updateAdminProfile, updateSchoolInfo, setTheme, toggleDarkMode
   ]);

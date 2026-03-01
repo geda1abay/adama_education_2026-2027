@@ -1,9 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Book,
   Bot,
   GraduationCap,
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
   LifeBuoy,
   Users,
 } from 'lucide-react';
+import { useData } from '@/context/data-context';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -26,16 +27,17 @@ const navItems = [
 
 export default function SidebarNav() {
   const pathname = usePathname();
+  const { schoolInfo } = useData();
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 items-center border-b border-sidebar-border px-4 lg:h-[60px] lg:px-6">
         <Link
-          href="/"
+          href="/dashboard"
           className="flex items-center gap-2 font-headline text-lg font-semibold"
         >
           <Bot className="h-6 w-6 text-sidebar-primary" />
-          <span>Adama Model</span>
+          <span>{schoolInfo?.name || 'Adama Model'}</span>
         </Link>
       </div>
       <div className="flex-1">
@@ -60,14 +62,22 @@ export default function SidebarNav() {
         <nav className="grid gap-1">
           <Link
             href="/dashboard/settings"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                pathname === '/dashboard/settings'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-muted-foreground'
+              }`}
           >
             <Settings className="h-4 w-4" />
             Settings
           </Link>
           <Link
             href="/dashboard/support"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                pathname === '/dashboard/support'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-muted-foreground'
+              }`}
           >
             <LifeBuoy className="h-4 w-4" />
             Support

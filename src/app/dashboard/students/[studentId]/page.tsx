@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
@@ -21,10 +22,10 @@ export default function StudentDetailsPage() {
   const student = useMemo(() => students?.find((s) => s.id === studentId), [students, studentId]);
   const examResults = useMemo(() => recentExamResults?.filter((r) => r.studentId === studentId), [recentExamResults, studentId]);
 
-  const avatar = PlaceHolderImages.find((img) => img.id === 'user-avatar-1'); // Simplified avatar logic
+  const avatar = PlaceHolderImages.find((img) => img.id === 'user-avatar-1');
 
   const stats = useMemo(() => {
-    if (!student || !examResults) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
+    if (!student || !examResults || !students) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
 
     const totalScore = examResults.reduce((acc, r) => acc + r.score, 0);
     const totalMaxScore = examResults.reduce((acc, r) => acc + (r.maxScore || 100), 0);

@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Bell,
@@ -20,21 +21,21 @@ import { Input } from '@/components/ui/input';
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import SidebarNav from './sidebar-nav';
+import { useData } from '@/context/data-context';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function Header() {
   const router = useRouter();
+  const { logout, adminProfile } = useData();
   const userProfileAvatar = PlaceHolderImages.find(
     (img) => img.id === 'user-profile-avatar'
   );
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
     router.push('/login');
   };
 
@@ -48,12 +49,6 @@ export default function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="sm:max-w-xs p-0">
-          <SheetHeader>
-            <SheetTitle>Menu</SheetTitle>
-            <SheetDescription>
-              Main navigation menu for the dashboard.
-            </SheetDescription>
-          </SheetHeader>
           <SidebarNav />
         </SheetContent>
       </Sheet>
@@ -100,16 +95,15 @@ export default function Header() {
                 alt={userProfileAvatar?.description}
                 data-ai-hint={userProfileAvatar?.imageHint}
               />
-              <AvatarFallback>AD</AvatarFallback>
+              <AvatarFallback>{adminProfile?.name?.charAt(0) || 'A'}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
+          <DropdownMenuLabel>{adminProfile?.name || 'Admin Account'}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>My Profile</DropdownMenuItem>
-          <DropdownMenuItem>Settings</DropdownMenuItem>
-          <DropdownMenuItem>Support</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>Settings</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/dashboard/support')}>Support</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
         </DropdownMenuContent>
