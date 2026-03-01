@@ -9,9 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
 export default function StudentAccountPage() {
-  const { currentUser: student, students } = useData();
+  const { currentUser: student, isAuthLoading } = useData();
   
-  const isLoading = students.length > 0 && !student;
+  const isLoading = isAuthLoading;
 
   const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
 

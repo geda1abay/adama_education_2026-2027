@@ -58,6 +58,7 @@ interface DataContextType {
   clearTeachers: () => void;
   toggleStudentStatus: (studentId: string) => void;
   currentUser: Student | null;
+  isAuthLoading: boolean;
   loginStudent: (email: string, password: string) => boolean;
   logoutStudent: () => void;
   adminProfile: AdminProfile;
@@ -98,10 +99,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
   const [currentUser, setCurrentUser] = useState<Student | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile>(initialAdminProfile);
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(initialSchoolInfo);
   const [appearance, setAppearance] = useState<Appearance>(initialAppearance);
+
+  useEffect(() => {
+    // This code only runs on the client.
+    const studentId = sessionStorage.getItem('currentUserId');
+    if (studentId) {
+        const student = students.find(s => s.id === studentId);
+        if (student) {
+            setCurrentUser(student);
+        }
+    }
+    setIsAuthLoading(false);
+  }, [students]);
 
   const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
     const randomId = Math.floor(Math.random() * 10000);
@@ -215,6 +229,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const loginStudent = useCallback((email: string, password: string): boolean => {
     const student = students.find(s => s.email === email && s.password === password);
     if (student) {
+      sessionStorage.setItem('currentUserId', student.id);
       setCurrentUser(student);
       return true;
     }
@@ -222,6 +237,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [students]);
 
   const logoutStudent = useCallback(() => {
+    sessionStorage.removeItem('currentUserId');
     setCurrentUser(null);
   }, []);
 
@@ -284,6 +300,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     clearTeachers,
     toggleStudentStatus,
     currentUser,
+    isAuthLoading,
     loginStudent,
     logoutStudent,
     adminProfile,
@@ -294,7 +311,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateSchoolInfo,
     setTheme,
     toggleDarkMode,
-  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, loginStudent, logoutStudent, adminProfile, schoolInfo, appearance, updateAdminProfile, updatePassword, updateSchoolInfo, setTheme, toggleDarkMode]);
+  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, isAuthLoading, loginStudent, logoutStudent, adminProfile, schoolInfo, appearance, updateAdminProfile, updatePassword, updateSchoolInfo, setTheme, toggleDarkMode]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

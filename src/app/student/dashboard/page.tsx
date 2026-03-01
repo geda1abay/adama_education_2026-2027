@@ -9,9 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
 export default function StudentDashboardPage() {
-  const { currentUser: student, recentExamResults, students } = useData();
+  const { currentUser: student, recentExamResults, isAuthLoading } = useData();
   
-  const isLoading = students.length === 0 && !student;
+  const isLoading = isAuthLoading;
 
   if (isLoading) {
     return (

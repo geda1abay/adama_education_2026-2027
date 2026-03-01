@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function StudentHeader() {
-  const { currentUser: student, students, logoutStudent } = useData();
+  const { currentUser: student, isAuthLoading, logoutStudent } = useData();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -27,7 +27,7 @@ export default function StudentHeader() {
   };
 
   const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
-  const isLoading = students.length === 0;
+  const isLoading = isAuthLoading;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
