@@ -70,7 +70,7 @@ interface DataContextType {
   // Mutation functions
   addStudent: (studentData: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string }) => Promise<void>;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address' | 'classes'> & { password?: string; classes: string }) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
   addAttendance: (attendanceData: Omit<Attendance, 'id'>) => Promise<void>;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => Promise<void>;
@@ -145,23 +145,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [firebaseUser, students, teachers, firestore]);
 
   // --- Auth Functions ---
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const adminLogin = async (email: string, password: string): Promise<boolean> => {
+    if (!auth || !firestore) return false;
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // After successful login, ensure the admin document exists.
+      // This is part of the bootstrapping process for the first admin.
+      const adminDocRef = doc(firestore, 'admins', user.uid);
+      const adminDoc = await getDoc(adminDocRef);
+
+      if (!adminDoc.exists() && user.email === 'gedaabay8@gmail.com') {
+        // The security rules allow the first admin to create their own document.
+        await setDoc(adminDocRef, {
+          userId: user.uid,
+          role: 'admin',
+          email: user.email,
+        });
+      }
+      return true;
+    } catch (error) {
+      console.error("Admin login failed:", error);
+      return false;
+    }
+  };
+
+  const loginStudent = async (email: string, password: string): Promise<boolean> => {
+    if (!auth) return false;
+    try {
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      sessionStorage.setItem('student-user-id', user.uid);
+      return true;
+    } catch (error) {
+      console.error("Student login failed:", error);
+      return false;
+    }
+  };
+
+  const loginTeacher = async (email: string, password: string): Promise<boolean> => {
     if (!auth) return false;
     try {
       await signInWithEmailAndPassword(auth, email, password);
       return true;
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Teacher login failed:", error);
       return false;
     }
   };
-  const adminLogin = login;
-  const loginStudent = login;
-  const loginTeacher = login;
   
   const logout = async () => {
     if (auth) {
       await signOut(auth);
+      sessionStorage.removeItem('student-user-id');
     }
   };
 
@@ -218,6 +254,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         hireDate: new Date().toISOString(), // Placeholder
         qualification: 'Not specified', // Placeholder
         address: 'Not specified', // Placeholder
+        classes: data.classes.split(',').map(c => c.trim()),
       };
       await setDoc(doc(firestore, 'teachers', userCredential.user.uid), teacherDoc);
       toast({ title: 'Teacher Added', description: `${data.firstName} has been created.` });
@@ -278,13 +315,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if(appearance) {
         updateSetting('appearance', { darkMode: !appearance.darkMode });
     }
-  }, [appearance]);
+  }, [appearance, updateSetting]);
 
   // --- UI Effects ---
   useEffect(() => {
     if (typeof window !== 'undefined' && appearance) {
         document.documentElement.classList.toggle('dark', appearance.darkMode);
-        document.documentElement.style.setProperty('--primary', appearance.theme);
+        if (appearance.theme) {
+          document.documentElement.style.setProperty('--primary', appearance.theme);
+        }
     }
   }, [appearance]);
 
