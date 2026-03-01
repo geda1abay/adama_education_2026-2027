@@ -43,7 +43,7 @@ export default function AiSummaryCard() {
       return;
     }
 
-    const student = students.find(s => s.id === selectedStudentId);
+    const student = students?.find(s => s.id === selectedStudentId);
     if (!student) {
         toast({
             variant: 'destructive',
@@ -58,39 +58,39 @@ export default function AiSummaryCard() {
     setError('');
 
     // Prepare grades data
-    const grades = recentExamResults
-      .filter(r => r.studentId === selectedStudentId && r.score !== 'N/A')
+    const grades = (recentExamResults ?? [])
+      .filter(r => r.studentId === selectedStudentId)
       .map(result => {
-        const scoreParts = result.score.split('/');
-        const score = parseInt(scoreParts[0], 10);
-        const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
         return {
-          subject: result.subject,
-          score: isNaN(score) ? 0 : score,
-          maxScore: isNaN(maxScore) ? 100 : maxScore,
+          subject: result.subjectId,
+          score: result.score,
+          maxScore: result.maxScore,
+          assignmentName: result.examId,
         };
-      })
-      .filter(g => !isNaN(g.score));
+      });
 
     // Prepare attendance data
-    const studentAttendanceRecords = studentAttendance.filter(att => att.studentId === selectedStudentId);
-    const totalClasses = studentAttendanceRecords.reduce((sum, record) => sum + record.totalDays, 0);
-    const classesAttended = studentAttendanceRecords.reduce((sum, record) => sum + record.daysPresent, 0);
+    const studentAttendanceRecords = (studentAttendance ?? []).filter(att => att.studentId === selectedStudentId);
+    const totalClasses = studentAttendanceRecords.length;
+    const classesAttended = studentAttendanceRecords.filter(att => att.status === 'present').length;
 
     const dataToSummarize: AIEnhancedStudentProgressOverviewInput = {
-      studentName: student.name,
+      studentName: `${student.firstName} ${student.lastName}`,
       grades: grades,
       attendance: {
-        totalClasses: totalClasses > 0 ? totalClasses : 50, // mock fallback
-        classesAttended: classesAttended > 0 ? classesAttended : 45, // mock fallback
+        totalClasses: totalClasses,
+        classesAttended: classesAttended,
       },
     };
     
     // Add mock data if no real data is available, so the AI has something to work with.
     if (dataToSummarize.grades.length === 0) {
-        dataToSummarize.grades.push({ subject: 'General', score: 85, maxScore: 100 });
+        dataToSummarize.grades.push({ subject: 'General', score: 85, maxScore: 100, assignmentName: 'Sample Exam' });
     }
-
+    if (dataToSummarize.attendance.totalClasses === 0) {
+        dataToSummarize.attendance.totalClasses = 50;
+        dataToSummarize.attendance.classesAttended = 45;
+    }
 
     try {
       const result = await getStudentProgressOverview(dataToSummarize);
@@ -108,8 +108,6 @@ export default function AiSummaryCard() {
       setIsLoading(false);
     }
   };
-  
-  const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   return (
     <Card className="bg-card/70 backdrop-blur-sm">
@@ -127,15 +125,15 @@ export default function AiSummaryCard() {
             <div className="flex gap-2">
                 <Select
                     onValueChange={setSelectedStudentId}
-                    disabled={students.length === 0}
+                    disabled={!students || students.length === 0}
                 >
                     <SelectTrigger>
                         <SelectValue placeholder="Select a student..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {students.map(student => (
+                        {(students ?? []).map(student => (
                             <SelectItem key={student.id} value={student.id}>
-                                {student.name}
+                                {student.firstName} {student.lastName}
                             </SelectItem>
                         ))}
                     </SelectContent>
