@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -44,17 +45,27 @@ interface AddExamResultDialogProps {
   onOpenChange: (open: boolean) => void;
   onExamResultAdd: (data: ExamResultFormValues) => void;
   students: Student[];
+  defaultSubject?: string;
 }
 
-export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, students }: AddExamResultDialogProps) {
+export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, students, defaultSubject }: AddExamResultDialogProps) {
   const form = useForm<ExamResultFormValues>({
     resolver: zodResolver(examResultSchema),
     defaultValues: {
       studentId: '',
-      subject: '',
+      subject: defaultSubject || '',
       score: '',
     },
   });
+
+  React.useEffect(() => {
+    form.reset({
+      studentId: '',
+      subject: defaultSubject || '',
+      score: '',
+    });
+  }, [open, defaultSubject, form]);
+
 
   const onSubmit = (data: ExamResultFormValues) => {
     onExamResultAdd(data);
@@ -103,7 +114,7 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
                 <FormItem>
                   <FormLabel>Subject</FormLabel>
                   <FormControl>
-                    <Input placeholder="Mathematics" {...field} />
+                    <Input placeholder="Mathematics" {...field} disabled={!!defaultSubject} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -156,6 +156,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         id: newTeacherId,
         name: teacherData.name,
         subject: teacherData.subject,
+        classes: teacherData.classes,
         mobile: teacherData.mobile,
         email: teacherData.email,
         status: 'Active',

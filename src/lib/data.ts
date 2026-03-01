@@ -18,6 +18,7 @@ export type Teacher = {
   id: string;
   name: string;
   subject: string;
+  classes: string[];
   mobile: string;
   email: string;
   avatar: string;
@@ -223,6 +224,7 @@ export const TEACHERS: Teacher[] = [
     id: 'TCH-001',
     name: 'Mr. Solomon',
     subject: 'Mathematics',
+    classes: ['10-A', '10-B', '11-A'],
     mobile: '+251 911 111 222',
     email: 'solomon@example.com',
     avatar: 'user-avatar-6',
@@ -233,6 +235,7 @@ export const TEACHERS: Teacher[] = [
     id: 'TCH-002',
     name: 'Ms. Genet',
     subject: 'Science',
+    classes: ['10-A', '10-B'],
     mobile: '+251 912 333 444',
     email: 'genet@example.com',
     avatar: 'user-avatar-7',
@@ -243,6 +246,7 @@ export const TEACHERS: Teacher[] = [
     id: 'TCH-003',
     name: 'Mrs. Fatuma',
     subject: 'English',
+    classes: ['11-A'],
     mobile: '+251 913 555 666',
     email: 'fatuma@example.com',
     avatar: 'user-avatar-8',
