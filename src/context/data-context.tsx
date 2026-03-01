@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { 
     STUDENTS,
     TEACHERS,
@@ -27,6 +27,21 @@ type Teacher = {
 type StudentAttendance = (typeof STUDENT_ATTENDANCE)[number];
 type ExamResult = (typeof RECENT_EXAM_RESULTS)[number];
 
+// New types for settings
+type AdminProfile = {
+  name: string;
+};
+
+type SchoolInfo = {
+  name: string;
+  address: string;
+  contact: string;
+};
+
+type Appearance = {
+  theme: string;
+  darkMode: boolean;
+};
 
 interface DataContextType {
   students: Student[];
@@ -45,9 +60,34 @@ interface DataContextType {
   currentUser: Student | null;
   loginStudent: (email: string, password: string) => boolean;
   logoutStudent: () => void;
+  adminProfile: AdminProfile;
+  schoolInfo: SchoolInfo;
+  appearance: Appearance;
+  updateAdminProfile: (data: Partial<AdminProfile>) => void;
+  updatePassword: () => void;
+  updateSchoolInfo: (data: Partial<SchoolInfo>) => void;
+  setTheme: (theme: string) => void;
+  toggleDarkMode: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+
+// Default values for new state
+const initialAdminProfile: AdminProfile = {
+  name: 'Geda Abay',
+};
+
+const initialSchoolInfo: SchoolInfo = {
+  name: 'Adama Model School',
+  address: 'Adama, Ethiopia',
+  contact: '+251 912 345 678',
+};
+
+const initialAppearance: Appearance = {
+  theme: '259 71% 50%', // Default purple
+  darkMode: false,
+};
+
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -58,6 +98,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
   const [currentUser, setCurrentUser] = useState<Student | null>(null);
+
+  const [adminProfile, setAdminProfile] = useState<AdminProfile>(initialAdminProfile);
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(initialSchoolInfo);
+  const [appearance, setAppearance] = useState<Appearance>(initialAppearance);
 
   const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
     const randomId = Math.floor(Math.random() * 10000);
@@ -181,6 +225,50 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
   }, []);
 
+  // Settings functions
+  const updateAdminProfile = useCallback((data: Partial<AdminProfile>) => {
+    setAdminProfile(prev => ({ ...prev, ...data }));
+    toast({ title: "Profile Updated", description: "Your profile information has been saved." });
+  }, [toast]);
+
+  const updatePassword = useCallback(() => {
+    toast({ title: "Password Updated", description: "Your password has been changed successfully." });
+  }, [toast]);
+  
+  const updateSchoolInfo = useCallback((data: Partial<SchoolInfo>) => {
+    setSchoolInfo(prev => ({...prev, ...data}));
+    toast({ title: "School Info Saved", description: "The school's information has been updated." });
+  }, [toast]);
+  
+  const setTheme = useCallback((theme: string) => {
+    setAppearance(prev => ({ ...prev, theme }));
+    toast({ title: "Theme Updated", description: "The application theme has been changed." });
+  }, [toast]);
+
+  const toggleDarkMode = useCallback(() => {
+    setAppearance(prev => {
+        const newDarkMode = !prev.darkMode;
+        if (newDarkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        return { ...prev, darkMode: newDarkMode };
+    });
+  }, []);
+
+  // Effect to apply theme on initial load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        if (appearance.darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        document.documentElement.style.setProperty('--primary', appearance.theme);
+    }
+  }, [appearance.darkMode, appearance.theme]);
+
   const value = useMemo(() => ({
     students,
     teachers,
@@ -198,7 +286,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     currentUser,
     loginStudent,
     logoutStudent,
-  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, loginStudent, logoutStudent]);
+    adminProfile,
+    schoolInfo,
+    appearance,
+    updateAdminProfile,
+    updatePassword,
+    updateSchoolInfo,
+    setTheme,
+    toggleDarkMode,
+  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, loginStudent, logoutStudent, adminProfile, schoolInfo, appearance, updateAdminProfile, updatePassword, updateSchoolInfo, setTheme, toggleDarkMode]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
