@@ -13,12 +13,12 @@ import {
 } from '@/firebase';
 import {
     collection,
+    collectionGroup,
     doc,
     addDoc,
     setDoc,
     updateDoc,
     deleteDoc,
-    writeBatch,
     getDoc
 } from 'firebase/firestore';
 import {
@@ -26,6 +26,8 @@ import {
     signInWithEmailAndPassword,
     signOut,
 } from 'firebase/auth';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 import {
     Student,
@@ -69,12 +71,12 @@ interface DataContextType {
 
   // Mutation functions
   addStudent: (studentData: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => Promise<void>;
-  deleteStudent: (studentId: string) => Promise<void>;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string; classes?: string }) => Promise<void>;
-  deleteTeacher: (teacherId: string) => Promise<void>;
-  addAttendance: (attendanceData: Omit<Attendance, 'id'>) => Promise<void>;
-  addExamResult: (examResultData: Omit<ExamResult, 'id'>) => Promise<void>;
-  addFee: (feeData: Omit<StudentFee, 'id'>) => Promise<void>;
+  deleteStudent: (studentId: string) => void;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address' | 'classes'> & { password?: string; classes?: string }) => Promise<void>;
+  deleteTeacher: (teacherId: string) => void;
+  addAttendance: (attendanceData: Omit<Attendance, 'id'>) => void;
+  addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
+  addFee: (feeData: Omit<StudentFee, 'id'>) => void;
 
   // Settings mutations
   updateAdminProfile: (data: Partial<AdminProfile>) => void;
@@ -103,18 +105,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const teachersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'teachers') : null, [firestore, isAdmin]);
   const { data: teachers, isLoading: isTeachersLoading } = useCollection<Teacher>(teachersQuery);
 
-  // NOTE: These are querying root collections. For a production app with many students,
-  // this would be inefficient. A better approach would be to use collectionGroup queries
-  // with appropriate indexes, or fetch this data on-demand for specific students.
-  // For this MVP, we are keeping them as admin-only root queries.
-  const feesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'studentFees') : null, [firestore, isAdmin]);
+  // Use collectionGroup for admin-level list views. This requires a Firestore index.
+  const feesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'studentFees') : null, [firestore, isAdmin]);
   const { data: feesData, isLoading: isFeesLoading } = useCollection<StudentFee>(feesQuery);
 
-  const attendanceQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'attendance') : null, [firestore, isAdmin]);
+  const attendanceQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'attendance') : null, [firestore, isAdmin]);
   const { data: studentAttendance, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
 
-  const examResultsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'examResults') : null, [firestore, isAdmin]);
+  const examResultsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'examResults') : null, [firestore, isAdmin]);
   const { data: recentExamResults, isLoading: isExamResultsLoading } = useCollection<ExamResult>(examResultsQuery);
+
 
   // --- Settings Fetching ---
   const adminProfileDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'adminProfile') : null, [firestore, isAdmin]);
@@ -132,35 +132,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const adminDocRef = doc(firestore, 'admins', firebaseUser.uid);
         const adminDoc = await getDoc(adminDocRef);
         let isAdminUser = adminDoc.exists();
-
-        // If the user is the designated first admin and their role doc doesn't exist, create it.
-        // This handles both initial login and subsequent page loads.
-        if (!isAdminUser && firebaseUser.email === 'gedaabay8@gmail.com') {
-          try {
-            await setDoc(adminDocRef, {
-              userId: firebaseUser.uid,
-              role: 'admin',
-              email: firebaseUser.email,
-            });
-            isAdminUser = true; // The role is now established.
-          } catch (e) {
-            console.error("Failed to bootstrap admin user:", e);
-          }
-        }
         
         setIsAdmin(isAdminUser);
 
-        // Set the appropriate profile based on the role
         if (isAdminUser) {
           setCurrentStudent(null);
           setCurrentTeacher(null);
         } else {
-          setCurrentStudent(students?.find(s => s.id === firebaseUser.uid) || null);
-          setCurrentTeacher(teachers?.find(t => t.id === firebaseUser.uid) || null);
+          // These will be null at first, then update when the collections load
+          setCurrentStudent(students?.find(s => s.userId === firebaseUser.uid) || null);
+          setCurrentTeacher(teachers?.find(t => t.userId === firebaseUser.uid) || null);
         }
 
       } else {
-        // No user, reset all roles and profiles
         setIsAdmin(false);
         setCurrentStudent(null);
         setCurrentTeacher(null);
@@ -175,14 +159,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!auth || !firestore) return false;
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // The useEffect hook now handles checking and creating the admin role doc.
-      // We can also trigger the check manually here to be safe.
       const adminDocRef = doc(firestore, 'admins', userCredential.user.uid);
       const adminDoc = await getDoc(adminDocRef);
       if (!adminDoc.exists() && userCredential.user.email === 'gedaabay8@gmail.com') {
         await setDoc(adminDocRef, { userId: userCredential.user.uid, role: 'admin', email: userCredential.user.email });
       }
-      setIsAdmin(true); // Assume login success means admin for this flow
+      setIsAdmin(true); 
       return true;
     } catch (error) {
       console.error("Admin login failed:", error);
@@ -225,7 +207,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!auth || !firestore || !data.password) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
-      const studentDoc: Student = {
+      const studentDocData: Student = {
         id: userCredential.user.uid,
         userId: userCredential.user.uid,
         firstName: data.firstName,
@@ -239,30 +221,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
         address: 'Not specified', // Placeholder
         parentIds: [], // Placeholder
       };
-      await setDoc(doc(firestore, 'students', userCredential.user.uid), studentDoc);
-      toast({ title: 'Student Added', description: `${data.firstName} has been created.` });
+      const studentDocRef = doc(firestore, 'students', userCredential.user.uid);
+      setDoc(studentDocRef, studentDocData)
+        .then(() => {
+          toast({ title: 'Student Added', description: `${data.firstName} has been created.` });
+        })
+        .catch(error => {
+          const contextualError = new FirestorePermissionError({
+            path: studentDocRef.path,
+            operation: 'create',
+            requestResourceData: studentDocData,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error adding student', description: error.message });
+      toast({ variant: 'destructive', title: 'Error adding student account', description: error.message });
     }
   }, [auth, firestore, toast]);
 
-  const deleteStudent = useCallback(async (studentId: string) => {
-    // This is a simplified delete. A real app would need a cloud function
-    // to delete the user from Firebase Auth.
+  const deleteStudent = useCallback((studentId: string) => {
     if (!firestore) return;
-    try {
-      await deleteDoc(doc(firestore, 'students', studentId));
-      toast({ title: 'Student Deleted', description: 'Student profile has been removed from Firestore.' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error deleting student', description: error.message });
-    }
+    const studentDocRef = doc(firestore, 'students', studentId);
+    deleteDoc(studentDocRef)
+      .then(() => {
+        toast({ title: 'Student Deleted', description: 'Student profile has been removed from Firestore.' });
+      })
+      .catch(error => {
+        const contextualError = new FirestorePermissionError({
+          path: studentDocRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
   }, [firestore, toast]);
   
-  const addTeacher = useCallback(async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string; classes?: string }) => {
+  const addTeacher = useCallback(async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address' | 'classes'> & { password?: string; classes?: string }) => {
     if (!auth || !firestore || !data.password) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
-      const teacherDoc: Teacher = {
+      const teacherDocData: Teacher = {
         id: userCredential.user.uid,
         userId: userCredential.user.uid,
         firstName: data.firstName,
@@ -270,46 +267,91 @@ export function DataProvider({ children }: { children: ReactNode }) {
         contactEmail: data.contactEmail,
         department: data.department,
         contactPhone: data.contactPhone,
-        hireDate: new Date().toISOString(), // Placeholder
-        qualification: 'Not specified', // Placeholder
-        address: 'Not specified', // Placeholder
+        classes: data.classes ? data.classes.split(',').map(c => c.trim()) : [],
+        hireDate: new Date().toISOString(),
+        qualification: 'Not specified',
+        address: 'Not specified',
       };
-      await setDoc(doc(firestore, 'teachers', userCredential.user.uid), teacherDoc);
-      toast({ title: 'Teacher Added', description: `${data.firstName} has been created.` });
+      const teacherDocRef = doc(firestore, 'teachers', userCredential.user.uid);
+      setDoc(teacherDocRef, teacherDocData)
+        .then(() => {
+          toast({ title: 'Teacher Added', description: `${data.firstName} has been created.` });
+        })
+        .catch(error => {
+          const contextualError = new FirestorePermissionError({
+            path: teacherDocRef.path,
+            operation: 'create',
+            requestResourceData: teacherDocData,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error adding teacher', description: error.message });
+      toast({ variant: 'destructive', title: 'Error adding teacher account', description: error.message });
     }
   }, [auth, firestore, toast]);
 
-  const deleteTeacher = useCallback(async (teacherId: string) => {
+  const deleteTeacher = useCallback((teacherId: string) => {
     if (!firestore) return;
-    try {
-      await deleteDoc(doc(firestore, 'teachers', teacherId));
-      toast({ title: 'Teacher Deleted', description: 'Teacher profile has been removed from Firestore.' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error deleting teacher', description: error.message });
-    }
+    const teacherDocRef = doc(firestore, 'teachers', teacherId);
+    deleteDoc(teacherDocRef)
+      .then(() => {
+        toast({ title: 'Teacher Deleted', description: 'Teacher profile has been removed from Firestore.' });
+      })
+      .catch(error => {
+        const contextualError = new FirestorePermissionError({
+          path: teacherDocRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
   }, [firestore, toast]);
 
-  const addAttendance = useCallback(async (data: Omit<Attendance, 'id'>) => {
+  const addAttendance = useCallback((data: Omit<Attendance, 'id'>) => {
     if (!firestore || !firebaseUser) return;
     const attendanceDoc = {
         ...data,
         recordedByTeacherId: firebaseUser.uid,
         classSessionId: 'session_placeholder' // Placeholder
     };
-    await addDoc(collection(firestore, 'attendance'), attendanceDoc);
+    const collectionRef = collection(firestore, 'students', data.studentId, 'attendance');
+    addDoc(collectionRef, attendanceDoc)
+      .catch(error => {
+        const contextualError = new FirestorePermissionError({
+          path: `${collectionRef.path}/{newDocId}`,
+          operation: 'create',
+          requestResourceData: attendanceDoc,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
   }, [firestore, firebaseUser]);
 
-  const addExamResult = useCallback(async (data: Omit<ExamResult, 'id'>) => {
+  const addExamResult = useCallback((data: Omit<ExamResult, 'id'>) => {
     if (!firestore) return;
     const resultDoc = { ...data, resultDate: new Date().toISOString() };
-    await addDoc(collection(firestore, 'examResults'), resultDoc);
+    const collectionRef = collection(firestore, 'students', data.studentId, 'examResults');
+    addDoc(collectionRef, resultDoc)
+      .catch(error => {
+        const contextualError = new FirestorePermissionError({
+          path: `${collectionRef.path}/{newDocId}`,
+          operation: 'create',
+          requestResourceData: resultDoc,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
   }, [firestore]);
 
-  const addFee = useCallback(async (data: Omit<StudentFee, 'id'>) => {
+  const addFee = useCallback((data: Omit<StudentFee, 'id'>) => {
     if (!firestore) return;
-    await addDoc(collection(firestore, 'studentFees'), data);
+    const collectionRef = collection(firestore, 'students', data.studentId, 'studentFees');
+    addDoc(collectionRef, data)
+      .catch(error => {
+        const contextualError = new FirestorePermissionError({
+          path: `${collectionRef.path}/{newDocId}`,
+          operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
   }, [firestore]);
 
 
@@ -362,7 +404,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     adminProfile, schoolInfo, appearance,
     adminLogin, loginStudent, loginTeacher, logout,
     addStudent, deleteStudent, addTeacher, deleteTeacher, addAttendance, addExamResult, addFee,
-    updateAdminProfile, updateSchoolInfo, setTheme, toggleDarkMode
+    updateAdminProfile, updateSchoolInfo, setTheme, toggleDarkMode,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

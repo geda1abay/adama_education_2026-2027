@@ -28,6 +28,7 @@ const teacherSchema = z.object({
   lastName: z.string().min(2, { message: 'Last name is required.' }),
   contactEmail: z.string().email({ message: 'Invalid email address.' }),
   department: z.string().min(2, { message: 'Department is required.' }),
+  classes: z.string().optional(),
   contactPhone: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
@@ -48,6 +49,7 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
       lastName: '',
       contactEmail: '',
       department: '',
+      classes: '',
       contactPhone: '',
       password: '',
     },
@@ -118,6 +120,19 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
                   <FormLabel>Department/Subject</FormLabel>
                   <FormControl>
                     <Input placeholder="Mathematics" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="classes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Classes (comma-separated)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="10-A, 11-B" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

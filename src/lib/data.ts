@@ -29,6 +29,7 @@ export type Teacher = {
   hireDate: string; // ISO date string
   department: string;
   qualification: string;
+  classes?: string[];
 };
 
 // Matches /students/{studentId}/studentFees/{studentFeeId}
