@@ -14,6 +14,17 @@ export type Student = {
   password: string;
 };
 
+export type Teacher = {
+  id: string;
+  name: string;
+  subject: string;
+  mobile: string;
+  email: string;
+  avatar: string;
+  status: 'Active' | 'Inactive';
+  password: string;
+};
+
 export type Fee = {
   studentId: string;
   amount: number;
@@ -207,15 +218,7 @@ export const STUDENTS: Student[] = [
   },
 ];
 
-export const TEACHERS: {
-  id: string;
-  name: string;
-  subject: string;
-  mobile: string;
-  email: string;
-  avatar: string;
-  status: 'Active' | 'Inactive';
-}[] = [
+export const TEACHERS: Teacher[] = [
   {
     id: 'TCH-001',
     name: 'Mr. Solomon',
@@ -224,6 +227,7 @@ export const TEACHERS: {
     email: 'solomon@example.com',
     avatar: 'user-avatar-6',
     status: 'Active',
+    password: 'password123',
   },
   {
     id: 'TCH-002',
@@ -233,6 +237,7 @@ export const TEACHERS: {
     email: 'genet@example.com',
     avatar: 'user-avatar-7',
     status: 'Active',
+    password: 'password123',
   },
   {
     id: 'TCH-003',
@@ -242,6 +247,7 @@ export const TEACHERS: {
     email: 'fatuma@example.com',
     avatar: 'user-avatar-8',
     status: 'Inactive',
+    password: 'password123',
   },
 ];
 

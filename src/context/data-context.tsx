@@ -8,21 +8,11 @@ import {
     RECENT_EXAM_RESULTS,
     FEES_DATA,
     type Student,
+    type Teacher,
     type Fee,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
-
-// The Teacher type from data.ts is different from the entity. Let's define it.
-type Teacher = {
-  id: string;
-  name: string;
-  subject: string;
-  mobile: string;
-  email: string;
-  avatar: string;
-  status: 'Active' | 'Inactive';
-};
 
 type StudentAttendance = (typeof STUDENT_ATTENDANCE)[number];
 type ExamResult = (typeof RECENT_EXAM_RESULTS)[number];
@@ -61,6 +51,10 @@ interface DataContextType {
   isAuthLoading: boolean;
   loginStudent: (email: string, password: string) => boolean;
   logoutStudent: () => void;
+  currentTeacher: Teacher | null;
+  isTeacherAuthLoading: boolean;
+  loginTeacher: (email: string, password: string) => boolean;
+  logoutTeacher: () => void;
   adminProfile: AdminProfile;
   schoolInfo: SchoolInfo;
   appearance: Appearance;
@@ -100,6 +94,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
   const [currentUser, setCurrentUser] = useState<Student | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
+  const [isTeacherAuthLoading, setIsTeacherAuthLoading] = useState(true);
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile>(initialAdminProfile);
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(initialSchoolInfo);
@@ -116,6 +112,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     setIsAuthLoading(false);
   }, [students]);
+  
+  useEffect(() => {
+    const teacherId = sessionStorage.getItem('currentTeacherId');
+    if (teacherId) {
+        const teacher = teachers.find(t => t.id === teacherId);
+        if (teacher) {
+            setCurrentTeacher(teacher);
+        }
+    }
+    setIsTeacherAuthLoading(false);
+  }, [teachers]);
 
   const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
     const randomId = Math.floor(Math.random() * 10000);
@@ -153,6 +160,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         email: teacherData.email,
         status: 'Active',
         avatar: `user-avatar-${(teachers.length % 3) + 6}`,
+        password: teacherData.password,
     };
 
     setTeachers(prev => [...prev, newTeacher]);
@@ -241,6 +249,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
   }, []);
 
+  const loginTeacher = useCallback((email: string, password: string): boolean => {
+    const teacher = teachers.find(t => t.email === email && t.password === password);
+    if (teacher) {
+      sessionStorage.setItem('currentTeacherId', teacher.id);
+      setCurrentTeacher(teacher);
+      return true;
+    }
+    return false;
+  }, [teachers]);
+
+  const logoutTeacher = useCallback(() => {
+    sessionStorage.removeItem('currentTeacherId');
+    setCurrentTeacher(null);
+  }, []);
+
+
   // Settings functions
   const updateAdminProfile = useCallback((data: Partial<AdminProfile>) => {
     setAdminProfile(prev => ({ ...prev, ...data }));
@@ -303,6 +327,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     isAuthLoading,
     loginStudent,
     logoutStudent,
+    currentTeacher,
+    isTeacherAuthLoading,
+    loginTeacher,
+    logoutTeacher,
     adminProfile,
     schoolInfo,
     appearance,
@@ -311,7 +339,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateSchoolInfo,
     setTheme,
     toggleDarkMode,
-  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, isAuthLoading, loginStudent, logoutStudent, adminProfile, schoolInfo, appearance, updateAdminProfile, updatePassword, updateSchoolInfo, setTheme, toggleDarkMode]);
+  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, isAuthLoading, loginStudent, logoutStudent, currentTeacher, isTeacherAuthLoading, loginTeacher, logoutTeacher, adminProfile, schoolInfo, appearance, updateAdminProfile, updatePassword, updateSchoolInfo, setTheme, toggleDarkMode]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

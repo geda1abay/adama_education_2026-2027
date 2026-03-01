@@ -28,6 +28,7 @@ const teacherSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   subject: z.string().min(2, { message: 'Subject must be at least 2 characters.' }),
   mobile: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
 type TeacherFormValues = z.infer<typeof teacherSchema>;
@@ -46,6 +47,7 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
       email: '',
       subject: '',
       mobile: '',
+      password: '',
     },
   });
 
@@ -112,6 +114,19 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
                   <FormLabel>Mobile</FormLabel>
                   <FormControl>
                     <Input placeholder="+251 911 111 222" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

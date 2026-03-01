@@ -100,10 +100,13 @@ export default function StudentLoginPage() {
                 </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            Not a student?{" "}
+            Not a student? Go to{" "}
             <Link href="/login" className="underline">
               Admin Login
-            </Link>
+            </Link> or the {" "}
+            <Link href="/teacher/login" className="underline">
+              Teacher Portal
+            </Link>.
           </div>
         </div>
       </div>
