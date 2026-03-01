@@ -12,25 +12,49 @@ import { z } from 'genkit';
 
 const AIEnhancedStudentProgressOverviewInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
-  grades: z.array(
-    z.object({
-      subject: z.string().describe('The name of the subject.'),
-      score: z.number().describe('The score the student received in this assignment or exam.'),
-      maxScore: z.number().optional().describe('The maximum possible score for this assignment or exam.'),
-      assignmentName: z.string().optional().describe('The name of the assignment or exam.'),
+  grades: z
+    .array(
+      z.object({
+        subject: z.string().describe('The name of the subject.'),
+        score: z
+          .number()
+          .describe('The score the student received in this assignment or exam.'),
+        maxScore: z
+          .number()
+          .optional()
+          .describe('The maximum possible score for this assignment or exam.'),
+        assignmentName: z
+          .string()
+          .optional()
+          .describe('The name of the assignment or exam.'),
+      })
+    )
+    .describe(
+      "An array of the student's grades across different subjects and assignments."
+    ),
+  attendance: z
+    .object({
+      totalClasses: z.number().describe('The total number of classes held.'),
+      classesAttended: z
+        .number()
+        .describe('The number of classes the student attended.'),
     })
-  ).describe('An array of the student\'s grades across different subjects and assignments.'),
-  attendance: z.object({
-    totalClasses: z.number().describe('The total number of classes held.'),
-    classesAttended: z.number().describe('The number of classes the student attended.'),
-  }).describe('The student\'s attendance record.'),
+    .describe("The student's attendance record."),
 });
-export type AIEnhancedStudentProgressOverviewInput = z.infer<typeof AIEnhancedStudentProgressOverviewInputSchema>;
+export type AIEnhancedStudentProgressOverviewInput = z.infer<
+  typeof AIEnhancedStudentProgressOverviewInputSchema
+>;
 
 const AIEnhancedStudentProgressOverviewOutputSchema = z.object({
-  summary: z.string().describe('A concise textual summary of the student\'s academic progress, highlighting strengths and areas for improvement.'),
+  summary: z
+    .string()
+    .describe(
+      "A concise textual summary of the student's academic progress, highlighting strengths and areas for improvement."
+    ),
 });
-export type AIEnhancedStudentProgressOverviewOutput = z.infer<typeof AIEnhancedStudentProgressOverviewOutputSchema>;
+export type AIEnhancedStudentProgressOverviewOutput = z.infer<
+  typeof AIEnhancedStudentProgressOverviewOutputSchema
+>;
 
 const prompt = ai.definePrompt({
   name: 'aiEnhancedStudentProgressOverviewPrompt',
@@ -67,8 +91,28 @@ const aiEnhancedStudentProgressOverviewFlow = ai.defineFlow(
 export async function getStudentProgressOverview(
   input: AIEnhancedStudentProgressOverviewInput
 ): Promise<AIEnhancedStudentProgressOverviewOutput> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('The Gemini API key is missing. Please add it to your .env file to use AI features.');
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.trim() === '') {
+    throw new Error(
+      'The Gemini API key is missing or empty. Please add it to your .env file to use AI features.'
+    );
   }
-  return aiEnhancedStudentProgressOverviewFlow(input);
+  try {
+    const result = await aiEnhancedStudentProgressOverviewFlow(input);
+    if (!result) {
+      throw new Error(
+        'The AI model did not return a valid response. Please check the prompt and model configuration.'
+      );
+    }
+    return result;
+  } catch (e: any) {
+    // Sanitize and re-throw the error to ensure it's a standard, catchable error on the client.
+    if (e.message.includes('API key not valid')) {
+      throw new Error(
+        'The provided Gemini API key is not valid. Please verify it in your .env file.'
+      );
+    }
+    throw new Error(
+      e.message || 'An unexpected error occurred while running the AI flow.'
+    );
+  }
 }
