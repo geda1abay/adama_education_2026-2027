@@ -31,14 +31,17 @@ import { Badge } from '@/components/ui/badge';
 import { EXAM_STAT_CARDS } from '@/lib/data';
 import { useData } from '@/context/data-context';
 import { AddExamResultDialog } from '@/components/dashboard/add-exam-result-dialog';
+import type { ExamResult, Student } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ExamsPage() {
-  const { students, recentExamResults, addExamResult } = useData();
+  const { students, recentExamResults, addExamResult, isLoading } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   const [isAddExamResultDialogOpen, setIsAddExamResultDialogOpen] = useState(false);
   
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(students.map((student) => student.class));
+    if (!students) return [];
+    const classes = new Set(students.map((student) => student.gradeLevel));
     return Array.from(classes).sort();
   }, [students]);
 
@@ -52,40 +55,34 @@ export default function ExamsPage() {
     });
   };
 
+  const getStudentById = (studentId: string) => students?.find(s => s.id === studentId);
+
   const filteredResults = useMemo(() => {
-    const studentIdToClassMap = new Map(students.map(s => [s.id, s.class]));
+    if (!recentExamResults || !students) return [];
+    const studentIdToClassMap = new Map(students.map(s => [s.id, s.gradeLevel]));
     return recentExamResults.filter((result) => {
       const studentClass = studentIdToClassMap.get(result.studentId);
       return classFilters.length === 0 || (studentClass && classFilters.includes(studentClass));
     });
   }, [classFilters, students, recentExamResults]);
 
-  const getStudentById = (studentId: string) => students.find(s => s.id === studentId);
-  
   const studentStats = useMemo(() => {
-    const statsMap = new Map<string, { totalScore: number, averagePercentage: string, rank: string }>();
-    
-    // First, calculate averages for all students
+    const statsMap = new Map<string, { totalScore: number; averagePercentage: string; rank: string }>();
+    if (!students || !recentExamResults) return statsMap;
+
     const allStudentAverages = students.map(student => {
-        const studentExamResults = recentExamResults.filter(r => r.studentId === student.id);
-        const processedResults = studentExamResults.map(r => {
-            const scoreParts = r.score.split('/');
-            const score = parseInt(scoreParts[0], 10);
-            const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
-            return { score: isNaN(score) ? 0 : score, maxScore: isNaN(maxScore) ? 100 : maxScore };
-        });
-        const totalScore = processedResults.reduce((acc, r) => acc + r.score, 0);
-        const totalMaxScore = processedResults.reduce((acc, r) => acc + r.maxScore, 0);
-        const average = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
-        return { studentId: student.id, studentClass: student.class, average, totalScore };
+      const studentExamResults = recentExamResults.filter(r => r.studentId === student.id);
+      const totalScore = studentExamResults.reduce((acc, r) => acc + r.score, 0);
+      const totalMaxScore = studentExamResults.reduce((acc, r) => acc + (r.maxScore || 100), 0);
+      const average = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+      return { studentId: student.id, studentClass: student.gradeLevel, average, totalScore };
     });
 
-    // Then, for each student, calculate their rank within their class
     students.forEach(student => {
       const studentData = allStudentAverages.find(s => s.studentId === student.id);
       if (!studentData) return;
 
-      const studentsInClass = allStudentAverages.filter(s => s.studentClass === student.class);
+      const studentsInClass = allStudentAverages.filter(s => s.studentClass === student.gradeLevel);
       studentsInClass.sort((a, b) => b.average - a.average);
       
       const rankIndex = studentsInClass.findIndex(s => s.studentId === student.id);
@@ -101,9 +98,8 @@ export default function ExamsPage() {
     return statsMap;
   }, [students, recentExamResults]);
 
-
-  const handleAddExamResult = (data: any) => {
-    addExamResult({ ...data, grade: 'N/A' });
+  const handleAddExamResult = async (data: Omit<ExamResult, 'id' | 'resultDate' | 'comments'>) => {
+    await addExamResult(data);
     setIsAddExamResultDialogOpen(false);
   }
 
@@ -186,17 +182,29 @@ export default function ExamsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredResults.map((result) => {
+            {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                    </TableRow>
+                ))
+            ) : filteredResults.map((result) => {
               const student = getStudentById(result.studentId);
               const stats = studentStats.get(result.studentId) || { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
               return (
               <TableRow key={result.id}>
-                <TableCell className="font-medium">{student?.name || 'N/A'}</TableCell>
+                <TableCell className="font-medium">{student?.firstName} {student?.lastName || ''}</TableCell>
                 <TableCell>
-                  <Badge variant="outline">{student?.class || 'N/A'}</Badge>
+                  <Badge variant="outline">{student?.gradeLevel || 'N/A'}</Badge>
                 </TableCell>
-                <TableCell>{result.subject}</TableCell>
-                <TableCell className="text-right">{result.score}</TableCell>
+                <TableCell>{result.subjectId}</TableCell>
+                <TableCell className="text-right">{result.score}/{result.maxScore || 100}</TableCell>
                 <TableCell className="text-right">{stats.totalScore}</TableCell>
                 <TableCell className="text-right">{stats.averagePercentage}%</TableCell>
                 <TableCell className="text-right">{stats.rank}</TableCell>
@@ -209,9 +217,9 @@ export default function ExamsPage() {
       </Card>
       <AddExamResultDialog
         open={isAddExamResultDialogOpen}
-        onOpenChange={setIsAddExamResultDialogOpen}
         onExamResultAdd={handleAddExamResult}
-        students={students}
+        onOpenChange={setIsAddExamResultDialogOpen}
+        students={students || []}
       />
     </div>
   );

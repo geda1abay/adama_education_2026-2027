@@ -10,46 +10,27 @@ import { useMemo } from 'react';
 import { Award, Calculator, TrendingUp } from 'lucide-react';
 
 export default function StudentDashboardPage() {
-  const { currentUser: student, recentExamResults, isAuthLoading, students } = useData();
+  const { currentStudent: student, recentExamResults, isUserLoading, students } = useData();
   
-  const isLoading = isAuthLoading;
+  const isLoading = isUserLoading;
 
   const examResults = useMemo(() => {
-    if (!student) return [];
+    if (!student || !recentExamResults) return [];
     return recentExamResults.filter((r) => r.studentId === student.id);
   }, [student, recentExamResults]);
 
   const stats = useMemo(() => {
-    if (!student) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
+    if (!student || !students || !recentExamResults) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
     
-    const processedResults = examResults.map(r => {
-        const scoreParts = r.score.split('/');
-        const score = parseInt(scoreParts[0], 10);
-        const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
-        return {
-            score: isNaN(score) ? 0 : score,
-            maxScore: isNaN(maxScore) ? 100 : maxScore,
-        };
-    });
-    
-    const totalScore = processedResults.reduce((acc, r) => acc + r.score, 0);
-    const totalMaxScore = processedResults.reduce((acc, r) => acc + r.maxScore, 0);
+    const totalScore = examResults.reduce((acc, r) => acc + r.score, 0);
+    const totalMaxScore = examResults.reduce((acc, r) => acc + (r.maxScore || 100), 0);
     const averagePercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
 
-    const studentsInClass = students.filter(s => s.class === student.class);
+    const studentsInClass = students.filter(s => s.gradeLevel === student.gradeLevel);
     const studentAverages = studentsInClass.map(s => {
         const studentExams = recentExamResults.filter(r => r.studentId === s.id);
-        const processedStudentResults = studentExams.map(r => {
-            const scoreParts = r.score.split('/');
-            const score = parseInt(scoreParts[0], 10);
-            const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
-            return {
-                score: isNaN(score) ? 0 : score,
-                maxScore: isNaN(maxScore) ? 100 : maxScore,
-            };
-        });
-        const totalStudentScore = processedStudentResults.reduce((acc, r) => acc + r.score, 0);
-        const totalStudentMaxScore = processedStudentResults.reduce((acc, r) => acc + r.maxScore, 0);
+        const totalStudentScore = studentExams.reduce((acc, r) => acc + r.score, 0);
+        const totalStudentMaxScore = studentExams.reduce((acc, r) => acc + (r.maxScore || 100), 0);
         const average = totalStudentMaxScore > 0 ? (totalStudentScore / totalStudentMaxScore) * 100 : 0;
         return { studentId: s.id, average };
     });
@@ -62,7 +43,7 @@ export default function StudentDashboardPage() {
         averagePercentage: averagePercentage.toFixed(2),
         rank: rank > 0 ? `${rank} / ${studentsInClass.length}` : 'N/A'
     }
-  }, [student, examResults, students]);
+  }, [student, examResults, students, recentExamResults]);
 
   if (isLoading) {
     return (
@@ -118,11 +99,13 @@ export default function StudentDashboardPage() {
         </div>
     )
   }
+  
+  const studentName = `${student.firstName} ${student.lastName}`;
 
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold font-headline">Welcome, {student.name}!</h1>
+        <h1 className="text-3xl font-bold font-headline">Welcome, {studentName}!</h1>
         <p className="text-muted-foreground">Here is your academic summary.</p>
       </div>
 
@@ -171,8 +154,8 @@ export default function StudentDashboardPage() {
                         <TableBody>
                             {examResults.length > 0 ? examResults.map((result) => (
                             <TableRow key={result.id}>
-                                <TableCell className="font-medium">{result.subject}</TableCell>
-                                <TableCell className="text-right">{result.score}</TableCell>
+                                <TableCell className="font-medium">{result.subjectId}</TableCell>
+                                <TableCell className="text-right">{result.score}/{result.maxScore || 100}</TableCell>
                             </TableRow>
                             )) : (
                                 <TableRow>

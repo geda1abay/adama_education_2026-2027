@@ -1,65 +1,83 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
-import { 
-    STUDENTS,
-    TEACHERS,
-    STUDENT_ATTENDANCE,
-    RECENT_EXAM_RESULTS,
-    FEES_DATA,
-    type Student,
-    type Teacher,
-    type Fee,
-} from '@/lib/data';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { 
+    useFirebase, 
+    useUser,
+    useCollection, 
+    useDoc,
+    useMemoFirebase,
+    WithId,
+} from '@/firebase';
+import {
+    collection,
+    doc,
+    addDoc,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    writeBatch,
+    getDoc
+} from 'firebase/firestore';
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+} from 'firebase/auth';
 
-
-type StudentAttendance = (typeof STUDENT_ATTENDANCE)[number];
-type ExamResult = (typeof RECENT_EXAM_RESULTS)[number];
-
-// New types for settings
-type AdminProfile = {
-  name: string;
-};
-
-type SchoolInfo = {
-  name: string;
-  address: string;
-  contact: string;
-};
-
-type Appearance = {
-  theme: string;
-  darkMode: boolean;
-};
+import {
+    Student,
+    Teacher,
+    StudentFee,
+    Attendance,
+    ExamResult,
+    AdminProfile,
+    SchoolInfo,
+    Appearance,
+} from '@/lib/data';
 
 interface DataContextType {
-  students: Student[];
-  teachers: Teacher[];
-  studentAttendance: StudentAttendance[];
-  recentExamResults: ExamResult[];
-  feesData: Fee[];
-  addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => void;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => void;
-  addAttendance: (attendanceData: StudentAttendance) => void;
-  addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
-  addFee: (feeData: Fee) => void;
-  clearStudents: () => void;
-  clearTeachers: () => void;
-  toggleStudentStatus: (studentId: string) => void;
-  currentUser: Student | null;
-  isAuthLoading: boolean;
-  loginStudent: (email: string, password: string) => boolean;
-  logoutStudent: () => void;
-  currentTeacher: Teacher | null;
-  isTeacherAuthLoading: boolean;
-  loginTeacher: (email: string, password: string) => boolean;
-  logoutTeacher: () => void;
-  adminProfile: AdminProfile;
-  schoolInfo: SchoolInfo;
-  appearance: Appearance;
+  // Data collections
+  students: WithId<Student>[] | null;
+  teachers: WithId<Teacher>[] | null;
+  studentAttendance: WithId<Attendance>[] | null;
+  recentExamResults: WithId<ExamResult>[] | null;
+  feesData: WithId<StudentFee>[] | null;
+
+  // Loading state
+  isLoading: boolean;
+  isUserLoading: boolean;
+
+  // Current user profiles
+  firebaseUser: any; // Firebase user object
+  currentStudent: WithId<Student> | null;
+  currentTeacher: WithId<Teacher> | null;
+  isAdmin: boolean;
+
+  // Settings
+  adminProfile: WithId<AdminProfile> | null;
+  schoolInfo: WithId<SchoolInfo> | null;
+  appearance: WithId<Appearance> | null;
+
+  // Auth functions
+  adminLogin: (email: string, password: string) => Promise<boolean>;
+  loginStudent: (email: string, password: string) => Promise<boolean>;
+  loginTeacher: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+
+  // Mutation functions
+  addStudent: (studentData: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => Promise<void>;
+  deleteStudent: (studentId: string) => Promise<void>;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string }) => Promise<void>;
+  deleteTeacher: (teacherId: string) => Promise<void>;
+  addAttendance: (attendanceData: Omit<Attendance, 'id'>) => Promise<void>;
+  addExamResult: (examResultData: Omit<ExamResult, 'id'>) => Promise<void>;
+  addFee: (feeData: Omit<StudentFee, 'id'>) => Promise<void>;
+
+  // Settings mutations
   updateAdminProfile: (data: Partial<AdminProfile>) => void;
-  updatePassword: () => void;
   updateSchoolInfo: (data: Partial<SchoolInfo>) => void;
   setTheme: (theme: string) => void;
   toggleDarkMode: () => void;
@@ -67,280 +85,228 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Default values for new state
-const initialAdminProfile: AdminProfile = {
-  name: 'Geda Abay',
-};
-
-const initialSchoolInfo: SchoolInfo = {
-  name: 'Adama Model School',
-  address: 'Adama, Ethiopia',
-  contact: '+251 912 345 678',
-};
-
-const initialAppearance: Appearance = {
-  theme: '259 71% 50%', // Default purple
-  darkMode: false,
-};
-
-
 export function DataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const { firestore, auth } = useFirebase();
+  const { user: firebaseUser, isUserLoading } = useUser();
 
-  const [students, setStudents] = useState<Student[]>(STUDENTS);
-  const [teachers, setTeachers] = useState<Teacher[]>(TEACHERS);
-  const [studentAttendance, setStudentAttendance] = useState<StudentAttendance[]>(STUDENT_ATTENDANCE);
-  const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
-  const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
-  const [currentUser, setCurrentUser] = useState<Student | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
-  const [isTeacherAuthLoading, setIsTeacherAuthLoading] = useState(true);
+  // --- Data Fetching ---
+  const studentsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'students') : null, [firestore]);
+  const { data: students, isLoading: isStudentsLoading } = useCollection<Student>(studentsQuery);
 
-  const [adminProfile, setAdminProfile] = useState<AdminProfile>(initialAdminProfile);
-  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(initialSchoolInfo);
-  const [appearance, setAppearance] = useState<Appearance>(initialAppearance);
+  const teachersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'teachers') : null, [firestore]);
+  const { data: teachers, isLoading: isTeachersLoading } = useCollection<Teacher>(teachersQuery);
 
-  useEffect(() => {
-    // This code only runs on the client.
-    const studentId = sessionStorage.getItem('currentUserId');
-    if (studentId) {
-        const student = students.find(s => s.id === studentId);
-        if (student) {
-            setCurrentUser(student);
-        }
-    }
-    setIsAuthLoading(false);
-  }, [students]);
+  const feesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'studentFees') : null, [firestore]);
+  const { data: feesData, isLoading: isFeesLoading } = useCollection<StudentFee>(feesQuery);
+
+  const attendanceQuery = useMemoFirebase(() => firestore ? collection(firestore, 'attendance') : null, [firestore]);
+  const { data: studentAttendance, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
+
+  const examResultsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'examResults') : null, [firestore]);
+  const { data: recentExamResults, isLoading: isExamResultsLoading } = useCollection<ExamResult>(examResultsQuery);
+
+  // --- Settings Fetching ---
+  const adminProfileDoc = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'adminProfile') : null, [firestore]);
+  const { data: adminProfile } = useDoc<AdminProfile>(adminProfileDoc);
+  
+  const schoolInfoDoc = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'schoolInfo') : null, [firestore]);
+  const { data: schoolInfo } = useDoc<SchoolInfo>(schoolInfoDoc);
+  
+  const appearanceDoc = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'appearance') : null, [firestore]);
+  const { data: appearance } = useDoc<Appearance>(appearanceDoc);
+  
+
+  // --- User Profile Derivation ---
+  const [currentStudent, setCurrentStudent] = useState<WithId<Student> | null>(null);
+  const [currentTeacher, setCurrentTeacher] = useState<WithId<Teacher> | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   useEffect(() => {
-    const teacherId = sessionStorage.getItem('currentTeacherId');
-    if (teacherId) {
-        const teacher = teachers.find(t => t.id === teacherId);
-        if (teacher) {
-            setCurrentTeacher(teacher);
-        }
-    }
-    setIsTeacherAuthLoading(false);
-  }, [teachers]);
-
-  const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
-    const randomId = Math.floor(Math.random() * 10000);
-    const newStudentId = `STU-${String(randomId).padStart(3, '0')}`;
-    const newRegistrationId = `Hgr/${String(randomId).padStart(4, '0')}/24`;
-    
-    const newStudent: Student = {
-        id: newStudentId,
-        registrationId: newRegistrationId,
-        name: studentData.name,
-        class: studentData.class,
-        parentName: studentData.parentName,
-        mobile: studentData.mobile,
-        email: studentData.email,
-        status: 'Active',
-        avatar: `user-avatar-${(students.length % 5) + 1}`,
-        password: studentData.password,
-    };
-
-    setStudents(prev => [...prev, newStudent]);
-    
-    toast({ title: "Student Added", description: `${studentData.name} has been added successfully.` });
-
-  }, [toast, students.length]);
-
-  const addTeacher = useCallback((teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => {
-    const randomId = Math.floor(Math.random() * 1000);
-    const newTeacherId = `TCH-${String(randomId).padStart(3, '0')}`;
-
-    const newTeacher: Teacher = {
-        id: newTeacherId,
-        name: teacherData.name,
-        subject: teacherData.subject,
-        classes: teacherData.classes,
-        mobile: teacherData.mobile,
-        email: teacherData.email,
-        status: 'Active',
-        avatar: `user-avatar-${(teachers.length % 3) + 6}`,
-        password: teacherData.password,
-    };
-
-    setTeachers(prev => [...prev, newTeacher]);
-
-    toast({ title: "Teacher Added", description: `${teacherData.name} has been added successfully.` });
-  }, [toast, teachers.length]);
-
-  const addAttendance = useCallback((data: StudentAttendance) => {
-    setStudentAttendance(prev => {
-      const existingIndex = prev.findIndex(
-        att => att.studentId === data.studentId && att.month === data.month
-      );
-
-      if (existingIndex !== -1) {
-        const updatedAttendance = [...prev];
-        updatedAttendance[existingIndex] = {
-          ...updatedAttendance[existingIndex],
-          daysPresent: data.daysPresent,
-          totalDays: data.totalDays,
-        };
-        return updatedAttendance;
+    const checkAdmin = async () => {
+      if(firebaseUser && firestore) {
+        const adminDocRef = doc(firestore, 'admins', firebaseUser.uid);
+        const adminDoc = await getDoc(adminDocRef);
+        setIsAdmin(adminDoc.exists());
       } else {
-        return [...prev, data];
+        setIsAdmin(false);
       }
-    });
-  }, []);
+    };
+    checkAdmin();
 
-  const addExamResult = useCallback((data: Omit<ExamResult, 'id'>) => {
-    setRecentExamResults(prev => {
-      const newExamResult: ExamResult = {
-        id: `EXAM-${String(prev.length + 1).padStart(3, '0')}`,
-        ...data
+    if (firebaseUser) {
+      setCurrentStudent(students?.find(s => s.id === firebaseUser.uid) || null);
+      setCurrentTeacher(teachers?.find(t => t.id === firebaseUser.uid) || null);
+    } else {
+      setCurrentStudent(null);
+      setCurrentTeacher(null);
+    }
+  }, [firebaseUser, students, teachers, firestore]);
+
+  // --- Auth Functions ---
+  const login = async (email: string, password: string): Promise<boolean> => {
+    if (!auth) return false;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return true;
+    } catch (error) {
+      console.error("Login failed:", error);
+      return false;
+    }
+  };
+  const adminLogin = login;
+  const loginStudent = login;
+  const loginTeacher = login;
+  
+  const logout = async () => {
+    if (auth) {
+      await signOut(auth);
+    }
+  };
+
+  // --- Mutation Functions ---
+  const addStudent = useCallback(async (data: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => {
+    if (!auth || !firestore || !data.password) return;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
+      const studentDoc: Student = {
+        id: userCredential.user.uid,
+        userId: userCredential.user.uid,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        contactEmail: data.contactEmail,
+        gradeLevel: data.gradeLevel,
+        contactPhone: data.contactPhone,
+        enrollmentDate: new Date().toISOString(),
+        dateOfBirth: new Date().toISOString(), // Placeholder
+        gender: 'Not specified', // Placeholder
+        address: 'Not specified', // Placeholder
+        parentIds: [], // Placeholder
       };
-      return [newExamResult, ...prev];
-    });
-  }, []);
+      await setDoc(doc(firestore, 'students', userCredential.user.uid), studentDoc);
+      toast({ title: 'Student Added', description: `${data.firstName} has been created.` });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error adding student', description: error.message });
+    }
+  }, [auth, firestore, toast]);
 
-  const addFee = useCallback((data: Fee) => {
-    setFeesData(prev => {
-      const existingIndex = prev.findIndex(
-        fee => fee.studentId === data.studentId
-      );
+  const deleteStudent = useCallback(async (studentId: string) => {
+    // This is a simplified delete. A real app would need a cloud function
+    // to delete the user from Firebase Auth.
+    if (!firestore) return;
+    try {
+      await deleteDoc(doc(firestore, 'students', studentId));
+      toast({ title: 'Student Deleted', description: 'Student profile has been removed from Firestore.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error deleting student', description: error.message });
+    }
+  }, [firestore, toast]);
+  
+  const addTeacher = useCallback(async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string }) => {
+    if (!auth || !firestore || !data.password) return;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
+      const teacherDoc: Teacher = {
+        id: userCredential.user.uid,
+        userId: userCredential.user.uid,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        contactEmail: data.contactEmail,
+        department: data.department,
+        contactPhone: data.contactPhone,
+        hireDate: new Date().toISOString(), // Placeholder
+        qualification: 'Not specified', // Placeholder
+        address: 'Not specified', // Placeholder
+      };
+      await setDoc(doc(firestore, 'teachers', userCredential.user.uid), teacherDoc);
+      toast({ title: 'Teacher Added', description: `${data.firstName} has been created.` });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error adding teacher', description: error.message });
+    }
+  }, [auth, firestore, toast]);
 
-      if (existingIndex !== -1) {
-        const updatedFees = [...prev];
-        updatedFees[existingIndex] = { ...updatedFees[existingIndex], ...data };
-        return updatedFees;
-      } else {
-        return [...prev, data];
+  const deleteTeacher = useCallback(async (teacherId: string) => {
+    if (!firestore) return;
+    try {
+      await deleteDoc(doc(firestore, 'teachers', teacherId));
+      toast({ title: 'Teacher Deleted', description: 'Teacher profile has been removed from Firestore.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error deleting teacher', description: error.message });
+    }
+  }, [firestore, toast]);
+
+  const addAttendance = useCallback(async (data: Omit<Attendance, 'id'>) => {
+    if (!firestore || !firebaseUser) return;
+    const attendanceDoc = {
+        ...data,
+        recordedByTeacherId: firebaseUser.uid,
+        classSessionId: 'session_placeholder' // Placeholder
+    };
+    await addDoc(collection(firestore, 'attendance'), attendanceDoc);
+  }, [firestore, firebaseUser]);
+
+  const addExamResult = useCallback(async (data: Omit<ExamResult, 'id'>) => {
+    if (!firestore) return;
+    const resultDoc = { ...data, resultDate: new Date().toISOString() };
+    await addDoc(collection(firestore, 'examResults'), resultDoc);
+  }, [firestore]);
+
+  const addFee = useCallback(async (data: Omit<StudentFee, 'id'>) => {
+    if (!firestore) return;
+    await addDoc(collection(firestore, 'studentFees'), data);
+  }, [firestore]);
+
+
+  // Settings Mutations
+  const updateSetting = useCallback(async (docId: string, data: any) => {
+      if (!firestore) return;
+      try {
+          const docRef = doc(firestore, 'settings', docId);
+          await setDoc(docRef, data, { merge: true });
+          toast({ title: 'Settings Saved', description: `Your ${docId} settings have been updated.` });
+      } catch (error: any) {
+          toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
       }
-    });
-  }, []);
+  }, [firestore, toast]);
 
-  const clearStudents = useCallback(() => {
-    setStudents([]);
-    toast({ title: "Students Cleared", description: "All student data has been removed." });
-  }, [toast]);
-
-  const clearTeachers = useCallback(() => {
-    setTeachers([]);
-    toast({ title: "Teachers Cleared", description: "All teacher data has been removed." });
-  }, [toast]);
-
-  const toggleStudentStatus = useCallback((studentId: string) => {
-    setStudents(prev => 
-      prev.map(student => 
-        student.id === studentId 
-          ? { ...student, status: student.status === 'Active' ? 'Inactive' : 'Active' }
-          : student
-      )
-    );
-  }, []);
-
-  const loginStudent = useCallback((email: string, password: string): boolean => {
-    const student = students.find(s => s.email === email && s.password === password);
-    if (student) {
-      sessionStorage.setItem('currentUserId', student.id);
-      setCurrentUser(student);
-      return true;
-    }
-    return false;
-  }, [students]);
-
-  const logoutStudent = useCallback(() => {
-    sessionStorage.removeItem('currentUserId');
-    setCurrentUser(null);
-  }, []);
-
-  const loginTeacher = useCallback((email: string, password: string): boolean => {
-    const teacher = teachers.find(t => t.email === email && t.password === password);
-    if (teacher) {
-      sessionStorage.setItem('currentTeacherId', teacher.id);
-      setCurrentTeacher(teacher);
-      return true;
-    }
-    return false;
-  }, [teachers]);
-
-  const logoutTeacher = useCallback(() => {
-    sessionStorage.removeItem('currentTeacherId');
-    setCurrentTeacher(null);
-  }, []);
-
-
-  // Settings functions
-  const updateAdminProfile = useCallback((data: Partial<AdminProfile>) => {
-    setAdminProfile(prev => ({ ...prev, ...data }));
-    toast({ title: "Profile Updated", description: "Your profile information has been saved." });
-  }, [toast]);
-
-  const updatePassword = useCallback(() => {
-    toast({ title: "Password Updated", description: "Your password has been changed successfully." });
-  }, [toast]);
-  
-  const updateSchoolInfo = useCallback((data: Partial<SchoolInfo>) => {
-    setSchoolInfo(prev => ({...prev, ...data}));
-    toast({ title: "School Info Saved", description: "The school's information has been updated." });
-  }, [toast]);
-  
-  const setTheme = useCallback((theme: string) => {
-    setAppearance(prev => ({ ...prev, theme }));
-    toast({ title: "Theme Updated", description: "The application theme has been changed." });
-  }, [toast]);
+  const updateAdminProfile = (data: Partial<AdminProfile>) => updateSetting('adminProfile', data);
+  const updateSchoolInfo = (data: Partial<SchoolInfo>) => updateSetting('schoolInfo', data);
+  const setTheme = (theme: string) => updateSetting('appearance', { theme });
 
   const toggleDarkMode = useCallback(() => {
-    setAppearance(prev => {
-        const newDarkMode = !prev.darkMode;
-        if (newDarkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        return { ...prev, darkMode: newDarkMode };
-    });
-  }, []);
+    if(appearance) {
+        updateSetting('appearance', { darkMode: !appearance.darkMode });
+    }
+  }, [appearance]);
 
-  // Effect to apply theme on initial load
+  // --- UI Effects ---
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-        if (appearance.darkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+    if (typeof window !== 'undefined' && appearance) {
+        document.documentElement.classList.toggle('dark', appearance.darkMode);
         document.documentElement.style.setProperty('--primary', appearance.theme);
     }
-  }, [appearance.darkMode, appearance.theme]);
+  }, [appearance]);
+
+  const isLoading = isUserLoading || isStudentsLoading || isTeachersLoading || isFeesLoading || isAttendanceLoading || isExamResultsLoading;
 
   const value = useMemo(() => ({
-    students,
-    teachers,
-    studentAttendance,
-    recentExamResults,
-    feesData,
-    addStudent,
-    addTeacher,
-    addAttendance,
-    addExamResult,
-    addFee,
-    clearStudents,
-    clearTeachers,
-    toggleStudentStatus,
-    currentUser,
-    isAuthLoading,
-    loginStudent,
-    logoutStudent,
-    currentTeacher,
-    isTeacherAuthLoading,
-    loginTeacher,
-    logoutTeacher,
-    adminProfile,
-    schoolInfo,
-    appearance,
-    updateAdminProfile,
-    updatePassword,
-    updateSchoolInfo,
-    setTheme,
-    toggleDarkMode,
-  }), [students, teachers, studentAttendance, recentExamResults, feesData, addStudent, addTeacher, addAttendance, addExamResult, addFee, clearStudents, clearTeachers, toggleStudentStatus, currentUser, isAuthLoading, loginStudent, logoutStudent, currentTeacher, isTeacherAuthLoading, loginTeacher, logoutTeacher, adminProfile, schoolInfo, appearance, updateAdminProfile, updatePassword, updateSchoolInfo, setTheme, toggleDarkMode]);
+    students, teachers, feesData, studentAttendance, recentExamResults,
+    isLoading, isUserLoading,
+    firebaseUser, currentStudent, currentTeacher, isAdmin,
+    adminProfile, schoolInfo, appearance,
+    adminLogin, loginStudent, loginTeacher, logout,
+    addStudent, deleteStudent, addTeacher, deleteTeacher, addAttendance, addExamResult, addFee,
+    updateAdminProfile, updateSchoolInfo, setTheme, toggleDarkMode
+  }), [
+    students, teachers, feesData, studentAttendance, recentExamResults,
+    isLoading, isUserLoading,
+    firebaseUser, currentStudent, currentTeacher, isAdmin,
+    adminProfile, schoolInfo, appearance,
+    adminLogin, loginStudent, loginTeacher, logout,
+    addStudent, deleteStudent, addTeacher, deleteTeacher, addAttendance, addExamResult, addFee,
+    updateAdminProfile, updateSchoolInfo, setTheme, toggleDarkMode
+  ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

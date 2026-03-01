@@ -24,11 +24,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 const teacherSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Invalid email address.' }),
-  subject: z.string().min(2, { message: 'Subject must be at least 2 characters.' }),
-  classes: z.string().min(1, { message: 'At least one class is required.' }),
-  mobile: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
+  firstName: z.string().min(2, { message: 'First name is required.' }),
+  lastName: z.string().min(2, { message: 'Last name is required.' }),
+  contactEmail: z.string().email({ message: 'Invalid email address.' }),
+  department: z.string().min(2, { message: 'Department is required.' }),
+  contactPhone: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
@@ -37,28 +37,24 @@ type TeacherFormValues = z.infer<typeof teacherSchema>;
 interface AddTeacherDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTeacherAdd: (teacher: Omit<TeacherFormValues, 'classes'> & { classes: string[] }) => void;
+  onTeacherAdd: (teacher: TeacherFormValues) => void;
 }
 
 export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeacherDialogProps) {
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      subject: '',
-      classes: '',
-      mobile: '',
+      firstName: '',
+      lastName: '',
+      contactEmail: '',
+      department: '',
+      contactPhone: '',
       password: '',
     },
   });
 
   const onSubmit = (data: TeacherFormValues) => {
-    const teacherDataWithClassesArray = {
-        ...data,
-        classes: data.classes.split(',').map(c => c.trim()),
-    };
-    onTeacherAdd(teacherDataWithClassesArray);
+    onTeacherAdd(data);
     form.reset();
   };
 
@@ -68,32 +64,47 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
         <DialogHeader>
           <DialogTitle>Add New Teacher</DialogTitle>
           <DialogDescription>
-            Enter the details of the new teacher. Click save when you&apos;re done.
+            Enter the details of the new teacher. An authentication account will be created.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Solomon" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Taye" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <FormField
               control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Teacher Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Mr. Solomon" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
+              name="contactEmail"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="solomon@example.com" {...field} />
+                    <Input placeholder="teacher@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -101,10 +112,10 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
             />
             <FormField
               control={form.control}
-              name="subject"
+              name="department"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Subject</FormLabel>
+                  <FormLabel>Department/Subject</FormLabel>
                   <FormControl>
                     <Input placeholder="Mathematics" {...field} />
                   </FormControl>
@@ -112,22 +123,9 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="classes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Classes (comma-separated)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="10-A, 10-B" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
-              name="mobile"
+              name="contactPhone"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Mobile</FormLabel>

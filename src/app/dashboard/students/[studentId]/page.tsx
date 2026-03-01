@@ -11,49 +11,32 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Award, Calculator, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentDetailsPage() {
   const params = useParams();
   const studentId = params.studentId as string;
-  const { students, recentExamResults } = useData();
+  const { students, recentExamResults, isLoading } = useData();
 
-  const student = students.find((s) => s.id === studentId);
-  const examResults = recentExamResults.filter((r) => r.studentId === studentId);
-  const avatar = PlaceHolderImages.find((img) => img.id === student?.avatar);
+  const student = useMemo(() => students?.find((s) => s.id === studentId), [students, studentId]);
+  const examResults = useMemo(() => recentExamResults?.filter((r) => r.studentId === studentId), [recentExamResults, studentId]);
+
+  const avatar = PlaceHolderImages.find((img) => img.id === 'user-avatar-1'); // Simplified avatar logic
 
   const stats = useMemo(() => {
-    if (!student) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
+    if (!student || !examResults) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
 
-    const processedResults = examResults.map(r => {
-        const scoreParts = r.score.split('/');
-        const score = parseInt(scoreParts[0], 10);
-        const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
-        return {
-            score: isNaN(score) ? 0 : score,
-            maxScore: isNaN(maxScore) ? 100 : maxScore,
-        };
-    });
-    
-    const totalScore = processedResults.reduce((acc, r) => acc + r.score, 0);
-    const totalMaxScore = processedResults.reduce((acc, r) => acc + r.maxScore, 0);
+    const totalScore = examResults.reduce((acc, r) => acc + r.score, 0);
+    const totalMaxScore = examResults.reduce((acc, r) => acc + (r.maxScore || 100), 0);
     const averagePercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
 
-    const studentsInClass = students.filter(s => s.class === student.class);
+    const studentsInClass = students?.filter(s => s.gradeLevel === student.gradeLevel) || [];
     const studentAverages = studentsInClass.map(s => {
-        const studentExams = recentExamResults.filter(r => r.studentId === s.id);
-        const processedStudentResults = studentExams.map(r => {
-            const scoreParts = r.score.split('/');
-            const score = parseInt(scoreParts[0], 10);
-            const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
-            return {
-                score: isNaN(score) ? 0 : score,
-                maxScore: isNaN(maxScore) ? 100 : maxScore,
-            };
-        });
-        const totalStudentScore = processedStudentResults.reduce((acc, r) => acc + r.score, 0);
-        const totalStudentMaxScore = processedStudentResults.reduce((acc, r) => acc + r.maxScore, 0);
-        const average = totalStudentMaxScore > 0 ? (totalStudentScore / totalStudentMaxScore) * 100 : 0;
-        return { studentId: s.id, average };
+      const studentExams = recentExamResults?.filter(r => r.studentId === s.id) || [];
+      const totalStudentScore = studentExams.reduce((acc, r) => acc + r.score, 0);
+      const totalStudentMaxScore = studentExams.reduce((acc, r) => acc + (r.maxScore || 100), 0);
+      const average = totalStudentMaxScore > 0 ? (totalStudentScore / totalStudentMaxScore) * 100 : 0;
+      return { studentId: s.id, average };
     });
     
     studentAverages.sort((a, b) => b.average - a.average);
@@ -64,8 +47,25 @@ export default function StudentDetailsPage() {
         averagePercentage: averagePercentage.toFixed(2),
         rank: rank > 0 ? `${rank} / ${studentsInClass.length}` : 'N/A'
     }
-  }, [student, examResults, students, studentId]);
+  }, [student, examResults, students, studentId, recentExamResults]);
 
+  if (isLoading) {
+    return (
+        <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-4">
+                <Skeleton className="h-10 w-10" />
+                <Skeleton className="h-9 w-48" />
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+                <Card><CardHeader className="items-center"><Skeleton className="h-24 w-24 rounded-full" /><Skeleton className="h-7 w-32 mt-2" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+                <div className="md:col-span-2 flex flex-col gap-6">
+                    <Card><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-20 w-full" /></CardContent></Card>
+                    <Card><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                </div>
+            </div>
+        </div>
+    );
+  }
 
   if (!student) {
     return (
@@ -87,6 +87,8 @@ export default function StudentDetailsPage() {
       </div>
     );
   }
+  
+  const studentName = `${student.firstName} ${student.lastName}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,28 +106,24 @@ export default function StudentDetailsPage() {
           <Card>
             <CardHeader className="items-center text-center">
                 <Avatar className="h-24 w-24 mb-2">
-                    <AvatarImage src={avatar?.imageUrl} alt={student.name} data-ai-hint={avatar?.imageHint} />
-                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={avatar?.imageUrl} alt={studentName} data-ai-hint={avatar?.imageHint} />
+                    <AvatarFallback>{student.firstName.charAt(0)}{student.lastName.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <CardTitle>{student.name}</CardTitle>
-                <Badge variant="outline">{student.class}</Badge>
+                <CardTitle>{studentName}</CardTitle>
+                <Badge variant="outline">{student.gradeLevel}</Badge>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Status:</span>
-                    <Badge variant={student.status === 'Active' ? 'default' : 'secondary'}>{student.status}</Badge>
-                </div>
-                <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Parent:</span>
-                    <span>{student.parentName}</span>
+                    <span>{student.parentIds?.join(', ') || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Contact:</span>
-                    <span>{student.mobile}</span>
+                    <span>{student.contactPhone}</span>
                 </div>
                  <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Email:</span>
-                    <span className="truncate">{student.email}</span>
+                    <span className="truncate">{student.contactEmail}</span>
                 </div>
             </CardContent>
           </Card>
@@ -173,10 +171,10 @@ export default function StudentDetailsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {examResults.length > 0 ? examResults.map((result) => (
+                            {examResults && examResults.length > 0 ? examResults.map((result) => (
                             <TableRow key={result.id}>
-                                <TableCell>{result.subject}</TableCell>
-                                <TableCell className="text-right">{result.score}</TableCell>
+                                <TableCell>{result.subjectId}</TableCell>
+                                <TableCell className="text-right">{result.score}/{result.maxScore || 100}</TableCell>
                             </TableRow>
                             )) : (
                                 <TableRow>

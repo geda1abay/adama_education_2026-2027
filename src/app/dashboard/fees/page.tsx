@@ -29,15 +29,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { useData } from '@/context/data-context';
 import { AddFeeDialog } from '@/components/dashboard/add-fee-dialog';
-import type { Fee } from '@/lib/data';
+import type { StudentFee } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function FeesPage() {
-  const { students, feesData, addFee } = useData();
+  const { students, feesData, addFee, isLoading } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
   
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(students.map((student) => student.class));
+    if (!students) return [];
+    const classes = new Set(students.map((student) => student.gradeLevel));
     return Array.from(classes).sort();
   }, [students]);
 
@@ -51,30 +53,31 @@ export default function FeesPage() {
     });
   };
 
-  const getStudentById = (studentId: string) => students.find(s => s.id === studentId);
+  const getStudentById = (studentId: string) => students?.find(s => s.id === studentId);
 
   const filteredFees = useMemo(() => {
+    if (!feesData || !students) return [];
     return feesData.filter((fee) => {
       const student = getStudentById(fee.studentId);
-      return classFilters.length === 0 || (student && classFilters.includes(student.class));
+      return classFilters.length === 0 || (student && classFilters.includes(student.gradeLevel));
     });
   }, [classFilters, feesData, students]);
 
-  const getStatusVariant = (status: 'Paid' | 'Due' | 'Overdue') => {
+  const getStatusVariant = (status: 'paid' | 'due' | 'overdue') => {
     switch (status) {
-      case 'Paid':
+      case 'paid':
         return 'default';
-      case 'Due':
+      case 'due':
         return 'secondary';
-      case 'Overdue':
+      case 'overdue':
         return 'destructive';
       default:
         return 'outline';
     }
   };
 
-  const handleAddFee = (data: Fee) => {
-    addFee(data);
+  const handleAddFee = async (data: Omit<StudentFee, 'id' | 'description'>) => {
+    await addFee(data);
     setIsAddFeeDialogOpen(false);
   }
 
@@ -145,16 +148,26 @@ export default function FeesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredFees.map((fee) => {
+              {isLoading ? (
+                 Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell className='text-right'><Skeleton className="h-6 w-16 ml-auto" /></TableCell>
+                    </TableRow>
+                 ))
+              ) : filteredFees.map((fee) => {
                  const student = getStudentById(fee.studentId);
                  return (
-                  <TableRow key={fee.studentId}>
-                    <TableCell className="font-medium">{student?.name || 'N/A'}</TableCell>
+                  <TableRow key={fee.id}>
+                    <TableCell className="font-medium">{student?.firstName} {student?.lastName || ''}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{student?.class || 'N/A'}</Badge>
+                      <Badge variant="outline">{student?.gradeLevel || 'N/A'}</Badge>
                     </TableCell>
-                    <TableCell>Birr {fee.amount.toFixed(2)}</TableCell>
-                    <TableCell>{fee.dueDate}</TableCell>
+                    <TableCell>Birr {fee.amountDue.toFixed(2)}</TableCell>
+                    <TableCell>{new Date(fee.dueDate).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={getStatusVariant(fee.status)}>{fee.status}</Badge>
                     </TableCell>
@@ -169,7 +182,7 @@ export default function FeesPage() {
         open={isAddFeeDialogOpen}
         onOpenChange={setIsAddFeeDialogOpen}
         onFeeAdd={handleAddFee}
-        students={students}
+        students={students || []}
       />
     </div>
   );

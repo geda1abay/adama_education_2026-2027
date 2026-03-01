@@ -13,11 +13,12 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { PlusCircle } from 'lucide-react';
 import { AddAttendanceDialog } from '@/components/dashboard/add-attendance-dialog';
 import { AddExamResultDialog } from '@/components/dashboard/add-exam-result-dialog';
+import type { Attendance, ExamResult } from '@/lib/data';
 
 export default function TeacherDashboardPage() {
   const { 
     currentTeacher: teacher, 
-    isTeacherAuthLoading, 
+    isUserLoading,
     students,
     addAttendance,
     addExamResult
@@ -26,26 +27,30 @@ export default function TeacherDashboardPage() {
   const [isAddAttendanceDialogOpen, setIsAddAttendanceDialogOpen] = useState(false);
   const [isAddExamResultDialogOpen, setIsAddExamResultDialogOpen] = useState(false);
   
-  const isLoading = isTeacherAuthLoading;
+  const isLoading = isUserLoading;
 
   const myStudents = useMemo(() => {
-    if (!teacher) return [];
-    return students.filter(student => teacher.classes.includes(student.class));
+    if (!teacher || !students) return [];
+    // Teacher's classes logic needs to be defined. Assuming a teacher is linked to a class.
+    // This is a placeholder. Real logic depends on how classes and teachers are linked.
+    // For now, let's assume a teacher's department is linked to a student's class somehow or just show a few students.
+    // A more robust implementation would link teachers to classes they teach.
+    // Example: teacher.classes = ["10-A", "10-B"].
+    // Let's assume for now the teacher can see all students.
+    return students;
   }, [teacher, students]);
   
   const getImage = (avatarId: string) => PlaceHolderImages.find((img) => img.id === avatarId);
 
-  const handleAddAttendance = (data: any) => {
-    addAttendance(data);
+  const handleAddAttendance = async (data: Omit<Attendance, 'id' | 'recordedByTeacherId' | 'classSessionId'> & { studentId: string }) => {
+    await addAttendance(data);
     setIsAddAttendanceDialogOpen(false);
   };
   
-  const handleAddExamResult = (data: any) => {
-    // The teacher should only be able to add results for their subject
-    addExamResult({ ...data, subject: teacher?.subject || data.subject, grade: 'N/A' });
+  const handleAddExamResult = async (data: Omit<ExamResult, 'id' | 'resultDate' | 'comments'>) => {
+    await addExamResult({ ...data, subjectId: teacher?.department || data.subjectId });
     setIsAddExamResultDialogOpen(false);
   };
-
 
   if (isLoading) {
     return (
@@ -85,12 +90,14 @@ export default function TeacherDashboardPage() {
     );
   }
 
+  const teacherName = `${teacher.firstName} ${teacher.lastName}`;
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex items-center mb-6">
         <div>
-            <h1 className="text-3xl font-bold font-headline">Welcome, {teacher.name}!</h1>
-            <p className="text-muted-foreground">Here are the students in your classes: {teacher.classes.join(', ')}.</p>
+            <h1 className="text-3xl font-bold font-headline">Welcome, {teacherName}!</h1>
+            <p className="text-muted-foreground">Here are the students you can manage.</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
             <Button onClick={() => setIsAddAttendanceDialogOpen(true)} size="sm" className="h-8 gap-1">
@@ -123,41 +130,35 @@ export default function TeacherDashboardPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead className="hidden md:table-cell">
-                    Parent
+                    Parent Contact
                   </TableHead>
-                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {myStudents.map((student) => {
-                  const avatar = getImage(student.avatar);
+                  const avatar = getImage('user-avatar-1');
                   return (
                     <TableRow key={student.id}>
                       <TableCell className="hidden sm:table-cell">
                         <Avatar className="h-10 w-10">
                           <AvatarImage
                             src={avatar?.imageUrl}
-                            alt={avatar?.description || student.name}
+                            alt={student.firstName}
                             data-ai-hint={avatar?.imageHint}
                           />
                           <AvatarFallback>
-                            {student.name.charAt(0)}
+                            {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {student.name}
+                        {student.firstName} {student.lastName}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{student.class}</Badge>
+                        <Badge variant="outline">{student.gradeLevel}</Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {student.parentName}
-                      </TableCell>
-                       <TableCell>
-                        <Badge variant={student.status === 'Active' ? 'default' : 'secondary'}>
-                          {student.status}
-                        </Badge>
+                        {student.contactPhone}
                       </TableCell>
                     </TableRow>
                   );
@@ -183,7 +184,7 @@ export default function TeacherDashboardPage() {
         onOpenChange={setIsAddExamResultDialogOpen}
         onExamResultAdd={handleAddExamResult}
         students={myStudents}
-        defaultSubject={teacher.subject}
+        defaultSubject={teacher.department}
       />
     </div>
   );

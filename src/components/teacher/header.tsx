@@ -18,16 +18,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function TeacherHeader() {
-  const { currentTeacher: teacher, isTeacherAuthLoading, logoutTeacher } = useData();
+  const { currentTeacher: teacher, isUserLoading, logout } = useData();
   const router = useRouter();
 
-  const handleLogout = () => {
-    logoutTeacher();
+  const handleLogout = async () => {
+    await logout();
     router.push('/teacher/login');
   };
 
-  const avatar = teacher ? PlaceHolderImages.find((img) => img.id === teacher.avatar) : null;
-  const isLoading = isTeacherAuthLoading;
+  const avatar = teacher ? PlaceHolderImages.find((img) => img.id === 'user-avatar-6') : null;
+  const isLoading = isUserLoading;
+
+  const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : '';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
@@ -53,12 +55,12 @@ export default function TeacherHeader() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 focus-visible:ring-0 h-12">
                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={avatar?.imageUrl} alt={teacher.name} data-ai-hint={avatar?.imageHint} />
-                        <AvatarFallback>{teacher.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={avatar?.imageUrl} alt={teacherName} data-ai-hint={avatar?.imageHint} />
+                        <AvatarFallback>{teacher.firstName.charAt(0)}{teacher.lastName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col text-sm items-start">
-                        <span className="font-semibold">{teacher.name}</span>
-                        <span className="text-xs text-muted-foreground">{teacher.subject}</span>
+                        <span className="font-semibold">{teacherName}</span>
+                        <span className="text-xs text-muted-foreground">{teacher.department}</span>
                     </div>
                 </Button>
               </DropdownMenuTrigger>

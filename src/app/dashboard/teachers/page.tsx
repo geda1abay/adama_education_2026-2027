@@ -51,30 +51,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AddTeacherDialog } from '@/components/dashboard/add-teacher-dialog';
-
-const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
-  switch (status) {
-    case 'Active':
-      return 'default';
-    case 'Inactive':
-      return 'secondary';
-    default:
-      return 'outline';
-  }
-};
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Teacher } from '@/lib/data';
 
 export default function TeachersPage() {
-  const { teachers, addTeacher, clearTeachers } = useData();
+  const { teachers, addTeacher, deleteTeacher, isLoading } = useData();
   const [isAddTeacherDialogOpen, setIsAddTeacherDialogOpen] = useState(false);
 
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
 
   const [subjectFilters, setSubjectFilters] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState('all');
-
+  
   const uniqueSubjects = useMemo(() => {
-    const subjects = new Set(teachers.map((teacher) => teacher.subject));
+    if (!teachers) return [];
+    const subjects = new Set(teachers.map((teacher) => teacher.department));
     return Array.from(subjects).sort();
   }, [teachers]);
 
@@ -88,20 +79,19 @@ export default function TeachersPage() {
     });
   };
   
-  const handleAddTeacher = (data: any) => {
-    addTeacher(data);
+  const handleAddTeacher = async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string }) => {
+    await addTeacher(data);
     setIsAddTeacherDialogOpen(false);
   };
 
   const filteredTeachers = useMemo(() => {
+    if (!teachers) return [];
     return teachers.filter((teacher) => {
-      const statusMatch =
-        activeTab === 'all' || teacher.status.toLowerCase() === activeTab;
       const subjectMatch =
-        subjectFilters.length === 0 || subjectFilters.includes(teacher.subject);
-      return statusMatch && subjectMatch;
+        subjectFilters.length === 0 || subjectFilters.includes(teacher.department);
+      return subjectMatch;
     });
-  }, [activeTab, subjectFilters, teachers]);
+  }, [subjectFilters, teachers]);
 
   const teacherTableCard = (
     <Card>
@@ -119,46 +109,50 @@ export default function TeachersPage() {
                 <span className="sr-only">Image</span>
               </TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Subject</TableHead>
+              <TableHead>Department</TableHead>
               <TableHead className="hidden md:table-cell">
                 Contact
               </TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTeachers.map((teacher) => {
-              const avatar = getImage(teacher.avatar);
+            {isLoading ? (
+               Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+              ))
+            ) : filteredTeachers.map((teacher) => {
+              const avatar = getImage('user-avatar-6'); // Simplified avatar
               return (
                 <TableRow key={teacher.id}>
                   <TableCell className="hidden sm:table-cell">
                     <Avatar className="h-10 w-10">
                       <AvatarImage
                         src={avatar?.imageUrl}
-                        alt={avatar?.description || teacher.name}
+                        alt={teacher.firstName}
                         data-ai-hint={avatar?.imageHint}
                       />
                       <AvatarFallback>
-                        {teacher.name.charAt(0)}
+                        {teacher.firstName.charAt(0)}{teacher.lastName.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {teacher.name}
+                    {teacher.firstName} {teacher.lastName}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{teacher.subject}</Badge>
+                    <Badge variant="outline">{teacher.department}</Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {teacher.mobile}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(teacher.status)}>
-                      {teacher.status}
-                    </Badge>
+                    {teacher.contactPhone}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -174,9 +168,25 @@ export default function TeachersPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">Delete</DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the teacher and their associated auth account. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteTeacher(teacher.id)}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -189,7 +199,7 @@ export default function TeachersPage() {
       <CardFooter>
         <div className="text-xs text-muted-foreground">
           Showing <strong>{filteredTeachers.length}</strong> of{' '}
-          <strong>{teachers.length}</strong> teachers
+          <strong>{teachers?.length || 0}</strong> teachers
         </div>
       </CardFooter>
     </Card>
@@ -198,12 +208,10 @@ export default function TeachersPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold font-headline mb-4">Teachers</h1>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue="all">
         <div className="flex items-center">
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="inactive">Inactive</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
@@ -243,33 +251,9 @@ export default function TeachersPage() {
                 Add Teacher
               </span>
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive" className="h-8 gap-1">
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Clear All
-                  </span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete all teacher data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={clearTeachers}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         </div>
         <TabsContent value="all">{teacherTableCard}</TabsContent>
-        <TabsContent value="active">{teacherTableCard}</TabsContent>
-        <TabsContent value="inactive">{teacherTableCard}</TabsContent>
       </Tabs>
        <AddTeacherDialog 
         open={isAddTeacherDialogOpen}

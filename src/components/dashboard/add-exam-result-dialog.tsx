@@ -34,8 +34,10 @@ import type { Student } from '@/lib/data';
 
 const examResultSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
-  subject: z.string().min(2, { message: 'Subject must be at least 2 characters.' }),
-  score: z.string().min(1, { message: 'Score is required.' }),
+  subjectId: z.string().min(2, { message: 'Subject must be at least 2 characters.' }),
+  examId: z.string().min(2, { message: 'Exam title is required.' }),
+  score: z.coerce.number().min(0, { message: 'Score must be a positive number.' }),
+  maxScore: z.coerce.number().min(1, { message: 'Max score must be at least 1.' }),
 });
 
 type ExamResultFormValues = z.infer<typeof examResultSchema>;
@@ -53,16 +55,20 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
     resolver: zodResolver(examResultSchema),
     defaultValues: {
       studentId: '',
-      subject: defaultSubject || '',
-      score: '',
+      subjectId: defaultSubject || '',
+      examId: 'Midterm',
+      score: 0,
+      maxScore: 100,
     },
   });
 
   React.useEffect(() => {
     form.reset({
       studentId: '',
-      subject: defaultSubject || '',
-      score: '',
+      subjectId: defaultSubject || '',
+      examId: 'Midterm',
+      score: 0,
+      maxScore: 100,
     });
   }, [open, defaultSubject, form]);
 
@@ -70,6 +76,7 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
   const onSubmit = (data: ExamResultFormValues) => {
     onExamResultAdd(data);
     form.reset();
+    onOpenChange(false);
   };
 
   return (
@@ -98,7 +105,7 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
                     <SelectContent>
                       {students.map((student) => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.name} ({student.class})
+                          {student.firstName} {student.lastName} ({student.gradeLevel})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -109,7 +116,7 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
             />
             <FormField
               control={form.control}
-              name="subject"
+              name="subjectId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Subject</FormLabel>
@@ -127,7 +134,20 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
                 <FormItem>
                   <FormLabel>Score</FormLabel>
                   <FormControl>
-                    <Input placeholder="95/100" {...field} />
+                    <Input type="number" placeholder="95" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="maxScore"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Max Score</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="100" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -52,20 +52,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-
-const getStatusVariant = (status: 'Active' | 'Inactive' | string) => {
-  switch (status) {
-    case 'Active':
-      return 'default';
-    case 'Inactive':
-      return 'secondary';
-    default:
-      return 'outline';
-  }
-};
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Student } from '@/lib/data';
 
 export default function StudentsPage() {
-  const { students, addStudent, clearStudents, toggleStudentStatus } = useData();
+  const { students, addStudent, deleteStudent, isLoading } = useData();
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const router = useRouter();
 
@@ -76,7 +67,8 @@ export default function StudentsPage() {
   const [activeTab, setActiveTab] = useState('all');
 
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(students.map((student) => student.class));
+    if (!students) return [];
+    const classes = new Set(students.map((student) => student.gradeLevel));
     return Array.from(classes).sort();
   }, [students]);
 
@@ -91,20 +83,18 @@ export default function StudentsPage() {
   };
 
   const filteredStudents = useMemo(() => {
+    if (!students) return [];
     return students.filter((student) => {
-      const statusMatch =
-        activeTab === 'all' || student.status.toLowerCase() === activeTab;
       const classMatch =
-        classFilters.length === 0 || classFilters.includes(student.class);
-      return statusMatch && classMatch;
+        classFilters.length === 0 || classFilters.includes(student.gradeLevel);
+      return classMatch;
     });
-  }, [activeTab, classFilters, students]);
+  }, [classFilters, students]);
 
-  const handleAddStudent = (data: any) => {
-    addStudent(data);
+  const handleAddStudent = async (data: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => {
+    await addStudent(data);
     setIsAddStudentDialogOpen(false);
   };
-
 
   const studentTableCard = (
     <Card>
@@ -124,50 +114,48 @@ export default function StudentsPage() {
               <TableHead>Name</TableHead>
               <TableHead>Class</TableHead>
               <TableHead className="hidden md:table-cell">
-                Parent
-              </TableHead>
-              <TableHead className="hidden md:table-cell">
                 Contact
               </TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((student) => {
-              const avatar = getImage(student.avatar);
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+              ))
+            ) : filteredStudents.map((student) => {
+              const avatar = getImage('user-avatar-1'); // Simplified avatar
               return (
                 <TableRow key={student.id}>
                   <TableCell className="hidden sm:table-cell">
                     <Avatar className="h-10 w-10">
                       <AvatarImage
                         src={avatar?.imageUrl}
-                        alt={avatar?.description || student.name}
+                        alt={student.firstName}
                         data-ai-hint={avatar?.imageHint}
                       />
                       <AvatarFallback>
-                        {student.name.charAt(0)}
+                        {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {student.name}
+                    {student.firstName} {student.lastName}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{student.class}</Badge>
+                    <Badge variant="outline">{student.gradeLevel}</Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {student.parentName}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {student.mobile}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(student.status)}>
-                      {student.status}
-                    </Badge>
+                    {student.contactPhone}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -183,13 +171,25 @@ export default function StudentsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id}`)}>View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleStudentStatus(student.id)}>
-                          {student.status === 'Active' ? 'Make Inactive' : 'Make Active'}
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">Delete</DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the student and their associated auth account. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteStudent(student.id)}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -202,7 +202,7 @@ export default function StudentsPage() {
       <CardFooter>
         <div className="text-xs text-muted-foreground">
           Showing <strong>{filteredStudents.length}</strong> of{' '}
-          <strong>{students.length}</strong> students
+          <strong>{students?.length || 0}</strong> students
         </div>
       </CardFooter>
     </Card>
@@ -215,8 +215,6 @@ export default function StudentsPage() {
         <div className="flex items-center">
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="inactive">Inactive</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
@@ -256,33 +254,9 @@ export default function StudentsPage() {
                 Add Student
               </span>
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive" className="h-8 gap-1">
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Clear All
-                  </span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete all student data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={clearStudents}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         </div>
         <TabsContent value="all">{studentTableCard}</TabsContent>
-        <TabsContent value="active">{studentTableCard}</TabsContent>
-        <TabsContent value="inactive">{studentTableCard}</TabsContent>
       </Tabs>
       <AddStudentDialog 
         open={isAddStudentDialogOpen}

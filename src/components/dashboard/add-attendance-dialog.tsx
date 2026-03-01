@@ -20,7 +20,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -33,9 +32,7 @@ import type { Student } from '@/lib/data';
 
 const attendanceSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
-  month: z.string().min(1, { message: 'Month is required.' }),
-  daysPresent: z.coerce.number().int().min(0, 'Days present must be positive.'),
-  totalDays: z.coerce.number().int().min(1, 'Total days must be at least 1.'),
+  status: z.enum(['present', 'absent', 'late', 'excused']),
 });
 
 type AttendanceFormValues = z.infer<typeof attendanceSchema>;
@@ -47,22 +44,19 @@ interface AddAttendanceDialogProps {
   students: Student[];
 }
 
-const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
 export function AddAttendanceDialog({ open, onOpenChange, onAttendanceAdd, students }: AddAttendanceDialogProps) {
   const form = useForm<AttendanceFormValues>({
     resolver: zodResolver(attendanceSchema),
     defaultValues: {
       studentId: '',
-      month: '',
-      daysPresent: 0,
-      totalDays: 22,
+      status: 'present',
     },
   });
 
   const onSubmit = (data: AttendanceFormValues) => {
     onAttendanceAdd(data);
     form.reset();
+    onOpenChange(false);
   };
 
   return (
@@ -91,7 +85,7 @@ export function AddAttendanceDialog({ open, onOpenChange, onAttendanceAdd, stude
                     <SelectContent>
                       {students.map((student) => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.name} ({student.class})
+                          {student.firstName} {student.lastName} ({student.gradeLevel})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -102,50 +96,23 @@ export function AddAttendanceDialog({ open, onOpenChange, onAttendanceAdd, stude
             />
             <FormField
               control={form.control}
-              name="month"
+              name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Month</FormLabel>
+                  <FormLabel>Status</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a month" />
+                        <SelectValue placeholder="Select a status" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {months.map((month) => (
-                        <SelectItem key={month} value={month}>
-                          {month}
-                        </SelectItem>
-                      ))}
+                        <SelectItem value="present">Present</SelectItem>
+                        <SelectItem value="absent">Absent</SelectItem>
+                        <SelectItem value="late">Late</SelectItem>
+                        <SelectItem value="excused">Excused</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="daysPresent"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Days Present</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="20" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="totalDays"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Total Days</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="22" {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

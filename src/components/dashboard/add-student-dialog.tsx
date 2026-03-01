@@ -24,11 +24,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 const studentSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Invalid email address.' }),
-  class: z.string().min(1, { message: 'Class is required.' }),
-  parentName: z.string().min(2, { message: 'Parent name must be at least 2 characters.' }),
-  mobile: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
+  firstName: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
+  lastName: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
+  contactEmail: z.string().email({ message: 'Invalid email address.' }),
+  gradeLevel: z.string().min(1, { message: 'Class is required.' }),
+  contactPhone: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
@@ -44,11 +44,11 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      class: '',
-      parentName: '',
-      mobile: '',
+      firstName: '',
+      lastName: '',
+      contactEmail: '',
+      gradeLevel: '',
+      contactPhone: '',
       password: '',
     },
   });
@@ -64,32 +64,47 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
         <DialogHeader>
           <DialogTitle>Add New Student</DialogTitle>
           <DialogDescription>
-            Enter the details of the new student. Click save when you&apos;re done.
+            Enter the details of the new student. An authentication account will be created.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Abebe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Kebede" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Student Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
+              name="contactEmail"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="john.doe@example.com" {...field} />
+                    <Input placeholder="student@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -97,7 +112,7 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
             />
             <FormField
               control={form.control}
-              name="class"
+              name="gradeLevel"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Class</FormLabel>
@@ -110,25 +125,12 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
             />
             <FormField
               control={form.control}
-              name="parentName"
+              name="contactPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Parent Name</FormLabel>
+                  <FormLabel>Contact Phone</FormLabel>
                   <FormControl>
-                    <Input placeholder="Jane Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="mobile"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mobile</FormLabel>
-                  <FormControl>
-                    <Input placeholder="+1 123 456 7890" {...field} />
+                    <Input placeholder="+251..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

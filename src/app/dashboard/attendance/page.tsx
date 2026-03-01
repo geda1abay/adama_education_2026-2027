@@ -30,15 +30,18 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useData } from '@/context/data-context';
 import { AddAttendanceDialog } from '@/components/dashboard/add-attendance-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Attendance, Student } from '@/lib/data';
 
 
 export default function AttendancePage() {
-  const { students, studentAttendance, addAttendance } = useData();
+  const { students, studentAttendance, addAttendance, isLoading } = useData();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   const [isAddAttendanceDialogOpen, setIsAddAttendanceDialogOpen] = useState(false);
   
   const uniqueClasses = useMemo(() => {
-    const classes = new Set(students.map((student) => student.class));
+    if (!students) return [];
+    const classes = new Set(students.map((student) => student.gradeLevel));
     return Array.from(classes).sort();
   }, [students]);
 
@@ -53,17 +56,31 @@ export default function AttendancePage() {
   };
 
   const filteredStudents = useMemo(() => {
+    if (!students) return [];
     return students.filter((student) => {
-      return classFilters.length === 0 || classFilters.includes(student.class);
+      return classFilters.length === 0 || classFilters.includes(student.gradeLevel);
     });
   }, [classFilters, students]);
 
   // For this example, let's just show attendance for "June"
   const currentMonth = 'June';
-  const attendanceForMonth = studentAttendance.filter(att => att.month === currentMonth);
+  const attendanceForMonth = useMemo(() => {
+    if (!studentAttendance) return [];
+    // This is a simplified logic. A real app would filter by a selected month.
+    // We group all attendance records by studentId for simplicity.
+    const attendanceMap = new Map<string, { daysPresent: number; totalDays: number }>();
+    studentAttendance.forEach(att => {
+        const existing = attendanceMap.get(att.studentId) || { daysPresent: 0, totalDays: 0 };
+        // This is not a perfect aggregation but good for demo
+        existing.daysPresent += att.status === 'present' ? 1 : 0;
+        existing.totalDays += 1; // each record is a session
+        attendanceMap.set(att.studentId, existing);
+    });
+    return attendanceMap;
+  }, [studentAttendance]);
 
   const getStudentAttendance = (studentId: string) => {
-    return attendanceForMonth.find(att => att.studentId === studentId);
+    return attendanceForMonth.get(studentId);
   }
   
   const getAttendanceColor = (percentage: number) => {
@@ -72,8 +89,8 @@ export default function AttendancePage() {
     return 'bg-red-500';
   }
 
-  const handleAddAttendance = (data: any) => {
-    addAttendance(data);
+  const handleAddAttendance = async (data: Omit<Attendance, 'id' | 'recordedByTeacherId' | 'classSessionId'> & { studentId: string }) => {
+    await addAttendance(data);
     setIsAddAttendanceDialogOpen(false);
   }
 
@@ -123,8 +140,8 @@ export default function AttendancePage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Attendance - {currentMonth}</CardTitle>
-          <CardDescription>Showing attendance for June. You can add or update records for any month using the button above.</CardDescription>
+          <CardTitle>Attendance Summary</CardTitle>
+          <CardDescription>An overview of student attendance records.</CardDescription>
         </CardHeader>
         <CardContent>
         <Table>
@@ -132,23 +149,35 @@ export default function AttendancePage() {
             <TableRow>
               <TableHead>Student Name</TableHead>
               <TableHead>Class</TableHead>
-              <TableHead>Days Present</TableHead>
-              <TableHead>Total Days</TableHead>
+              <TableHead>Sessions Present</TableHead>
+              <TableHead>Total Sessions</TableHead>
               <TableHead className="w-[30%]">Attendance</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((student) => {
+            {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-10" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-10" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    </TableRow>
+                ))
+            ) : filteredStudents.map((student) => {
               const attendance = getStudentAttendance(student.id);
-              const percentage = attendance ? (attendance.daysPresent / attendance.totalDays) * 100 : 0;
+              const totalDays = attendance?.totalDays || 0;
+              const daysPresent = attendance?.daysPresent || 0;
+              const percentage = totalDays > 0 ? (daysPresent / totalDays) * 100 : 0;
               return (
                 <TableRow key={student.id}>
-                  <TableCell className="font-medium">{student.name}</TableCell>
+                  <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{student.class}</Badge>
+                    <Badge variant="outline">{student.gradeLevel}</Badge>
                   </TableCell>
-                  <TableCell>{attendance?.daysPresent || 'N/A'}</TableCell>
-                  <TableCell>{attendance?.totalDays || 'N/A'}</TableCell>
+                  <TableCell>{daysPresent}</TableCell>
+                  <TableCell>{totalDays}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Progress value={percentage} className="h-2" indicatorClassName={getAttendanceColor(percentage)} />
@@ -167,7 +196,7 @@ export default function AttendancePage() {
         open={isAddAttendanceDialogOpen}
         onOpenChange={setIsAddAttendanceDialogOpen}
         onAttendanceAdd={handleAddAttendance}
-        students={students}
+        students={students || []}
       />
     </div>
   );

@@ -9,11 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
 export default function StudentAccountPage() {
-  const { currentUser: student, isAuthLoading } = useData();
+  const { currentStudent: student, isUserLoading } = useData();
   
-  const isLoading = isAuthLoading;
+  const isLoading = isUserLoading;
 
-  const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
+  const avatar = student ? PlaceHolderImages.find((img) => img.id === 'user-avatar-1') : null;
 
   if (isLoading) {
     return (
@@ -65,6 +65,8 @@ export default function StudentAccountPage() {
     )
   }
 
+  const studentName = `${student.firstName} ${student.lastName}`;
+
   return (
     <div className="container mx-auto py-8 max-w-2xl">
       <div className="mb-6">
@@ -75,32 +77,24 @@ export default function StudentAccountPage() {
        <Card>
             <CardHeader className="items-center text-center">
                 <Avatar className="h-24 w-24 mb-2">
-                    <AvatarImage src={avatar?.imageUrl} alt={student.name} data-ai-hint={avatar?.imageHint} />
-                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={avatar?.imageUrl} alt={studentName} data-ai-hint={avatar?.imageHint} />
+                    <AvatarFallback>{student.firstName.charAt(0)}{student.lastName.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <CardTitle>{student.name}</CardTitle>
-                <CardDescription>{student.email}</CardDescription>
+                <CardTitle>{studentName}</CardTitle>
+                <CardDescription>{student.contactEmail}</CardDescription>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Class:</span>
-                    <span>{student.class}</span>
+                    <span>{student.gradeLevel}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Registration ID:</span>
-                    <span>{student.registrationId}</span>
-                </div>
-                 <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Status:</span>
-                    <span>{student.status}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Parent Name:</span>
-                    <span>{student.parentName}</span>
+                    <span className="font-semibold text-muted-foreground">Enrollment Date:</span>
+                    <span>{new Date(student.enrollmentDate).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Parent Contact:</span>
-                    <span>{student.mobile}</span>
+                    <span>{student.contactPhone}</span>
                 </div>
             </CardContent>
           </Card>

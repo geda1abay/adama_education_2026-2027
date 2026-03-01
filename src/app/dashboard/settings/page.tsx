@@ -15,20 +15,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-
+import { Skeleton } from '@/components/ui/skeleton';
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  currentPassword: z.string().optional(),
-  newPassword: z.string().optional(),
-}).refine(data => {
-    if (data.newPassword && (!data.currentPassword || data.currentPassword.length < 6)) {
-      return false;
-    }
-    return true;
-}, {
-    message: "Current password of at least 6 characters is required to set a new one.",
-    path: ["currentPassword"],
+  // Password validation removed from here, handled separately
 });
 
 const schoolInfoSchema = z.object({
@@ -51,44 +42,39 @@ export default function SettingsPage() {
     schoolInfo, 
     appearance, 
     updateAdminProfile, 
-    updatePassword, 
     updateSchoolInfo, 
-    toggleDarkMode, 
-    setTheme 
+    setTheme, 
+    toggleDarkMode,
+    isLoading, // Use global loading state
   } = useData();
   
   const { toast } = useToast();
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: adminProfile.name,
-      currentPassword: '',
-      newPassword: '',
-    },
+    defaultValues: { name: '' },
   });
 
   const schoolInfoForm = useForm<z.infer<typeof schoolInfoSchema>>({
     resolver: zodResolver(schoolInfoSchema),
-    defaultValues: schoolInfo,
+    defaultValues: { name: '', address: '', contact: '' },
   });
   
-  // Sync form with context data if it changes elsewhere
+  // Sync form with context data when it loads
   useEffect(() => {
-    profileForm.reset({ name: adminProfile.name, currentPassword: '', newPassword: '' });
+    if (adminProfile) {
+      profileForm.reset({ name: adminProfile.name });
+    }
   }, [adminProfile, profileForm]);
 
   useEffect(() => {
-    schoolInfoForm.reset(schoolInfo);
+    if (schoolInfo) {
+      schoolInfoForm.reset(schoolInfo);
+    }
   }, [schoolInfo, schoolInfoForm]);
 
-
   const onProfileSubmit = (data: z.infer<typeof profileSchema>) => {
-    updateAdminProfile({ name: data.name });
-    if (data.newPassword && data.currentPassword) {
-      updatePassword();
-    }
-    profileForm.reset({ ...profileForm.getValues(), currentPassword: '', newPassword: '' });
+    updateAdminProfile(data);
   };
   
   const onSchoolInfoSubmit = (data: z.infer<typeof schoolInfoSchema>) => {
@@ -104,6 +90,19 @@ export default function SettingsPage() {
       title: 'Appearance Saved',
       description: 'Your appearance settings are saved automatically.',
     });
+  }
+
+  if (isLoading) {
+    return (
+        <div className="flex flex-col gap-6">
+            <h1 className="text-3xl font-bold font-headline">Settings</h1>
+            <div className="grid gap-6 lg:grid-cols-2">
+                <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                <Card className="lg:col-span-2"><CardHeader><Skeleton className="h-6 w-48" /></CardHeader><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
+            </div>
+        </div>
+    );
   }
 
   return (
@@ -138,34 +137,9 @@ export default function SettingsPage() {
                     />
                 <div className="space-y-2">
                   <Label htmlFor="admin-email">Email</Label>
-                  <Input id="admin-email" type="email" defaultValue="gedaabay8@gmail.com" readOnly />
+                  <Input id="admin-email" type="email" value={adminProfile?.email || ''} readOnly />
                 </div>
-                 <FormField
-                    control={profileForm.control}
-                    name="currentPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Current Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                 <FormField
-                    control={profileForm.control}
-                    name="newPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>New Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                 {/* Password fields can be added here if needed, linking to a password change function */}
               </CardContent>
               <CardFooter>
                 <Button type="submit">Update Profile</Button>
@@ -250,7 +224,7 @@ export default function SettingsPage() {
                     </div>
                     <Switch 
                         id="dark-mode" 
-                        checked={appearance.darkMode}
+                        checked={appearance?.darkMode}
                         onCheckedChange={toggleDarkMode}
                     />
                 </div>
@@ -269,12 +243,12 @@ export default function SettingsPage() {
                                 size="icon"
                                 className={cn(
                                     "h-8 w-8 rounded-full",
-                                    appearance.theme === color.value && "ring-2 ring-ring"
+                                    appearance?.theme === color.value && "ring-2 ring-ring"
                                 )}
                                 style={{ backgroundColor: `hsl(${color.value})` }}
                                 onClick={() => onThemeChange(color.value)}
                             >
-                                {appearance.theme === color.value && <Check className="h-4 w-4 text-primary-foreground" />}
+                                {appearance?.theme === color.value && <Check className="h-4 w-4 text-primary-foreground" />}
                                 <span className="sr-only">{color.name}</span>
                             </Button>
                         ))}

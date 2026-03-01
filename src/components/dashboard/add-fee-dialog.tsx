@@ -33,9 +33,11 @@ import type { Student } from '@/lib/data';
 
 const feeSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
-  amount: z.coerce.number().positive({ message: 'Amount must be a positive number.' }),
+  amountDue: z.coerce.number().positive({ message: 'Amount must be a positive number.' }),
   dueDate: z.string().min(1, { message: 'Due date is required.' }),
-  status: z.enum(['Paid', 'Due', 'Overdue']),
+  status: z.enum(['paid', 'due', 'overdue']),
+  academicYear: z.string().min(4, { message: 'Academic year is required.' }),
+  feeTypeId: z.string().min(1, { message: 'Fee type is required.' }),
 });
 
 type FeeFormValues = z.infer<typeof feeSchema>;
@@ -52,15 +54,18 @@ export function AddFeeDialog({ open, onOpenChange, onFeeAdd, students }: AddFeeD
     resolver: zodResolver(feeSchema),
     defaultValues: {
       studentId: '',
-      amount: 1200,
+      amountDue: 1200,
       dueDate: '',
-      status: 'Due',
+      status: 'due',
+      academicYear: '2024-2025',
+      feeTypeId: 'tuition',
     },
   });
 
   const onSubmit = (data: FeeFormValues) => {
     onFeeAdd(data);
     form.reset();
+    onOpenChange(false);
   };
 
   return (
@@ -69,7 +74,7 @@ export function AddFeeDialog({ open, onOpenChange, onFeeAdd, students }: AddFeeD
         <DialogHeader>
           <DialogTitle>Add or Update Fee Record</DialogTitle>
           <DialogDescription>
-            Enter the fee details for a student. This will update an existing record or create a new one.
+            Enter the fee details for a student. This will create a new fee record.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -89,7 +94,7 @@ export function AddFeeDialog({ open, onOpenChange, onFeeAdd, students }: AddFeeD
                     <SelectContent>
                       {students.map((student) => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.name} ({student.class})
+                          {student.firstName} {student.lastName} ({student.gradeLevel})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -100,10 +105,10 @@ export function AddFeeDialog({ open, onOpenChange, onFeeAdd, students }: AddFeeD
             />
             <FormField
               control={form.control}
-              name="amount"
+              name="amountDue"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>Amount Due</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="1200" {...field} />
                   </FormControl>
@@ -137,9 +142,9 @@ export function AddFeeDialog({ open, onOpenChange, onFeeAdd, students }: AddFeeD
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                      <SelectItem value="Due">Due</SelectItem>
-                      <SelectItem value="Overdue">Overdue</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="due">Due</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

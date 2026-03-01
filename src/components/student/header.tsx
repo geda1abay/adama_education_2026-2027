@@ -18,16 +18,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function StudentHeader() {
-  const { currentUser: student, isAuthLoading, logoutStudent } = useData();
+  const { currentStudent: student, isUserLoading, logout } = useData();
   const router = useRouter();
 
-  const handleLogout = () => {
-    logoutStudent();
+  const handleLogout = async () => {
+    await logout();
     router.push('/student/login');
   };
 
-  const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
-  const isLoading = isAuthLoading;
+  const avatar = student ? PlaceHolderImages.find((img) => img.id === 'user-avatar-1') : null;
+  const isLoading = isUserLoading;
+
+  const studentName = student ? `${student.firstName} ${student.lastName}` : '';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
@@ -53,12 +55,12 @@ export default function StudentHeader() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 focus-visible:ring-0 h-12">
                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={avatar?.imageUrl} alt={student.name} data-ai-hint={avatar?.imageHint} />
-                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={avatar?.imageUrl} alt={studentName} data-ai-hint={avatar?.imageHint} />
+                        <AvatarFallback>{student.firstName?.charAt(0)}{student.lastName?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col text-sm items-start">
-                        <span className="font-semibold">{student.name}</span>
-                        <span className="text-xs text-muted-foreground">{student.class}</span>
+                        <span className="font-semibold">{studentName}</span>
+                        <span className="text-xs text-muted-foreground">{student.gradeLevel}</span>
                     </div>
                 </Button>
               </DropdownMenuTrigger>

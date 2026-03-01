@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BookUser } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -21,17 +21,23 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function TeacherLoginPage() {
     const router = useRouter();
-    const { loginTeacher } = useData();
+    const { loginTeacher, firebaseUser, isUserLoading } = useData();
     const { toast } = useToast();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    useEffect(() => {
+        if (!isUserLoading && firebaseUser) {
+            router.push('/teacher/dashboard');
+        }
+    }, [firebaseUser, isUserLoading, router]);
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
+        setIsSubmitting(true);
         
-        const success = loginTeacher(email, password);
+        const success = await loginTeacher(email, password);
 
         if (success) {
             router.push('/teacher/dashboard');
@@ -41,8 +47,16 @@ export default function TeacherLoginPage() {
                 title: 'Login Failed',
                 description: 'Invalid email or password. Please try again.',
             });
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
+    };
+
+    if (isUserLoading || firebaseUser) {
+        return (
+          <div className="flex h-screen items-center justify-center">
+            <p>Loading...</p>
+          </div>
+        );
     }
 
   return (
@@ -65,7 +79,7 @@ export default function TeacherLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid gap-2">
@@ -85,11 +99,11 @@ export default function TeacherLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)} 
                 required 
-                disabled={isLoading}
+                disabled={isSubmitting}
                 />
             </div>
-                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Login'}
+                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isSubmitting}>
+                {isSubmitting ? 'Logging in...' : 'Login'}
                 </Button>
           </form>
           <div className="mt-4 text-center text-sm">

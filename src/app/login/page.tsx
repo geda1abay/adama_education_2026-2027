@@ -3,7 +3,9 @@
 import Link from "next/link"
 import { Bot } from "lucide-react"
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/context/data-context";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,16 +20,42 @@ import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
     const router = useRouter();
+    const { toast } = useToast();
+    const { adminLogin, firebaseUser, isUserLoading } = useData();
     const [email, setEmail] = useState('gedaabay8@gmail.com');
     const [password, setPassword] = useState('151835');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    useEffect(() => {
+      if (!isUserLoading && firebaseUser) {
+        // Assuming admin role check will happen on dashboard
+        router.push('/dashboard');
+      }
+    }, [firebaseUser, isUserLoading, router]);
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        // No auth, just redirect
-        router.push('/dashboard');
+        const success = await adminLogin(email, password);
+        if (success) {
+            router.push('/dashboard');
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Invalid credentials or you are not an admin.',
+            });
+            setIsLoading(false);
+        }
     };
+
+    if (isUserLoading || firebaseUser) {
+      return (
+        <div className="flex h-screen items-center justify-center">
+          <p>Loading...</p>
+        </div>
+      );
+    }
 
   return (
     <div className="w-full h-screen lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]">

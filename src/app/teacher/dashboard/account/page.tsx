@@ -9,11 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
 export default function TeacherAccountPage() {
-  const { currentTeacher: teacher, isTeacherAuthLoading } = useData();
+  const { currentTeacher: teacher, isUserLoading } = useData();
   
-  const isLoading = isTeacherAuthLoading;
+  const isLoading = isUserLoading;
 
-  const avatar = teacher ? PlaceHolderImages.find((img) => img.id === teacher.avatar) : null;
+  const avatar = teacher ? PlaceHolderImages.find((img) => img.id === 'user-avatar-6') : null;
 
   if (isLoading) {
     return (
@@ -65,6 +65,8 @@ export default function TeacherAccountPage() {
     )
   }
 
+  const teacherName = `${teacher.firstName} ${teacher.lastName}`;
+
   return (
     <div className="container mx-auto py-8 max-w-2xl">
       <div className="mb-6">
@@ -75,24 +77,24 @@ export default function TeacherAccountPage() {
        <Card>
             <CardHeader className="items-center text-center">
                 <Avatar className="h-24 w-24 mb-2">
-                    <AvatarImage src={avatar?.imageUrl} alt={teacher.name} data-ai-hint={avatar?.imageHint} />
-                    <AvatarFallback>{teacher.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={avatar?.imageUrl} alt={teacherName} data-ai-hint={avatar?.imageHint} />
+                    <AvatarFallback>{teacher.firstName.charAt(0)}{teacher.lastName.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <CardTitle>{teacher.name}</CardTitle>
-                <CardDescription>{teacher.email}</CardDescription>
+                <CardTitle>{teacherName}</CardTitle>
+                <CardDescription>{teacher.contactEmail}</CardDescription>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Subject:</span>
-                    <span>{teacher.subject}</span>
+                    <span className="font-semibold text-muted-foreground">Department:</span>
+                    <span>{teacher.department}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Contact:</span>
-                    <span>{teacher.mobile}</span>
+                    <span>{teacher.contactPhone}</span>
                 </div>
                  <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Status:</span>
-                    <span>{teacher.status}</span>
+                    <span className="font-semibold text-muted-foreground">Hire Date:</span>
+                    <span>{new Date(teacher.hireDate).toLocaleDateString()}</span>
                 </div>
             </CardContent>
           </Card>
