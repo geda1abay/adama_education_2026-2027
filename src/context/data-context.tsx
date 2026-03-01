@@ -117,13 +117,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const { data: recentExamResults, isLoading: isExamResultsLoading } = useCollection<ExamResult>(examResultsQuery);
 
   // --- Settings Fetching ---
-  const adminProfileDoc = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'adminProfile') : null, [firestore]);
+  const adminProfileDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'adminProfile') : null, [firestore, isAdmin]);
   const { data: adminProfile } = useDoc<AdminProfile>(adminProfileDoc);
   
-  const schoolInfoDoc = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'schoolInfo') : null, [firestore]);
+  const schoolInfoDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'schoolInfo') : null, [firestore, isAdmin]);
   const { data: schoolInfo } = useDoc<SchoolInfo>(schoolInfoDoc);
   
-  const appearanceDoc = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'appearance') : null, [firestore]);
+  const appearanceDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'appearance') : null, [firestore, isAdmin]);
   const { data: appearance } = useDoc<Appearance>(appearanceDoc);
   
   useEffect(() => {
@@ -172,10 +172,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // --- Auth Functions ---
   const adminLogin = async (email: string, password: string): Promise<boolean> => {
-    if (!auth) return false;
+    if (!auth || !firestore) return false;
     try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       // The useEffect hook now handles checking and creating the admin role doc.
-      await signInWithEmailAndPassword(auth, email, password);
+      // We can also trigger the check manually here to be safe.
+      const adminDocRef = doc(firestore, 'admins', userCredential.user.uid);
+      const adminDoc = await getDoc(adminDocRef);
+      if (!adminDoc.exists() && userCredential.user.email === 'gedaabay8@gmail.com') {
+        await setDoc(adminDocRef, { userId: userCredential.user.uid, role: 'admin', email: userCredential.user.email });
+      }
+      setIsAdmin(true); // Assume login success means admin for this flow
       return true;
     } catch (error) {
       console.error("Admin login failed:", error);
