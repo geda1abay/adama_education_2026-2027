@@ -37,17 +37,25 @@ export default function StudentDashboardPage() {
     const averagePercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
 
     const studentsInClass = students.filter(s => s.class === student.class);
-    const studentScores = studentsInClass.map(s => {
+    const studentAverages = studentsInClass.map(s => {
         const studentExams = recentExamResults.filter(r => r.studentId === s.id);
-        const total = studentExams.reduce((acc, r) => {
-            const score = parseInt(r.score.split('/')[0], 10);
-            return acc + (isNaN(score) ? 0 : score);
-        }, 0);
-        return { studentId: s.id, total };
+        const processedStudentResults = studentExams.map(r => {
+            const scoreParts = r.score.split('/');
+            const score = parseInt(scoreParts[0], 10);
+            const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
+            return {
+                score: isNaN(score) ? 0 : score,
+                maxScore: isNaN(maxScore) ? 100 : maxScore,
+            };
+        });
+        const totalStudentScore = processedStudentResults.reduce((acc, r) => acc + r.score, 0);
+        const totalStudentMaxScore = processedStudentResults.reduce((acc, r) => acc + r.maxScore, 0);
+        const average = totalStudentMaxScore > 0 ? (totalStudentScore / totalStudentMaxScore) * 100 : 0;
+        return { studentId: s.id, average };
     });
     
-    studentScores.sort((a, b) => b.total - a.total);
-    const rank = studentScores.findIndex(s => s.studentId === student.id) + 1;
+    studentAverages.sort((a, b) => b.average - a.average);
+    const rank = studentAverages.findIndex(s => s.studentId === student.id) + 1;
     
     return {
         totalScore,
