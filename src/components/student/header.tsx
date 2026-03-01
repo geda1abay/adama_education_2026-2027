@@ -7,8 +7,6 @@ import { GraduationCap, LogOut, UserCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/context/data-context';
-import { useUser, useAuth } from '@/firebase'; // Import firebase hooks
-import { signOut } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Skeleton } from '../ui/skeleton';
 import {
@@ -22,22 +20,19 @@ import {
 
 export default function StudentHeader() {
   const { students } = useData();
-  const { user, isUserLoading } = useUser();
-  const auth = useAuth();
   const router = useRouter();
 
+  // Since there is no auth, let's just display the first student as the "logged in" user for the portal
   const student = useMemo(() => {
-    if (!user) return null;
-    return students.find(s => s.id === user.uid) ?? null;
-  }, [students, user]);
+    return students.length > 0 ? students[0] : null;
+  }, [students]);
 
-  const handleLogout = async () => {
-    await signOut(auth);
+  const handleLogout = () => {
     router.push('/student/login');
   };
 
   const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
-  const isLoading = isUserLoading || students.length === 0;
+  const isLoading = students.length === 0;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">

@@ -27,23 +27,15 @@ import {
 } from '@/components/ui/sheet';
 import SidebarNav from './sidebar-nav';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useAuth } from '@/firebase'; // Import useAuth
-import { signOut } from 'firebase/auth'; // Import signOut
 
 export default function Header() {
   const router = useRouter();
-  const auth = useAuth(); // Get auth instance
   const userProfileAvatar = PlaceHolderImages.find(
     (img) => img.id === 'user-profile-avatar'
   );
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login');
-    } catch (error) {
-      console.error("Error signing out: ", error);
-    }
+  const handleLogout = () => {
+    router.push('/login');
   };
 
   return (

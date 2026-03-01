@@ -1,12 +1,9 @@
 'use client';
 
 import Link from "next/link"
-import { Bot, Terminal } from "lucide-react"
+import { Bot } from "lucide-react"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAuth, useFirestore } from "@/firebase"; // Import useAuth and useFirestore
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"; // Import sign in and create user
-import { doc, setDoc, getDoc } from "firebase/firestore"; // Import firestore functions
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,78 +15,18 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
     const router = useRouter();
-    const auth = useAuth(); // Get auth instance
-    const firestore = useFirestore(); // Get firestore instance
     const [email, setEmail] = useState('gedaabay8@gmail.com');
     const [password, setPassword] = useState('151835');
-    const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // Helper to ensure role exists and then redirect
-    const ensureAdminRoleAndRedirect = async (userId: string) => {
-        const adminRoleRef = doc(firestore, 'admins', userId);
-        try {
-            const adminRoleSnap = await getDoc(adminRoleRef);
-            if (!adminRoleSnap.exists()) {
-                console.log("Admin role document missing, creating...");
-                await setDoc(adminRoleRef, { userId: userId, role: 'admin', email: email.toLowerCase() });
-                // Verify creation
-                const finalCheck = await getDoc(adminRoleRef);
-                if (!finalCheck.exists()) {
-                    throw new Error("Failed to create and verify admin role in database.");
-                }
-                console.log("Admin role created and verified.");
-            }
-            router.push('/dashboard');
-        } catch (e: any) {
-            console.error("Role verification/creation failed:", e);
-            setError("An error occurred verifying admin permissions. Please try again.");
-            setIsLoading(false); // Make sure to stop loading indicator on error
-        }
-    };
-
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
         setIsLoading(true);
-
-        // Only allow gedaabay8@gmail.com to attempt login here
-        if (email.toLowerCase() !== 'gedaabay8@gmail.com') {
-            setError("This login is for administrators only.");
-            setIsLoading(false);
-            return;
-        }
-
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            await userCredential.user.getIdToken(true); // Force token refresh
-            await ensureAdminRoleAndRedirect(userCredential.user.uid);
-        } catch (signInError: any) {
-            if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
-                console.log('Admin user not found. Attempting to create a new admin account...');
-                try {
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    await userCredential.user.getIdToken(true); // Force token refresh for new user
-                    await ensureAdminRoleAndRedirect(userCredential.user.uid);
-                } catch (createError: any) {
-                    if (createError.code === 'auth/email-already-in-use') {
-                        setError('Invalid password for admin account. Please try again.');
-                    } else {
-                        setError('Failed to create admin account. Please check console for details.');
-                        console.error('Admin creation error:', createError);
-                    }
-                    setIsLoading(false);
-                }
-            } else {
-                setError(signInError.message || 'An unexpected error occurred during login.');
-                console.error(signInError);
-                setIsLoading(false);
-            }
-        }
+        // No auth, just redirect
+        router.push('/dashboard');
     };
 
   return (
@@ -102,13 +39,6 @@ export default function LoginPage() {
               Enter your credentials to login to your account.
             </p>
           </div>
-          {error && (
-            <Alert variant="destructive">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Login Failed</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
           <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>

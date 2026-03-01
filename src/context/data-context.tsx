@@ -2,17 +2,15 @@
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 import { 
+    STUDENTS,
+    TEACHERS,
     STUDENT_ATTENDANCE,
     RECENT_EXAM_RESULTS,
     FEES_DATA,
     type Student,
     type Fee,
 } from '@/lib/data';
-import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, setDoc, writeBatch, getDocs, updateDoc, query } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 // The Teacher type from data.ts is different from the entity. Let's define it.
@@ -36,8 +34,8 @@ interface DataContextType {
   studentAttendance: StudentAttendance[];
   recentExamResults: ExamResult[];
   feesData: Fee[];
-  addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'> & { password: string }) => void;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'> & { password: string}) => void;
+  addStudent: (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => void;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => void;
   addAttendance: (attendanceData: StudentAttendance) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
   addFee: (feeData: Fee) => void;
@@ -49,116 +47,55 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const firestore = useFirestore();
-  const auth = useAuth();
   const { toast } = useToast();
-  const { user } = useUser();
 
-  const studentsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(firestore, 'students'))
-  }, [firestore, user]);
-  const { data: studentsData, isLoading: studentsLoading } = useCollection<Omit<Student, 'id'>>(studentsQuery);
-  const students = useMemo(() => studentsData || [], [studentsData]);
-
-  const teachersQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(firestore, 'teachers'))
-  }, [firestore, user]);
-  const { data: teachersData, isLoading: teachersLoading } = useCollection<Omit<Teacher, 'id'>>(teachersQuery);
-  const teachers = useMemo(() => teachersData || [], [teachersData]);
-
-  // Keep mock data for these for now
+  const [students, setStudents] = useState<Student[]>(STUDENTS);
+  const [teachers, setTeachers] = useState<Teacher[]>(TEACHERS);
   const [studentAttendance, setStudentAttendance] = useState<StudentAttendance[]>(STUDENT_ATTENDANCE);
   const [recentExamResults, setRecentExamResults] = useState<ExamResult[]>(RECENT_EXAM_RESULTS);
   const [feesData, setFeesData] = useState<Fee[]>(FEES_DATA);
 
-  const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'> & { password: string }) => {
-    try {
-        // NOTE: Creating users on the client is not recommended for production.
-        // This should be moved to a secure backend (e.g., Cloud Function).
-        const userCredential = await createUserWithEmailAndPassword(auth, studentData.email, studentData.password);
-        const newStudentId = userCredential.user.uid;
-        
-        const randomId = Math.floor(Math.random() * 10000);
-        const newRegistrationId = `Hgr/${String(randomId).padStart(4, '0')}/24`;
-        
-        const newStudentDoc = {
-            userId: newStudentId,
-            firstName: studentData.name.split(' ')[0] || '',
-            lastName: studentData.name.split(' ')[1] || '',
-            name: studentData.name, // Keeping full name for compatibility
-            class: studentData.class,
-            parentName: studentData.parentName,
-            mobile: studentData.mobile,
-            email: studentData.email,
-            registrationId: newRegistrationId,
-            status: 'Active',
-            avatar: `user-avatar-${(randomId % 5) + 1}`,
-        };
+  const addStudent = useCallback((studentData: Omit<Student, 'id' | 'avatar' | 'status' | 'registrationId'>) => {
+    const randomId = Math.floor(Math.random() * 10000);
+    const newStudentId = `STU-${String(randomId).padStart(3, '0')}`;
+    const newRegistrationId = `Hgr/${String(randomId).padStart(4, '0')}/24`;
+    
+    const newStudent: Student = {
+        id: newStudentId,
+        registrationId: newRegistrationId,
+        name: studentData.name,
+        class: studentData.class,
+        parentName: studentData.parentName,
+        mobile: studentData.mobile,
+        email: studentData.email,
+        status: 'Active',
+        avatar: `user-avatar-${(students.length % 5) + 1}`,
+    };
 
-        const studentRef = doc(firestore, 'students', newStudentId);
-        setDocumentNonBlocking(studentRef, newStudentDoc, {});
-        
-        toast({ title: "Student Added", description: `${studentData.name} has been added successfully.` });
+    setStudents(prev => [...prev, newStudent]);
+    
+    toast({ title: "Student Added", description: `${studentData.name} has been added successfully.` });
 
-    } catch (error: any) {
-        console.error("Error adding student:", error);
-         if (error.code === 'auth/email-already-in-use') {
-             toast({
-                variant: "destructive",
-                title: "Error adding student",
-                description: "This email is already in use by another account."
-            });
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Error adding student",
-                description: error.message || 'An unknown error occurred.'
-            });
-        }
-    }
-  }, [auth, firestore, toast]);
+  }, [toast, students.length]);
 
-  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'> & { password: string }) => {
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, teacherData.email, teacherData.password);
-        const newTeacherId = userCredential.user.uid;
+  const addTeacher = useCallback((teacherData: Omit<Teacher, 'id' | 'avatar' | 'status'>) => {
+    const randomId = Math.floor(Math.random() * 1000);
+    const newTeacherId = `TCH-${String(randomId).padStart(3, '0')}`;
 
-        const randomId = Math.floor(Math.random() * 1000);
-        const newTeacherDoc = {
-            userId: newTeacherId,
-            firstName: teacherData.name.split(' ')[0] || '',
-            lastName: teacherData.name.split(' ')[1] || '',
-            name: teacherData.name,
-            subject: teacherData.subject,
-            mobile: teacherData.mobile,
-            email: teacherData.email,
-            status: 'Active',
-            avatar: `user-avatar-${(randomId % 3) + 6}`,
-        };
+    const newTeacher: Teacher = {
+        id: newTeacherId,
+        name: teacherData.name,
+        subject: teacherData.subject,
+        mobile: teacherData.mobile,
+        email: teacherData.email,
+        status: 'Active',
+        avatar: `user-avatar-${(teachers.length % 3) + 6}`,
+    };
 
-        const teacherRef = doc(firestore, 'teachers', newTeacherId);
-        setDocumentNonBlocking(teacherRef, newTeacherDoc, {});
+    setTeachers(prev => [...prev, newTeacher]);
 
-        toast({ title: "Teacher Added", description: `${teacherData.name} has been added successfully.` });
-    } catch (error: any) {
-        console.error("Error adding teacher:", error);
-        if (error.code === 'auth/email-already-in-use') {
-             toast({
-                variant: "destructive",
-                title: "Error adding teacher",
-                description: "This email is already in use by another account."
-            });
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Error adding teacher",
-                description: error.message || 'An unknown error occurred.'
-            });
-        }
-    }
-  }, [auth, firestore, toast]);
+    toast({ title: "Teacher Added", description: `${teacherData.name} has been added successfully.` });
+  }, [toast, teachers.length]);
 
   const addAttendance = useCallback((data: StudentAttendance) => {
     setStudentAttendance(prev => {
@@ -206,48 +143,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const clearStudents = useCallback(async () => {
-    console.log("Clearing all students...");
-    try {
-        const studentsSnapshot = await getDocs(collection(firestore, 'students'));
-        studentsSnapshot.docs.forEach((studentDoc) => {
-            deleteDocumentNonBlocking(doc(firestore, 'students', studentDoc.id));
-            // Note: This does not delete the user from Firebase Auth.
-            // That requires the Admin SDK and a backend function.
-        });
-        toast({ title: "Students Cleared", description: "All student data is being removed from Firestore." });
-    } catch (error: any) {
-        console.error("Error clearing students:", error);
-        const permissionError = new FirestorePermissionError({ operation: 'list', path: 'students' });
-        errorEmitter.emit('permission-error', permissionError);
-        toast({ variant: "destructive", title: "Error", description: "Could not list students to clear them." });
-    }
-  }, [firestore, toast]);
+  const clearStudents = useCallback(() => {
+    setStudents([]);
+    toast({ title: "Students Cleared", description: "All student data has been removed." });
+  }, [toast]);
 
-  const clearTeachers = useCallback(async () => {
-    console.log("Clearing all teachers...");
-    try {
-        const teachersSnapshot = await getDocs(collection(firestore, 'teachers'));
-        teachersSnapshot.docs.forEach((teacherDoc) => {
-            deleteDocumentNonBlocking(doc(firestore, 'teachers', teacherDoc.id));
-        });
-        toast({ title: "Teachers Cleared", description: "All teacher data has been removed from Firestore." });
-    } catch (error: any) {
-        console.error("Error clearing teachers:", error);
-        const permissionError = new FirestorePermissionError({ operation: 'list', path: 'teachers' });
-        errorEmitter.emit('permission-error', permissionError);
-         toast({ variant: "destructive", title: "Error", description: "Could not list teachers to clear them." });
-    }
-  }, [firestore, toast]);
+  const clearTeachers = useCallback(() => {
+    setTeachers([]);
+    toast({ title: "Teachers Cleared", description: "All teacher data has been removed." });
+  }, [toast]);
 
   const toggleStudentStatus = useCallback((studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
-
-    const newStatus = student.status === 'Active' ? 'Inactive' : 'Active';
-    const studentRef = doc(firestore, 'students', studentId);
-    updateDocumentNonBlocking(studentRef, { status: newStatus });
-  }, [firestore, students]);
+    setStudents(prev => 
+      prev.map(student => 
+        student.id === studentId 
+          ? { ...student, status: student.status === 'Active' ? 'Inactive' : 'Active' }
+          : student
+      )
+    );
+  }, []);
 
   const value = useMemo(() => ({
     students,

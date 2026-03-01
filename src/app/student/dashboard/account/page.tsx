@@ -1,24 +1,21 @@
 'use client';
 
 import { useData } from '@/context/data-context';
-import { useUser } from '@/firebase'; // Import useUser
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import type { Student } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMemo } from 'react';
 
 export default function StudentAccountPage() {
   const { students } = useData();
-  const { user, isUserLoading } = useUser();
 
+  // Since there is no auth, let's just display the first student as the "logged in" user for the portal
   const student = useMemo(() => {
-    if (!user) return null;
-    return students.find(s => s.id === user.uid) ?? null;
-  }, [students, user]);
+    return students.length > 0 ? students[0] : null;
+  }, [students]);
   
-  const isLoading = isUserLoading || students.length === 0;
+  const isLoading = students.length === 0;
 
   const avatar = student ? PlaceHolderImages.find((img) => img.id === student.avatar) : null;
 
@@ -59,8 +56,8 @@ export default function StudentAccountPage() {
         <div className="flex items-center justify-center h-[80vh]">
             <Card>
                 <CardHeader>
-                    <CardTitle>Student Not Found</CardTitle>
-                    <CardDescription>Could not find your information. Please try logging in again.</CardDescription>
+                    <CardTitle>No Student Data</CardTitle>
+                    <CardDescription>Could not find student information.</CardDescription>
                 </CardHeader>
             </Card>
         </div>
