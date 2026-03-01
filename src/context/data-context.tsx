@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
@@ -72,7 +73,7 @@ interface DataContextType {
   // Mutation functions
   addStudent: (studentData: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => Promise<void>;
   deleteStudent: (studentId: string) => void;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address' | 'classes'> & { password?: string; classes?: string }) => Promise<void>;
+  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address' > & { password?: string; classes?: string }) => Promise<void>;
   deleteTeacher: (teacherId: string) => void;
   addAttendance: (attendanceData: Omit<Attendance, 'id'>) => void;
   addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
@@ -98,14 +99,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [currentTeacher, setCurrentTeacher] = useState<WithId<Teacher> | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // --- Data Fetching ---
+  // --- Role determination effect ---
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (firebaseUser && firestore) {
+        const adminDocRef = doc(firestore, 'admins', firebaseUser.uid);
+        const adminDoc = await getDoc(adminDocRef);
+        let isAdminUser = adminDoc.exists();
+
+        // Auto-create the first admin user
+        if (!isAdminUser && firebaseUser.email === 'gedaabay8@gmail.com') {
+          await setDoc(adminDocRef, {
+            userId: firebaseUser.uid,
+            role: 'admin',
+            email: firebaseUser.email,
+          });
+          isAdminUser = true;
+        }
+        setIsAdmin(isAdminUser);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    checkAdminStatus();
+  }, [firebaseUser, firestore]);
+  
+  // --- Data Fetching (conditional on admin status) ---
   const studentsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'students') : null, [firestore, isAdmin]);
   const { data: students, isLoading: isStudentsLoading } = useCollection<Student>(studentsQuery);
 
   const teachersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'teachers') : null, [firestore, isAdmin]);
   const { data: teachers, isLoading: isTeachersLoading } = useCollection<Teacher>(teachersQuery);
 
-  // Use collectionGroup for admin-level list views. This requires a Firestore index.
   const feesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'studentFees') : null, [firestore, isAdmin]);
   const { data: feesData, isLoading: isFeesLoading } = useCollection<StudentFee>(feesQuery);
 
@@ -115,8 +140,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const examResultsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'examResults') : null, [firestore, isAdmin]);
   const { data: recentExamResults, isLoading: isExamResultsLoading } = useCollection<ExamResult>(examResultsQuery);
 
-
-  // --- Settings Fetching ---
+  // --- Settings Fetching (conditional on admin status) ---
   const adminProfileDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'adminProfile') : null, [firestore, isAdmin]);
   const { data: adminProfile } = useDoc<AdminProfile>(adminProfileDoc);
   
@@ -126,45 +150,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const appearanceDoc = useMemoFirebase(() => (firestore && isAdmin) ? doc(firestore, 'settings', 'appearance') : null, [firestore, isAdmin]);
   const { data: appearance } = useDoc<Appearance>(appearanceDoc);
   
+  // --- Derive current user profile (Student/Teacher) after data has loaded ---
   useEffect(() => {
-    const checkAndSetRoles = async () => {
-      if (firebaseUser && firestore) {
-        const adminDocRef = doc(firestore, 'admins', firebaseUser.uid);
-        const adminDoc = await getDoc(adminDocRef);
-        let isAdminUser = adminDoc.exists();
-        
-        setIsAdmin(isAdminUser);
-
-        if (isAdminUser) {
-          setCurrentStudent(null);
-          setCurrentTeacher(null);
-        } else {
-          // These will be null at first, then update when the collections load
-          setCurrentStudent(students?.find(s => s.userId === firebaseUser.uid) || null);
-          setCurrentTeacher(teachers?.find(t => t.userId === firebaseUser.uid) || null);
-        }
-
-      } else {
-        setIsAdmin(false);
-        setCurrentStudent(null);
-        setCurrentTeacher(null);
+    if (firebaseUser && !isAdmin) {
+      if (students) {
+        const studentProfile = students.find(s => s.userId === firebaseUser.uid) || null;
+        setCurrentStudent(studentProfile);
       }
-    };
-    checkAndSetRoles();
-  }, [firebaseUser, firestore, students, teachers]);
+      if (teachers) {
+        const teacherProfile = teachers.find(t => t.userId === firebaseUser.uid) || null;
+        setCurrentTeacher(teacherProfile);
+      }
+    } else {
+      setCurrentStudent(null);
+      setCurrentTeacher(null);
+    }
+  }, [firebaseUser, isAdmin, students, teachers]);
 
 
   // --- Auth Functions ---
   const adminLogin = async (email: string, password: string): Promise<boolean> => {
     if (!auth || !firestore) return false;
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const adminDocRef = doc(firestore, 'admins', userCredential.user.uid);
-      const adminDoc = await getDoc(adminDocRef);
-      if (!adminDoc.exists() && userCredential.user.email === 'gedaabay8@gmail.com') {
-        await setDoc(adminDocRef, { userId: userCredential.user.uid, role: 'admin', email: userCredential.user.email });
-      }
-      setIsAdmin(true); 
+      await signInWithEmailAndPassword(auth, email, password);
+      // The role determination useEffect will handle setting isAdmin state.
       return true;
     } catch (error) {
       console.error("Admin login failed:", error);
@@ -175,8 +184,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const loginStudent = async (email: string, password: string): Promise<boolean> => {
     if (!auth) return false;
     try {
-      const { user } = await signInWithEmailAndPassword(auth, email, password);
-      sessionStorage.setItem('student-user-id', user.uid);
+      await signInWithEmailAndPassword(auth, email, password);
       return true;
     } catch (error) {
       console.error("Student login failed:", error);
@@ -198,7 +206,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     if (auth) {
       await signOut(auth);
-      sessionStorage.removeItem('student-user-id');
+      // Reset all user-specific state
+      setIsAdmin(false);
+      setCurrentStudent(null);
+      setCurrentTeacher(null);
     }
   };
 
@@ -206,6 +217,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addStudent = useCallback(async (data: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => {
     if (!auth || !firestore || !data.password) return;
     try {
+      // Note: This creates a temporary second auth instance. This is a known issue with modular SDK and certain auth operations.
+      // For a real app, you might handle user creation in a backend function for better security and management.
       const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
       const studentDocData: Student = {
         id: userCredential.user.uid,
@@ -242,6 +255,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteStudent = useCallback((studentId: string) => {
     if (!firestore) return;
     const studentDocRef = doc(firestore, 'students', studentId);
+    // Note: This only deletes the Firestore record, not the auth user. A backend function is needed for that.
     deleteDoc(studentDocRef)
       .then(() => {
         toast({ title: 'Student Deleted', description: 'Student profile has been removed from Firestore.' });
@@ -255,11 +269,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
   }, [firestore, toast]);
   
-  const addTeacher = useCallback(async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address' | 'classes'> & { password?: string; classes?: string }) => {
+  const addTeacher = useCallback(async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string; classes?: string }) => {
     if (!auth || !firestore || !data.password) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
-      const teacherDocData: Teacher = {
+      const teacherDocData: Omit<Teacher, 'id'> & { id: string } = {
         id: userCredential.user.uid,
         userId: userCredential.user.uid,
         firstName: data.firstName,
@@ -358,13 +372,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Settings Mutations
   const updateSetting = useCallback(async (docId: string, data: any) => {
       if (!firestore) return;
-      try {
-          const docRef = doc(firestore, 'settings', docId);
-          await setDoc(docRef, data, { merge: true });
-          toast({ title: 'Settings Saved', description: `Your ${docId} settings have been updated.` });
-      } catch (error: any) {
-          toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
-      }
+      const docRef = doc(firestore, 'settings', docId);
+      await setDoc(docRef, data, { merge: true })
+        .then(() => {
+            toast({ title: 'Settings Saved', description: `Your ${docId} settings have been updated.` });
+        })
+        .catch(error => {
+            const contextualError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'update',
+              requestResourceData: data,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            toast({ variant: 'destructive', title: 'Save Failed', description: 'Check console for details.' });
+        });
   }, [firestore, toast]);
 
   const updateAdminProfile = (data: Partial<AdminProfile>) => updateSetting('adminProfile', data);
@@ -402,9 +423,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     isLoading, isUserLoading,
     firebaseUser, currentStudent, currentTeacher, isAdmin,
     adminProfile, schoolInfo, appearance,
-    adminLogin, loginStudent, loginTeacher, logout,
     addStudent, deleteStudent, addTeacher, deleteTeacher, addAttendance, addExamResult, addFee,
-    updateAdminProfile, updateSchoolInfo, setTheme, toggleDarkMode,
+    toggleDarkMode,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
@@ -417,3 +437,5 @@ export function useData() {
   }
   return context;
 }
+
+    
