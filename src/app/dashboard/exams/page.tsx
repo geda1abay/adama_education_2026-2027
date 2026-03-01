@@ -82,9 +82,10 @@ export default function ExamsPage() {
 
     // Then, for each student, calculate their rank within their class
     students.forEach(student => {
-      const studentData = allStudentAverages.find(s => s.studentId === student.id)!;
+      const studentData = allStudentAverages.find(s => s.studentId === student.id);
+      if (!studentData) return;
 
-      const studentsInClass = allStudentAverages.filter(s => s.studentClass === student.studentClass);
+      const studentsInClass = allStudentAverages.filter(s => s.studentClass === student.class);
       studentsInClass.sort((a, b) => b.average - a.average);
       
       const rankIndex = studentsInClass.findIndex(s => s.studentId === student.id);
