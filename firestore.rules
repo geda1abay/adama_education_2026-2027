@@ -181,6 +181,21 @@ service cloud.firestore {
       allow update: if (isAdmin() || isOwner(parentId)) && isUpdatingOwnUserDoc() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
+    
+    // --------------------------------------------------------------------------
+    // Settings Collection
+    // --------------------------------------------------------------------------
+    
+    /**
+     * @description Manages application-wide settings like profiles, info, and appearance.
+     * @path        /settings/{settingId}
+     * @allow       (read, write) Only admins can read and modify settings.
+     * @principle   Centralizes control over configuration to authorized administrators.
+     */
+    match /settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+
 
     // --------------------------------------------------------------------------
     // School Administration Collections (Read-Only for most users)
