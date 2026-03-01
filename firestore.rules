@@ -143,8 +143,8 @@ service cloud.firestore {
      * @principle   Enforces ownership and parental access for sensitive profile data.
      */
     match /students/{studentId} {
-      allow get: if isAdmin() || isStudentOrParent(studentId);
-      allow list: if isAdmin();
+      allow get: if isAdmin() || isStudentOrParent(studentId) || isTeacher();
+      allow list: if isAdmin() || isTeacher();
       // Allow admin to create students, not just the user themselves.
       allow create: if isAdmin() || (isOwner(studentId) && isCreatingOwnUserDoc(studentId));
       allow update: if (isAdmin() || isOwner(studentId)) && isUpdatingOwnUserDoc() && resource != null;
