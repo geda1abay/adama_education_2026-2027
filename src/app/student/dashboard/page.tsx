@@ -4,14 +4,57 @@ import Link from 'next/link';
 import { useData } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { useMemo } from 'react';
+import { Award, Calculator, TrendingUp } from 'lucide-react';
 
 export default function StudentDashboardPage() {
-  const { currentUser: student, recentExamResults, isAuthLoading } = useData();
+  const { currentUser: student, recentExamResults, isAuthLoading, students } = useData();
   
   const isLoading = isAuthLoading;
+
+  const examResults = useMemo(() => {
+    if (!student) return [];
+    return recentExamResults.filter((r) => r.studentId === student.id);
+  }, [student, recentExamResults]);
+
+  const stats = useMemo(() => {
+    if (!student) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
+    
+    const processedResults = examResults.map(r => {
+        const scoreParts = r.score.split('/');
+        const score = parseInt(scoreParts[0], 10);
+        const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
+        return {
+            score: isNaN(score) ? 0 : score,
+            maxScore: isNaN(maxScore) ? 100 : maxScore,
+        };
+    });
+    
+    const totalScore = processedResults.reduce((acc, r) => acc + r.score, 0);
+    const totalMaxScore = processedResults.reduce((acc, r) => acc + r.maxScore, 0);
+    const averagePercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+
+    const studentsInClass = students.filter(s => s.class === student.class);
+    const studentScores = studentsInClass.map(s => {
+        const studentExams = recentExamResults.filter(r => r.studentId === s.id);
+        const total = studentExams.reduce((acc, r) => {
+            const score = parseInt(r.score.split('/')[0], 10);
+            return acc + (isNaN(score) ? 0 : score);
+        }, 0);
+        return { studentId: s.id, total };
+    });
+    
+    studentScores.sort((a, b) => b.total - a.total);
+    const rank = studentScores.findIndex(s => s.studentId === student.id) + 1;
+    
+    return {
+        totalScore,
+        averagePercentage: averagePercentage.toFixed(2),
+        rank: rank > 0 ? `${rank} / ${studentsInClass.length}` : 'N/A'
+    }
+  }, [student, examResults, students]);
 
   if (isLoading) {
     return (
@@ -30,20 +73,17 @@ export default function StudentDashboardPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Subject</TableHead>
-                                <TableHead>Score</TableHead>
-                                <TableHead className="text-right">Grade</TableHead>
+                                <TableHead className="text-right">Score</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             <TableRow>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-6 w-10 inline-block" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-5 w-16" /></TableCell>
                             </TableRow>
                              <TableRow>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-6 w-10 inline-block" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-5 w-16" /></TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -71,54 +111,71 @@ export default function StudentDashboardPage() {
     )
   }
 
-  const examResults = recentExamResults.filter((r) => r.studentId === student.id);
-  
-  const getGradeVariant = (grade: string) => {
-    if (grade.startsWith('A') || grade === 'N/A') return 'default';
-    if (grade.startsWith('B')) return 'secondary';
-    if (grade.startsWith('C')) return 'outline';
-    return 'destructive';
-  }
-
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold font-headline">Welcome, {student.name}!</h1>
-        <p className="text-muted-foreground">Here are your latest exam results.</p>
+        <p className="text-muted-foreground">Here is your academic summary.</p>
       </div>
 
-      <Card>
-          <CardHeader>
-              <CardTitle>Your Exam Results</CardTitle>
-              <CardDescription>A summary of your performance in recent exams.</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead>Subject</TableHead>
-                          <TableHead>Score</TableHead>
-                          <TableHead className="text-right">Grade</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {examResults.length > 0 ? examResults.map((result) => (
-                      <TableRow key={result.id}>
-                          <TableCell className="font-medium">{result.subject}</TableCell>
-                          <TableCell>{result.score}</TableCell>
-                          <TableCell className="text-right">
-                          <Badge variant={getGradeVariant(result.grade) as any}>{result.grade}</Badge>
-                          </TableCell>
-                      </TableRow>
-                      )) : (
-                          <TableRow>
-                              <TableCell colSpan={3} className="text-center">No exam results found.</TableCell>
-                          </TableRow>
-                      )}
-                  </TableBody>
-              </Table>
-          </CardContent>
-      </Card>
+       <div className="grid gap-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Academic Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-8 sm:grid-cols-3">
+                    <div className="flex items-center gap-4">
+                        <Calculator className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                            <p className="text-sm text-muted-foreground">Total Score</p>
+                            <p className="text-2xl font-bold">{stats.totalScore}</p>
+                        </div>
+                    </div>
+                        <div className="flex items-center gap-4">
+                        <TrendingUp className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                            <p className="text-sm text-muted-foreground">Average</p>
+                            <p className="text-2xl font-bold">{stats.averagePercentage}%</p>
+                        </div>
+                    </div>
+                        <div className="flex items-center gap-4">
+                        <Award className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                            <p className="text-sm text-muted-foreground">Class Rank</p>
+                            <p className="text-2xl font-bold">{stats.rank}</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Your Exam Results</CardTitle>
+                    <CardDescription>A summary of your performance in recent exams.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Subject</TableHead>
+                                <TableHead className="text-right">Score</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {examResults.length > 0 ? examResults.map((result) => (
+                            <TableRow key={result.id}>
+                                <TableCell className="font-medium">{result.subject}</TableCell>
+                                <TableCell className="text-right">{result.score}</TableCell>
+                            </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={2} className="text-center">No exam results found.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+       </div>
     </div>
   );
 }

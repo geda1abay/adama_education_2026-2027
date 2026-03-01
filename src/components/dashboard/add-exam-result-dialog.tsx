@@ -35,7 +35,6 @@ const examResultSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
   subject: z.string().min(2, { message: 'Subject must be at least 2 characters.' }),
   score: z.string().min(1, { message: 'Score is required.' }),
-  grade: z.string().min(1, { message: 'Grade is required.' }),
 });
 
 type ExamResultFormValues = z.infer<typeof examResultSchema>;
@@ -54,7 +53,6 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
       studentId: '',
       subject: '',
       score: '',
-      grade: '',
     },
   });
 
@@ -119,19 +117,6 @@ export function AddExamResultDialog({ open, onOpenChange, onExamResultAdd, stude
                   <FormLabel>Score</FormLabel>
                   <FormControl>
                     <Input placeholder="95/100" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="grade"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Grade</FormLabel>
-                  <FormControl>
-                    <Input placeholder="A+" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Award, Calculator, TrendingUp } from 'lucide-react';
+import { useMemo } from 'react';
 
 export default function StudentDetailsPage() {
   const params = useParams();
@@ -20,12 +21,43 @@ export default function StudentDetailsPage() {
   const examResults = recentExamResults.filter((r) => r.studentId === studentId);
   const avatar = PlaceHolderImages.find((img) => img.id === student?.avatar);
 
-  const getGradeVariant = (grade: string) => {
-    if (grade.startsWith('A') || grade === 'N/A') return 'default';
-    if (grade.startsWith('B')) return 'secondary';
-    if (grade.startsWith('C')) return 'outline';
-    return 'destructive';
-  }
+  const stats = useMemo(() => {
+    if (!student) return { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
+
+    const processedResults = examResults.map(r => {
+        const scoreParts = r.score.split('/');
+        const score = parseInt(scoreParts[0], 10);
+        const maxScore = scoreParts.length > 1 ? parseInt(scoreParts[1], 10) : 100;
+        return {
+            score: isNaN(score) ? 0 : score,
+            maxScore: isNaN(maxScore) ? 100 : maxScore,
+        };
+    });
+    
+    const totalScore = processedResults.reduce((acc, r) => acc + r.score, 0);
+    const totalMaxScore = processedResults.reduce((acc, r) => acc + r.maxScore, 0);
+    const averagePercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+
+    const studentsInClass = students.filter(s => s.class === student.class);
+    const studentScores = studentsInClass.map(s => {
+        const studentExams = recentExamResults.filter(r => r.studentId === s.id);
+        const total = studentExams.reduce((acc, r) => {
+            const score = parseInt(r.score.split('/')[0], 10);
+            return acc + (isNaN(score) ? 0 : score);
+        }, 0);
+        return { studentId: s.id, total };
+    });
+    
+    studentScores.sort((a, b) => b.total - a.total);
+    const rank = studentScores.findIndex(s => s.studentId === studentId) + 1;
+    
+    return {
+        totalScore,
+        averagePercentage: averagePercentage.toFixed(2),
+        rank: rank > 0 ? `${rank} / ${studentsInClass.length}` : 'N/A'
+    }
+  }, [student, examResults, students, studentId]);
+
 
   if (!student) {
     return (
@@ -90,7 +122,35 @@ export default function StudentDetailsPage() {
             </CardContent>
           </Card>
         </div>
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 flex flex-col gap-6">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Academic Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-8 sm:grid-cols-3">
+                    <div className="flex items-center gap-4">
+                        <Calculator className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                            <p className="text-sm text-muted-foreground">Total Score</p>
+                            <p className="text-2xl font-bold">{stats.totalScore}</p>
+                        </div>
+                    </div>
+                        <div className="flex items-center gap-4">
+                        <TrendingUp className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                            <p className="text-sm text-muted-foreground">Average</p>
+                            <p className="text-2xl font-bold">{stats.averagePercentage}%</p>
+                        </div>
+                    </div>
+                        <div className="flex items-center gap-4">
+                        <Award className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                            <p className="text-sm text-muted-foreground">Class Rank</p>
+                            <p className="text-2xl font-bold">{stats.rank}</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>Exam Results</CardTitle>
@@ -101,18 +161,14 @@ export default function StudentDetailsPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Subject</TableHead>
-                                <TableHead>Score</TableHead>
-                                <TableHead className="text-right">Grade</TableHead>
+                                <TableHead className="text-right">Score</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {examResults.length > 0 ? examResults.map((result) => (
                             <TableRow key={result.id}>
                                 <TableCell>{result.subject}</TableCell>
-                                <TableCell>{result.score}</TableCell>
-                                <TableCell className="text-right">
-                                <Badge variant={getGradeVariant(result.grade) as any}>{result.grade}</Badge>
-                                </TableCell>
+                                <TableCell className="text-right">{result.score}</TableCell>
                             </TableRow>
                             )) : (
                                 <TableRow>

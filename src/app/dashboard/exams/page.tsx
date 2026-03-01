@@ -62,15 +62,8 @@ export default function ExamsPage() {
 
   const getStudentById = (studentId: string) => students.find(s => s.id === studentId);
 
-  const getGradeVariant = (grade: string) => {
-    if (grade.startsWith('A') || grade === 'N/A') return 'default';
-    if (grade.startsWith('B')) return 'secondary';
-    if (grade.startsWith('C')) return 'outline';
-    return 'destructive';
-  }
-
   const handleAddExamResult = (data: any) => {
-    addExamResult(data);
+    addExamResult({ ...data, grade: 'N/A' });
     setIsAddExamResultDialogOpen(false);
   }
 
@@ -146,8 +139,7 @@ export default function ExamsPage() {
               <TableHead>Student Name</TableHead>
               <TableHead>Class</TableHead>
               <TableHead>Subject</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead className="text-right">Grade</TableHead>
+              <TableHead className="text-right">Score</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -160,10 +152,7 @@ export default function ExamsPage() {
                   <Badge variant="outline">{student?.class || 'N/A'}</Badge>
                 </TableCell>
                 <TableCell>{result.subject}</TableCell>
-                <TableCell>{result.score}</TableCell>
-                <TableCell className="text-right">
-                  <Badge variant={getGradeVariant(result.grade) as any}>{result.grade}</Badge>
-                </TableCell>
+                <TableCell className="text-right">{result.score}</TableCell>
               </TableRow>
               )
             })}
