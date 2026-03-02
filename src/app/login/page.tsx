@@ -17,21 +17,21 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { set } from "zod";
 
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const { adminLogin, firebaseUser, isUserLoading } = useData();
-    const [email, setEmail] = useState('gedaabay8@gmail.com');
-    const [password, setPassword] = useState('151835');
+    const { adminLogin, firebaseUser, isUserLoading, userRole } = useData();
+    const [email, setEmail] = useState('admin@example.com');
+    const [password, setPassword] = useState('password');
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-      if (!isUserLoading && firebaseUser) {
-        // Assuming admin role check will happen on dashboard
+      if (!isUserLoading && firebaseUser && userRole === 'admin') {
         router.push('/dashboard');
       }
-    }, [firebaseUser, isUserLoading, router]);
+    }, [firebaseUser, isUserLoading, userRole, router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,7 +49,7 @@ export default function LoginPage() {
         }
     };
 
-    if (isUserLoading || firebaseUser) {
+    if (isUserLoading || (firebaseUser && userRole)) {
       return (
         <div className="flex h-screen items-center justify-center">
           <p>Loading...</p>
@@ -73,7 +73,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="gedaabay8@gmail.com"
+                placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

@@ -21,17 +21,17 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function TeacherLoginPage() {
     const router = useRouter();
-    const { loginTeacher, firebaseUser, isUserLoading } = useData();
+    const { loginTeacher, firebaseUser, isUserLoading, userRole } = useData();
     const { toast } = useToast();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        if (!isUserLoading && firebaseUser) {
+        if (!isUserLoading && firebaseUser && userRole === 'teacher') {
             router.push('/teacher/dashboard');
         }
-    }, [firebaseUser, isUserLoading, router]);
+    }, [firebaseUser, isUserLoading, userRole, router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,7 +51,7 @@ export default function TeacherLoginPage() {
         }
     };
 
-    if (isUserLoading || firebaseUser) {
+    if (isUserLoading || (firebaseUser && userRole)) {
         return (
           <div className="flex h-screen items-center justify-center">
             <p>Loading...</p>

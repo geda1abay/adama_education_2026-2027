@@ -1,8 +1,34 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
+  collection,
+  doc,
+  deleteDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
+import { useAuth, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc } from '@/firebase/firestore/use-collection';
+import {
+  setDocumentNonBlocking,
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+} from '@/firebase/non-blocking-updates';
+import type {
   Student,
   Teacher,
   StudentFee,
@@ -11,67 +37,63 @@ import {
   AdminProfile,
   SchoolInfo,
   Appearance,
-  STUDENTS,
-  TEACHERS,
-  STUDENT_ATTENDANCE,
-  RECENT_EXAM_RESULTS,
-  FEES_DATA,
 } from '@/lib/data';
-import type { User } from 'firebase/auth'; // Using type for mock user object shape
 
-// Mock user object to satisfy components expecting `firebaseUser`
-const MOCK_ADMIN_USER: User = {
-    uid: 'admin-uid',
-    email: 'gedaabay8@gmail.com',
-} as User;
-
-const MOCK_STUDENT_USER = (id: string, email: string): User => ({
-    uid: id,
-    email,
-} as User)
-
-const MOCK_TEACHER_USER = (id: string, email: string): User => ({
-    uid: id,
-    email,
-} as User)
-
-
-// Utility type to add an 'id' field
-export type WithId<T> = T & { id: string };
+type WithId<T> = T & { id: string };
 
 interface DataContextType {
+  // Data from Firestore
   students: WithId<Student>[] | null;
   teachers: WithId<Teacher>[] | null;
   studentAttendance: WithId<Attendance>[] | null;
   recentExamResults: WithId<ExamResult>[] | null;
   feesData: WithId<StudentFee>[] | null;
-  
+
+  // Loading states
   isLoading: boolean;
   isUserLoading: boolean;
+  isRoleLoading: boolean;
 
-  firebaseUser: User | null;
+  // Auth & Role
+  firebaseUser: any | null; // Keep firebaseUser for general auth state
+  userRole: 'admin' | 'student' | 'teacher' | null;
+  isAdmin: boolean;
   currentStudent: WithId<Student> | null;
   currentTeacher: WithId<Teacher> | null;
-  isAdmin: boolean;
-  userRole: 'admin' | 'teacher' | 'student' | null;
 
+  // Settings (can remain local or be moved to Firestore)
   adminProfile: WithId<AdminProfile> | null;
   schoolInfo: WithId<SchoolInfo> | null;
   appearance: WithId<Appearance> | null;
-  
+
+  // Functions
   adminLogin: (email: string, password: string) => Promise<boolean>;
   loginStudent: (email: string, password: string) => Promise<boolean>;
   loginTeacher: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
 
-  addStudent: (studentData: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'>) => Promise<void>;
-  deleteStudent: (studentId: string) => void;
-  addTeacher: (teacherData: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { classes?: string }) => Promise<void>;
-  deleteTeacher: (teacherId: string) => void;
-  addAttendance: (attendanceData: Omit<Attendance, 'id'>) => void;
-  addExamResult: (examResultData: Omit<ExamResult, 'id'>) => void;
-  addFee: (feeData: Omit<StudentFee, 'id'>) => void;
-  
+  addStudent: (
+    studentData: Omit<
+      Student,
+      'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'
+    > & { password?: string }
+  ) => Promise<void>;
+  deleteStudent: (studentId: string) => Promise<void>;
+  addTeacher: (
+    teacherData: Omit<
+      Teacher,
+      'id' | 'userId' | 'hireDate' | 'qualification' | 'address'
+    > & { classes?: string; password?: string }
+  ) => Promise<void>;
+  deleteTeacher: (teacherId: string) => Promise<void>;
+  addAttendance: (
+    attendanceData: Omit<Attendance, 'id'>
+  ) => Promise<void>;
+  addExamResult: (
+    examResultData: Omit<ExamResult, 'id'>
+  ) => Promise<void>;
+  addFee: (feeData: Omit<StudentFee, 'id'>) => Promise<void>;
+
   updateAdminProfile: (data: Partial<AdminProfile>) => void;
   updateSchoolInfo: (data: Partial<SchoolInfo>) => void;
   setTheme: (theme: string) => void;
@@ -82,210 +104,299 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  
-  // Data state
-  const [students, setStudents] = useState<Student[] | null>(null);
-  const [teachers, setTeachers] = useState<Teacher[] | null>(null);
-  const [feesData, setFeesData] = useState<StudentFee[] | null>(null);
-  const [studentAttendance, setStudentAttendance] = useState<Attendance[] | null>(null);
-  const [recentExamResults, setRecentExamResults] = useState<ExamResult[] | null>(null);
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { user: firebaseUser, isUserLoading } = useUser();
 
-  // Settings state
-  const [adminProfile, setAdminProfile] = useState<WithId<AdminProfile> | null>({ id: 'admin-profile', name: 'Admin', email: 'gedaabay8@gmail.com'});
-  const [schoolInfo, setSchoolInfo] = useState<WithId<SchoolInfo> | null>({id: 'school-info', name: 'Adama Model', address: 'Adama, Ethiopia', contact: '+251 912 345 678'});
-  const [appearance, setAppearance] = useState<WithId<Appearance> | null>({id: 'appearance', theme: '259 71% 50%', darkMode: false});
-  
-  // Auth & loading state
-  const [isUserLoading, setIsUserLoading] = useState(true);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<'admin' | 'teacher' | 'student' | null>(null);
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
-  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'student' | 'teacher' | null>(null);
+  const [isRoleLoading, setIsRoleLoading] = useState(true);
 
+  // Firestore References
+  const usersRef = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+  const studentsRef = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
+  const teachersRef = useMemoFirebase(() => collection(firestore, 'teachers'), [firestore]);
+  const attendanceRef = useMemoFirebase(() => collection(firestore, 'attendance'), [firestore]);
+  const examsRef = useMemoFirebase(() => collection(firestore, 'examResults'), [firestore]);
+  const feesRef = useMemoFirebase(() => collection(firestore, 'fees'), [firestore]);
+  
+  // Real-time data fetching
+  const { data: students, isLoading: studentsLoading } = useCollection<Student>(userRole === 'admin' ? studentsRef : null);
+  const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(userRole === 'admin' ? teachersRef : null);
+  const { data: studentAttendance, isLoading: attendanceLoading } = useCollection<Attendance>(userRole === 'admin' ? attendanceRef : null);
+  const { data: recentExamResults, isLoading: examsLoading } = useCollection<ExamResult>(examsRef); // All users need this
+  const { data: feesData, isLoading: feesLoading } = useCollection<StudentFee>(userRole === 'admin' ? feesRef : null);
+
+  const { data: userRoleDoc } = useDoc<{ role: 'admin' | 'student' | 'teacher' }>(
+    firebaseUser ? doc(usersRef, firebaseUser.uid) : null
+  );
+
+  const { data: currentStudent } = useDoc<Student>(
+    userRole === 'student' && firebaseUser ? doc(studentsRef, firebaseUser.uid) : null
+  );
+
+  const { data: currentTeacher } = useDoc<Teacher>(
+    userRole === 'teacher' && firebaseUser ? doc(teachersRef, firebaseUser.uid) : null
+  );
+
+  // Settings State (kept local for now)
+  const [adminProfile, setAdminProfile] = useState<WithId<AdminProfile> | null>(null);
+  const [schoolInfo, setSchoolInfo] = useState<WithId<SchoolInfo> | null>(null);
+  const [appearance, setAppearance] = useState<WithId<Appearance> | null>(null);
+  
   useEffect(() => {
-    // Simulate initial data loading
-    const timer = setTimeout(() => {
-      setStudents(STUDENTS);
-      setTeachers(TEACHERS);
-      setFeesData(FEES_DATA);
-      setStudentAttendance(STUDENT_ATTENDANCE);
-      setRecentExamResults(RECENT_EXAM_RESULTS);
-      setIsDataLoading(false);
-      setIsUserLoading(false);
-    }, 1000); // 1-second delay
-    return () => clearTimeout(timer);
-  }, []);
-  
+    if (!isUserLoading) {
+      if (firebaseUser) {
+        if (userRoleDoc) {
+          setUserRole(userRoleDoc.role);
+          setIsRoleLoading(false);
+        } else {
+          // If the user document doesn't exist, they have no role.
+          setIsRoleLoading(false);
+          setUserRole(null);
+        }
+      } else {
+        // No user, no role
+        setIsRoleLoading(false);
+        setUserRole(null);
+      }
+    }
+  }, [isUserLoading, firebaseUser, userRoleDoc]);
+
+
+  // Login Functions
   const adminLogin = async (email: string, password: string): Promise<boolean> => {
-    if (email === 'gedaabay8@gmail.com' && password === '151835') {
-      setFirebaseUser(MOCK_ADMIN_USER);
-      setUserRole('admin');
-      return true;
+     try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // After sign-in, the role will be determined by the useEffect above.
+      return !!userCredential.user;
+    } catch (error) {
+      console.error('Admin login failed:', error);
+      return false;
     }
-    return false;
   };
-  
+
   const loginStudent = async (email: string, password: string): Promise<boolean> => {
-    const student = STUDENTS.find(s => s.contactEmail.toLowerCase() === email.toLowerCase());
-    if (student && password) { // Mock password check
-        setFirebaseUser(MOCK_STUDENT_USER(student.id, student.contactEmail));
-        setUserRole('student');
-        setCurrentStudent(student);
-        return true;
+     try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return !!userCredential.user;
+    } catch (error) {
+      console.error('Student login failed:', error);
+      return false;
     }
-    return false;
   };
 
   const loginTeacher = async (email: string, password: string): Promise<boolean> => {
-    const teacher = TEACHERS.find(t => t.contactEmail.toLowerCase() === email.toLowerCase());
-    if (teacher && password) { // Mock password check
-        setFirebaseUser(MOCK_TEACHER_USER(teacher.id, teacher.contactEmail));
-        setUserRole('teacher');
-        setCurrentTeacher(teacher);
-        return true;
+     try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return !!userCredential.user;
+    } catch (error) {
+      console.error('Teacher login failed:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = async () => {
-    setFirebaseUser(null);
+    await signOut(auth);
     setUserRole(null);
-    setCurrentStudent(null);
-    setCurrentTeacher(null);
   };
   
-  const addStudent = async (data: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'>) => {
-    const newId = `s${Date.now()}`;
-    const newStudent: Student = {
+  // Data modification functions
+  const addStudent = async (data: Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string }) => {
+    if (!data.password) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Password is required to create a student user.' });
+      return;
+    }
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
+      const newUserId = userCredential.user.uid;
+      
+      const userDocRef = doc(usersRef, newUserId);
+      setDocumentNonBlocking(userDocRef, {
+        id: newUserId,
+        email: data.contactEmail,
+        role: 'student',
+        firstName: data.firstName,
+        lastName: data.lastName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      const studentDocRef = doc(studentsRef, newUserId);
+      const newStudent: Omit<Student, 'id'> = {
         ...data,
-        id: newId,
-        userId: newId,
+        userId: newUserId,
         parentIds: [],
         enrollmentDate: new Date().toISOString(),
         dateOfBirth: new Date().toISOString(),
         gender: 'Not Specified',
         address: 'Not Specified',
-    };
-    setStudents(prev => [...(prev || []), newStudent]);
-    toast({ title: 'Student Added', description: `${data.firstName} has been added.` });
+      };
+      setDocumentNonBlocking(studentDocRef, newStudent, { merge: true });
+
+      toast({ title: 'Student Added', description: `${data.firstName} has been added.` });
+    } catch (error) {
+      console.error("Error adding student:", error);
+      toast({ variant: 'destructive', title: 'Error Adding Student', description: (error as Error).message });
+    }
   };
 
-  const deleteStudent = (studentId: string) => {
-    setStudents(prev => (prev || []).filter(s => s.id !== studentId));
-    toast({ title: 'Student Deleted', description: 'The student has been removed.' });
+  const deleteStudent = async (studentId: string) => {
+    // This is complex because it involves deleting auth user.
+    // For now, just delete the Firestore doc.
+    await deleteDocumentNonBlocking(doc(studentsRef, studentId));
+    await deleteDocumentNonBlocking(doc(usersRef, studentId));
+    toast({ title: 'Student Deleted' });
   };
   
-  const addTeacher = async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { classes?: string }) => {
-     const newId = `t${Date.now()}`;
-     const newTeacher: Teacher = {
+  const addTeacher = async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { classes?: string; password?: string }) => {
+    if (!data.password) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Password is required to create a teacher user.' });
+      return;
+    }
+     try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.contactEmail, data.password);
+      const newUserId = userCredential.user.uid;
+      
+      const userDocRef = doc(usersRef, newUserId);
+      setDocumentNonBlocking(userDocRef, {
+        id: newUserId,
+        email: data.contactEmail,
+        role: 'teacher',
+        firstName: data.firstName,
+        lastName: data.lastName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      const teacherDocRef = doc(teachersRef, newUserId);
+      const newTeacher: Omit<Teacher, 'id'> = {
         ...data,
-        id: newId,
-        userId: newId,
+        userId: newUserId,
         hireDate: new Date().toISOString(),
         qualification: 'Not specified',
         address: 'Not specified',
         classes: data.classes ? data.classes.split(',').map(c => c.trim()) : [],
-     };
-     setTeachers(prev => [...(prev || []), newTeacher]);
-     toast({ title: 'Teacher Added', description: `${data.firstName} has been added.` });
+      };
+      setDocumentNonBlocking(teacherDocRef, newTeacher, { merge: true });
+
+      toast({ title: 'Teacher Added', description: `${data.firstName} has been added.` });
+    } catch (error) {
+      console.error("Error adding teacher:", error);
+      toast({ variant: 'destructive', title: 'Error Adding Teacher', description: (error as Error).message });
+    }
   };
   
-  const deleteTeacher = (teacherId: string) => {
-    setTeachers(prev => (prev || []).filter(t => t.id !== teacherId));
-    toast({ title: 'Teacher Deleted', description: 'The teacher has been removed.' });
+  const deleteTeacher = async (teacherId: string) => {
+    await deleteDocumentNonBlocking(doc(teachersRef, teacherId));
+    await deleteDocumentNonBlocking(doc(usersRef, teacherId));
+    toast({ title: 'Teacher Deleted' });
   };
   
-  const addAttendance = (data: Omit<Attendance, 'id'>) => {
-     const newAttendance: Attendance = {
-        ...data,
-        id: `att${Date.now()}`,
-     };
-     setStudentAttendance(prev => [...(prev || []), newAttendance]);
-     toast({ title: 'Attendance Added' });
+  const addAttendance = async (data: Omit<Attendance, 'id'>) => {
+    await addDocumentNonBlocking(attendanceRef, data);
+    toast({ title: 'Attendance Added' });
   };
 
-  const addExamResult = (data: Omit<ExamResult, 'id'>) => {
-     const newResult: ExamResult = {
-        ...data,
-        id: `er${Date.now()}`,
-        resultDate: new Date().toISOString(),
-     };
-     setRecentExamResults(prev => [...(prev || []), newResult]);
+  const addExamResult = async (data: Omit<ExamResult, 'id'>) => {
+     await addDocumentNonBlocking(examsRef, {
+       ...data,
+       resultDate: new Date().toISOString()
+     });
      toast({ title: 'Exam Result Added' });
   };
 
-  const addFee = (data: Omit<StudentFee, 'id'>) => {
-    const newFee: StudentFee = {
-        ...data,
-        id: `fee${Date.now()}`,
-    };
-    setFeesData(prev => [...(prev || []), newFee]);
+  const addFee = async (data: Omit<StudentFee, 'id'>) => {
+    await addDocumentNonBlocking(feesRef, data);
     toast({ title: 'Fee Record Added' });
   };
 
+  // Settings functions (local state updates)
   const updateAdminProfile = (data: Partial<AdminProfile>) => {
-    setAdminProfile(prev => prev ? { ...prev, ...data } : null);
+    setAdminProfile((prev) => (prev ? { ...prev, ...data } : null));
     toast({ title: 'Profile Updated' });
   };
-  
   const updateSchoolInfo = (data: Partial<SchoolInfo>) => {
-    setSchoolInfo(prev => prev ? { ...prev, ...data } : null);
+    setSchoolInfo((prev) => (prev ? { ...prev, ...data } : null));
     toast({ title: 'School Info Updated' });
   };
-
   const setTheme = (theme: string) => {
-    setAppearance(prev => prev ? { ...prev, theme } : null);
+    setAppearance((prev) => (prev ? { ...prev, theme } : null));
   };
-  
   const toggleDarkMode = () => {
-    setAppearance(prev => prev ? { ...prev, darkMode: !prev.darkMode } : null);
+    setAppearance((prev) => (prev ? { ...prev, darkMode: !prev.darkMode } : null));
   };
-  
+
   useEffect(() => {
     if (typeof window !== 'undefined' && appearance) {
       document.documentElement.classList.toggle('dark', appearance.darkMode);
       document.documentElement.style.setProperty('--primary', appearance.theme);
     }
   }, [appearance]);
+  
+  // Set default settings if they are not loaded
+  useEffect(() => {
+    if (!adminProfile) setAdminProfile({ id: 'admin-profile', name: 'Admin', email: firebaseUser?.email || '' });
+    if (!schoolInfo) setSchoolInfo({id: 'school-info', name: 'Adama Model', address: 'Adama, Ethiopia', contact: '+251 912 345 678'});
+    if (!appearance) setAppearance({id: 'appearance', theme: '259 71% 50%', darkMode: false});
+  }, [adminProfile, schoolInfo, appearance, firebaseUser]);
 
-  const value = useMemo(() => ({
-    students,
-    teachers,
-    studentAttendance,
-    recentExamResults,
-    feesData,
-    isLoading: isDataLoading,
-    isUserLoading,
-    firebaseUser,
-    currentStudent,
-    currentTeacher,
-    isAdmin: userRole === 'admin',
-    userRole,
-    adminProfile,
-    schoolInfo,
-    appearance,
-    adminLogin,
-    loginStudent,
-    loginTeacher,
-    logout,
-    addStudent,
-    deleteStudent,
-    addTeacher,
-    deleteTeacher,
-    addAttendance,
-    addExamResult,
-    addFee,
-    updateAdminProfile,
-    updateSchoolInfo,
-    setTheme,
-    toggleDarkMode,
-  }), [
-      students, teachers, studentAttendance, recentExamResults, feesData,
-      isDataLoading, isUserLoading,
-      firebaseUser, currentStudent, currentTeacher, userRole,
-      adminProfile, schoolInfo, appearance
-  ]);
+
+  const value = useMemo(
+    () => ({
+      students,
+      teachers,
+      studentAttendance,
+      recentExamResults,
+      feesData,
+      isLoading: studentsLoading || teachersLoading || attendanceLoading || examsLoading || feesLoading || isUserLoading || isRoleLoading,
+      isUserLoading,
+      isRoleLoading,
+      firebaseUser,
+      userRole,
+      isAdmin: userRole === 'admin',
+      currentStudent,
+      currentTeacher,
+      adminProfile,
+      schoolInfo,
+      appearance,
+      adminLogin,
+      loginStudent,
+      loginTeacher,
+      logout,
+      addStudent,
+      deleteStudent,
+      addTeacher,
+      deleteTeacher,
+      addAttendance,
+      addExamResult,
+      addFee,
+      updateAdminProfile,
+      updateSchoolInfo,
+      setTheme,
+      toggleDarkMode,
+    }),
+    [
+      students,
+      teachers,
+      studentAttendance,
+      recentExamResults,
+      feesData,
+      studentsLoading,
+      teachersLoading,
+      attendanceLoading,
+      examsLoading,
+      feesLoading,
+      isUserLoading,
+      isRoleLoading,
+      firebaseUser,
+      userRole,
+      currentStudent,
+      currentTeacher,
+      adminProfile,
+      schoolInfo,
+      appearance,
+    ]
+  );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

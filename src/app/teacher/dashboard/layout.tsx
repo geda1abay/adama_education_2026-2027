@@ -11,16 +11,18 @@ export default function TeacherDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isUserLoading, firebaseUser, userRole } = useData();
+  const { isUserLoading, isRoleLoading, firebaseUser, userRole } = useData();
   const router = useRouter();
 
+  const isLoading = isUserLoading || isRoleLoading;
+
   useEffect(() => {
-    if (!isUserLoading && (!firebaseUser || userRole !== 'teacher')) {
+    if (!isLoading && (!firebaseUser || userRole !== 'teacher')) {
       router.push('/teacher/login');
     }
-  }, [isUserLoading, firebaseUser, userRole, router]);
+  }, [isLoading, firebaseUser, userRole, router]);
 
-  if (isUserLoading || userRole !== 'teacher') {
+  if (isLoading || userRole !== 'teacher') {
     return (
        <div className="min-h-screen w-full bg-background flex items-center justify-center">
         <p>Loading...</p>

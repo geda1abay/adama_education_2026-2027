@@ -13,18 +13,18 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isUserLoading, firebaseUser, isAdmin } = useData();
+  const { isUserLoading, isRoleLoading, firebaseUser, isAdmin } = useData();
   const router = useRouter();
 
+  const isLoading = isUserLoading || isRoleLoading;
+
   useEffect(() => {
-    // If loading is finished and there's no user, or the user is not an admin, redirect.
-    if (!isUserLoading && (!firebaseUser || !isAdmin)) {
+    if (!isLoading && (!firebaseUser || !isAdmin)) {
       router.push('/login');
     }
-  }, [isUserLoading, firebaseUser, isAdmin, router]);
+  }, [isLoading, firebaseUser, isAdmin, router]);
 
-  // While checking auth/role, show a loading shell.
-  if (isUserLoading || !isAdmin) {
+  if (isLoading || !isAdmin) {
     return (
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-muted/40 md:block">
