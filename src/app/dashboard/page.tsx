@@ -39,28 +39,28 @@ export default function DashboardPage() {
     {
       title: 'Total Students',
       value: String(students?.length || 0),
-      change: '+0 from last month',
+      change: '+0',
       icon: 'Users',
       href: '/dashboard/students',
     },
     {
       title: 'Total Teachers',
       value: String(teachers?.length || 0),
-      change: '+0 from last month',
+      change: '+0',
       icon: 'GraduationCap',
       href: '/dashboard/teachers',
     },
     {
       title: 'Fees Collected',
       value: `Birr ${(totalFeesCollected / 1000).toFixed(1)}K`,
-      change: '+0 from last month',
+      change: '+0',
       icon: 'DollarSign',
       href: '/dashboard/fees',
     },
     {
         title: 'Average Attendance',
         value: `${averageAttendance.toFixed(1)}%`,
-        change: '+0 from last month',
+        change: '+0',
         icon: 'ClipboardCheck',
         href: '/dashboard/attendance',
     }
