@@ -157,18 +157,37 @@ export default function AiSummaryCard() {
                 <AlertDescription>
                   {error}
                   {error.includes('API key') && (
-                    <p className="mt-2">
-                      Please{' '}
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline"
-                      >
-                        get a valid Gemini API Key
-                      </a>{' '}
-                      and add it to your .env file as `GEMINI_API_KEY=your_key_here`.
-                    </p>
+                    <div className="mt-2 text-xs">
+                      <p className="font-semibold">To fix this:</p>
+                      <ol className="list-decimal list-inside space-y-1 mt-1">
+                        <li>
+                          <a
+                            href="https://aistudio.google.com/app/apikey"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                          >
+                            Create or get your Gemini API Key
+                          </a>
+                          .
+                        </li>
+                        <li>
+                          In your project's root directory, open the{' '}
+                          <code>.env</code> file.
+                        </li>
+                        <li>
+                          Add the following line, pasting your key after the
+                          `=` sign:
+                          <pre className="mt-1 p-2 rounded-md bg-muted/50 font-mono text-xs">
+                            GEMINI_API_KEY=your_key_here
+                          </pre>
+                        </li>
+                        <li>
+                          The app will automatically use the new key. You may
+                          need to try generating the summary again.
+                        </li>
+                      </ol>
+                    </div>
                   )}
                 </AlertDescription>
               </Alert>
