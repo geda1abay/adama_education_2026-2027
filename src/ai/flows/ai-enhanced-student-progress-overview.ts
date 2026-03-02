@@ -8,7 +8,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const AIEnhancedStudentProgressOverviewInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
@@ -62,6 +62,7 @@ export type GetStudentProgressOverviewResult =
 
 const prompt = ai.definePrompt({
   name: 'aiEnhancedStudentProgressOverviewPrompt',
+  model: 'gemini-2.5-flash',
   input: { schema: AIEnhancedStudentProgressOverviewInputSchema },
   output: { schema: AIEnhancedStudentProgressOverviewOutputSchema },
   prompt: `You are an academic advisor specialized in summarizing student performance.
