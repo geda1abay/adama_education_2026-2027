@@ -20,6 +20,7 @@ import {
 import {
   getStudentProgressOverview,
   type AIEnhancedStudentProgressOverviewInput,
+  type GetStudentProgressOverviewResult,
 } from '@/ai/flows/ai-enhanced-student-progress-overview';
 import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/context/data-context';
@@ -183,8 +184,9 @@ export default function AiSummaryCard() {
                           </pre>
                         </li>
                         <li>
-                          The app will automatically use the new key. You may
-                          need to try generating the summary again.
+                          <strong>Important:</strong> After saving the <code>.env</code> file,
+                          you must <strong>restart your application server</strong> for the new key to
+                          be recognized.
                         </li>
                       </ol>
                     </div>
