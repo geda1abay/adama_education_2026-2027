@@ -97,6 +97,13 @@ service cloud.firestore {
     function isStudentParent(docData) {
       return isSignedIn() && request.auth.uid in docData.parentUserIds;
     }
+    
+    /**
+     * Returns true if the user's role in the /users collection is 'admin'.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
 
     // ---------------------------------------------------------------------
     // User Profile Rules
@@ -110,8 +117,8 @@ service cloud.firestore {
      * @principle Enforces Self-Creation and Ownership for a user's primary identity document.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false; // Disallow listing all users for security.
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if false; // Generally, user profiles should be disabled, not deleted.
@@ -143,11 +150,11 @@ service cloud.firestore {
      * @principle Shared read access for related users, with ownership for writes. Assumes denormalized `parentUserIds`.
      */
     match /students/{studentId} {
-      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isStudentParent(resource.data));
-      allow list: if false;
-      allow create: if isOwner(request.resource.data.userId);
-      allow update: if resource != null && isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if false; // Admin-only task.
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isStudentParent(resource.data) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if (resource != null && isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
@@ -158,11 +165,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for a role-specific profile.
      */
     match /teachers/{teacherId} {
-      allow get: if isSignedIn() && isOwner(resource.data.userId);
-      allow list: if false;
-      allow create: if isOwner(request.resource.data.userId);
-      allow update: if resource != null && isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if false; // Admin-only task.
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if (resource != null && isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
@@ -302,6 +309,20 @@ service cloud.firestore {
     }
 
     /**
+     * @description Allows role-based collection group queries on examResults.
+     * @path /{path=**}/examResults/{examResultId}
+     * @allow (list) an admin to list all results, or a user to query results related to them.
+     * @principle Enforces query constraints for collection group reads.
+     */
+    match /{path=**}/examResults/{examResultId} {
+      allow list: if isAdmin() ||
+                     (request.query.where.studentUserId is string && request.query.where.studentUserId == request.auth.uid) ||
+                     (request.query.where.gradedByTeacherUserId is string && request.query.where.gradedByTeacherUserId == request.auth.uid);
+      
+      // get permission is handled by the more specific path rule below, which can access parent context.
+    }
+
+    /**
      * @description Teachers post exam results. The relevant student and their parents can read them.
      * @path /classes/{classId}/exams/{examId}/examResults/{examResultId}
      * @allow (get) a student viewing their own exam result.
@@ -309,7 +330,7 @@ service cloud.firestore {
      * @principle Role-based writes (teacher) and relational-based reads (student, parent).
      */
     match /classes/{classId}/exams/{examId}/examResults/{examResultId} {
-      allow get, list: if isClassTeacher(classId) || isOwner(resource.data.studentUserId) || isStudentParent(resource.data);
+      allow get, list: if isClassTeacher(classId) || (resource.data.studentUserId != null && isOwner(resource.data.studentUserId)) || (resource.data.parentUserIds != null && isStudentParent(resource.data));
       allow create: if isClassTeacher(classId) && request.resource.data.gradedByTeacherUserId == request.auth.uid;
       allow update: if resource != null && isClassTeacher(classId) && request.resource.data.gradedByTeacherUserId == resource.data.gradedByTeacherUserId;
       allow delete: if resource != null && isClassTeacher(classId);

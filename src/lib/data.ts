@@ -63,6 +63,10 @@ export type ExamResult = {
   maxScore: number;
   resultDate: string; // ISO date-time string
   comments?: string;
+  // Denormalized fields for security rules
+  studentUserId: string;
+  gradedByTeacherUserId: string;
+  parentUserIds?: string[];
 };
 
 // Settings types
