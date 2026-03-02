@@ -1,39 +1,62 @@
 {
   "entities": {
-    "Admin": {
+    "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Admin",
+      "title": "User",
       "type": "object",
-      "description": "Represents an administrator user with system-wide privileges.",
+      "description": "Represents a general user within the ScholarlyFlow system, acting as a base for specific roles like Student, Teacher, or Parent. Authentication details are managed externally.",
       "properties": {
-        "userId": {
+        "id": {
           "type": "string",
-          "description": "The user's unique ID, which must match the Firebase Auth UID."
-        },
-        "role": {
-          "type": "string",
-          "description": "The assigned role for the user.",
-          "enum": [
-            "admin"
-          ]
+          "description": "Unique identifier for the User entity."
         },
         "email": {
           "type": "string",
-          "description": "The admin user's email address.",
+          "description": "The user's email address, typically used for login and notifications.",
           "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The assigned role of the user within the system (e.g., 'Admin', 'Teacher', 'Student', 'Parent')."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's contact phone number."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was last updated.",
+          "format": "date-time"
         }
       },
       "required": [
-        "userId",
+        "id",
+        "email",
         "role",
-        "email"
+        "firstName",
+        "lastName",
+        "createdAt",
+        "updatedAt"
       ]
     },
     "Student": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Student",
       "type": "object",
-      "description": "Represents a student enrolled in the school, including their personal details and enrollment information.",
+      "description": "Represents a student enrolled in the school, linked to a general user account and containing academic-specific information.",
       "properties": {
         "id": {
           "type": "string",
@@ -41,37 +64,16 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the external user authentication system ID. (Relationship: ExternalUser 1:1 Student)"
+          "description": "Reference to the associated User entity for general user information. (Relationship: User 1:1 Student)"
         },
-        "firstName": {
+        "studentIdNumber": {
           "type": "string",
-          "description": "The first name of the student."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the student."
+          "description": "A unique identifier assigned to the student within the school's administrative system."
         },
         "dateOfBirth": {
           "type": "string",
           "description": "The student's date of birth.",
           "format": "date"
-        },
-        "gender": {
-          "type": "string",
-          "description": "The student's gender (e.g., 'Male', 'Female', 'Other')."
-        },
-        "address": {
-          "type": "string",
-          "description": "The student's residential address."
-        },
-        "contactEmail": {
-          "type": "string",
-          "description": "The student's contact email address.",
-          "format": "email"
-        },
-        "contactPhone": {
-          "type": "string",
-          "description": "The student's contact phone number."
         },
         "enrollmentDate": {
           "type": "string",
@@ -80,11 +82,22 @@
         },
         "gradeLevel": {
           "type": "string",
-          "description": "The current academic grade level of the student (e.g., '10th Grade')."
+          "description": "The current academic grade level or year of the student (e.g., '10th Grade', 'Freshman')."
+        },
+        "address": {
+          "type": "string",
+          "description": "The student's residential address."
         },
         "parentIds": {
           "type": "array",
-          "description": "References to the Parent entities associated with this student. (Relationship: Student N:N Parent)",
+          "description": "References to Parent entities associated with this student. (Relationship: Parent N:N Student)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "classIds": {
+          "type": "array",
+          "description": "References to Class entities in which the student is currently enrolled. (Relationship: Class N:N Student)",
           "items": {
             "type": "string"
           }
@@ -93,8 +106,7 @@
       "required": [
         "id",
         "userId",
-        "firstName",
-        "lastName",
+        "studentIdNumber",
         "dateOfBirth",
         "enrollmentDate",
         "gradeLevel"
@@ -104,7 +116,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Teacher",
       "type": "object",
-      "description": "Represents a teacher employed by the school, including their professional details.",
+      "description": "Represents a teacher employed by the school, linked to a general user account and containing professional information.",
       "properties": {
         "id": {
           "type": "string",
@@ -112,90 +124,38 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the external user authentication system ID. (Relationship: ExternalUser 1:1 Teacher)"
+          "description": "Reference to the associated User entity for general user information. (Relationship: User 1:1 Teacher)"
         },
-        "firstName": {
+        "teacherIdNumber": {
           "type": "string",
-          "description": "The first name of the teacher."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the teacher."
-        },
-        "contactEmail": {
-          "type": "string",
-          "description": "The teacher's contact email address.",
-          "format": "email"
-        },
-        "contactPhone": {
-          "type": "string",
-          "description": "The teacher's contact phone number."
-        },
-        "address": {
-          "type": "string",
-          "description": "The teacher's residential address."
-        },
-        "hireDate": {
-          "type": "string",
-          "description": "The date when the teacher was hired.",
-          "format": "date"
+          "description": "A unique identifier assigned to the teacher within the school's administrative system."
         },
         "department": {
           "type": "string",
-          "description": "The academic department the teacher belongs to (e.g., 'Mathematics', 'Science')."
+          "description": "The academic department or faculty the teacher belongs to."
         },
-        "qualification": {
+        "hireDate": {
           "type": "string",
-          "description": "The highest academic qualification of the teacher."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "firstName",
-        "lastName",
-        "hireDate",
-        "department"
-      ]
-    },
-    "Parent": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Parent",
-      "type": "object",
-      "description": "Represents a parent or guardian of a student, including their contact information and linked children.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Parent entity."
+          "description": "The date when the teacher was hired by the school.",
+          "format": "date"
         },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the external user authentication system ID. (Relationship: ExternalUser 1:1 Parent)"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the parent."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the parent."
-        },
-        "contactEmail": {
-          "type": "string",
-          "description": "The parent's contact email address.",
-          "format": "email"
-        },
-        "contactPhone": {
-          "type": "string",
-          "description": "The parent's contact phone number."
-        },
-        "address": {
-          "type": "string",
-          "description": "The parent's residential address."
-        },
-        "studentIds": {
+        "qualifications": {
           "type": "array",
-          "description": "References to the Student entities associated with this parent. (Relationship: Parent N:N Student)",
+          "description": "A list of the teacher's academic qualifications, degrees, and certifications.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subjectIds": {
+          "type": "array",
+          "description": "References to Subject entities that the teacher is qualified and assigned to teach. (Relationship: Teacher N:N Subject)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "classIds": {
+          "type": "array",
+          "description": "References to Class entities that the teacher is currently instructing. (Relationship: Teacher N:N Class)",
           "items": {
             "type": "string"
           }
@@ -204,15 +164,43 @@
       "required": [
         "id",
         "userId",
-        "firstName",
-        "lastName"
+        "teacherIdNumber",
+        "department",
+        "hireDate"
+      ]
+    },
+    "Parent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Parent",
+      "type": "object",
+      "description": "Represents a parent or legal guardian of one or more students, linked to a general user account.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Parent entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the associated User entity for general user information. (Relationship: User 1:1 Parent)"
+        },
+        "studentIds": {
+          "type": "array",
+          "description": "References to Student entities who are children of this parent. (Relationship: Parent N:N Student)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId"
       ]
     },
     "Subject": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Subject",
       "type": "object",
-      "description": "Defines an academic subject offered by the school (e.g., 'Mathematics', 'History').",
+      "description": "Represents an academic subject offered within the school curriculum.",
       "properties": {
         "id": {
           "type": "string",
@@ -220,15 +208,15 @@
         },
         "name": {
           "type": "string",
-          "description": "The official name of the subject."
+          "description": "The full name of the academic subject (e.g., 'Mathematics', 'World History')."
         },
         "code": {
           "type": "string",
-          "description": "A short, unique code for the subject (e.g., 'MATH101')."
+          "description": "A short, unique alphanumeric code for the subject (e.g., 'MATH101', 'HIST202')."
         },
         "description": {
           "type": "string",
-          "description": "A brief description of the subject's content."
+          "description": "A brief description outlining the content and objectives of the subject."
         }
       },
       "required": [
@@ -241,7 +229,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Class",
       "type": "object",
-      "description": "Represents a specific instance of a course or academic section being taught during a given period (e.g., 'Algebra I - Section B, Fall 2024').",
+      "description": "Represents a specific offering or section of a subject, including its assigned teacher, schedule, and enrolled students.",
       "properties": {
         "id": {
           "type": "string",
@@ -249,31 +237,31 @@
         },
         "name": {
           "type": "string",
-          "description": "The name of the class (e.g., 'Mathematics 101 - Section A')."
+          "description": "The specific name of the class section (e.g., 'Algebra I - Section A', 'Biology II - Lab')."
         },
-        "classCode": {
+        "subjectId": {
           "type": "string",
-          "description": "A unique code for this specific class section."
-        },
-        "academicYear": {
-          "type": "string",
-          "description": "The academic year in which the class is conducted (e.g., '2024-2025')."
-        },
-        "semester": {
-          "type": "string",
-          "description": "The semester or term in which the class is offered (e.g., 'Fall', 'Spring')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the class and its objectives."
+          "description": "Reference to the Subject entity that this class teaches. (Relationship: Subject 1:N Class)"
         },
         "teacherId": {
           "type": "string",
-          "description": "Reference to the primary Teacher assigned to this class. (Relationship: Teacher 1:N Class)"
+          "description": "Reference to the Teacher entity assigned to instruct this class. (Relationship: Teacher 1:N Class)"
         },
-        "subjectIds": {
+        "academicYear": {
+          "type": "string",
+          "description": "The academic year during which this class is offered (e.g., '2023-2024')."
+        },
+        "schedule": {
+          "type": "string",
+          "description": "Details of the class schedule (e.g., 'Mon, Wed, Fri 9:00 AM - 10:00 AM')."
+        },
+        "roomNumber": {
+          "type": "string",
+          "description": "The physical room number where the class is regularly held."
+        },
+        "studentIds": {
           "type": "array",
-          "description": "References to the Subject entities covered in this class. (Relationship: Class N:N Subject)",
+          "description": "References to Student entities currently enrolled in this class. (Relationship: Class N:N Student)",
           "items": {
             "type": "string"
           }
@@ -282,127 +270,17 @@
       "required": [
         "id",
         "name",
-        "classCode",
+        "subjectId",
+        "teacherId",
         "academicYear",
-        "semester",
-        "teacherId"
-      ]
-    },
-    "Enrollment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Enrollment",
-      "type": "object",
-      "description": "Represents a student's enrollment in a specific class, capturing details about the association.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Enrollment entity."
-        },
-        "studentId": {
-          "type": "string",
-          "description": "Reference to the Student entity. (Relationship: Student 1:N Enrollment)"
-        },
-        "classId": {
-          "type": "string",
-          "description": "Reference to the Class entity. (Relationship: Class 1:N Enrollment)"
-        },
-        "enrollmentDate": {
-          "type": "string",
-          "description": "The date when the student was enrolled in this class.",
-          "format": "date"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the enrollment (e.g., 'active', 'completed', 'dropped')."
-        }
-      },
-      "required": [
-        "id",
-        "studentId",
-        "classId",
-        "enrollmentDate",
-        "status"
-      ]
-    },
-    "ClassSession": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ClassSession",
-      "type": "object",
-      "description": "Represents a single scheduled instance of a class, including its date, time, and location.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ClassSession entity."
-        },
-        "classId": {
-          "type": "string",
-          "description": "Reference to the Class entity this session belongs to. (Relationship: Class 1:N ClassSession)"
-        },
-        "sessionDateTime": {
-          "type": "string",
-          "description": "The date and time when the class session is scheduled to occur.",
-          "format": "date-time"
-        },
-        "durationMinutes": {
-          "type": "number",
-          "description": "The duration of the class session in minutes."
-        },
-        "location": {
-          "type": "string",
-          "description": "The physical location or classroom where the session takes place."
-        },
-        "topic": {
-          "type": "string",
-          "description": "The main topic or agenda for this specific class session."
-        }
-      },
-      "required": [
-        "id",
-        "classId",
-        "sessionDateTime",
-        "durationMinutes",
-        "location"
-      ]
-    },
-    "Attendance": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Attendance",
-      "type": "object",
-      "description": "Records a student's attendance status for a specific class session.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Attendance entity."
-        },
-        "studentId": {
-          "type": "string",
-          "description": "Reference to the Student entity. (Relationship: Student 1:N Attendance)"
-        },
-        "classSessionId": {
-          "type": "string",
-          "description": "Reference to the ClassSession entity. (Relationship: ClassSession 1:N Attendance)"
-        },
-        "status": {
-          "type": "string",
-          "description": "The attendance status of the student (e.g., 'present', 'absent', 'late', 'excused')."
-        },
-        "recordedByTeacherId": {
-          "type": "string",
-          "description": "Reference to the Teacher who recorded this attendance. (Relationship: Teacher 1:N Attendance)"
-        }
-      },
-      "required": [
-        "id",
-        "studentId",
-        "classSessionId",
-        "status"
+        "schedule"
       ]
     },
     "Assignment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Assignment",
       "type": "object",
-      "description": "Defines an assignment given to students, including its details and due date.",
+      "description": "Represents an academic assignment or task given to students within a specific class.",
       "properties": {
         "id": {
           "type": "string",
@@ -410,87 +288,93 @@
         },
         "title": {
           "type": "string",
-          "description": "The title of the assignment."
+          "description": "The title or name of the assignment."
         },
         "description": {
           "type": "string",
-          "description": "A detailed description of the assignment."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The date by which the assignment must be submitted.",
-          "format": "date-time"
-        },
-        "maxScore": {
-          "type": "number",
-          "description": "The maximum possible score for this assignment."
-        },
-        "assignmentType": {
-          "type": "string",
-          "description": "The type of assignment (e.g., 'homework', 'quiz', 'project', 'essay')."
+          "description": "A detailed description of the assignment, including instructions and requirements."
         },
         "classId": {
           "type": "string",
-          "description": "Reference to the Class for which this assignment is given. (Relationship: Class 1:N Assignment)"
+          "description": "Reference to the Class entity to which this assignment belongs. (Relationship: Class 1:N Assignment)"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to the Subject entity this assignment is related to. (Relationship: Subject 1:N Assignment)"
         },
         "teacherId": {
           "type": "string",
-          "description": "Reference to the Teacher who created this assignment. (Relationship: Teacher 1:N Assignment)"
+          "description": "Reference to the Teacher entity who created this assignment. (Relationship: Teacher 1:N Assignment)"
         },
-        "creationDate": {
+        "dueDate": {
           "type": "string",
-          "description": "The date when the assignment was created.",
+          "description": "The date and time by which the assignment is expected to be submitted.",
+          "format": "date-time"
+        },
+        "maxPoints": {
+          "type": "number",
+          "description": "The maximum possible points a student can earn for this assignment."
+        },
+        "assignmentType": {
+          "type": "string",
+          "description": "The category or type of the assignment (e.g., 'Homework', 'Quiz', 'Project', 'Essay')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the assignment was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the assignment was last updated.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "title",
-        "dueDate",
-        "maxScore",
+        "description",
         "classId",
+        "subjectId",
         "teacherId",
-        "creationDate"
+        "dueDate",
+        "maxPoints",
+        "assignmentType",
+        "createdAt",
+        "updatedAt"
       ]
     },
-    "AssignmentSubmission": {
+    "Submission": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AssignmentSubmission",
+      "title": "Submission",
       "type": "object",
-      "description": "Records a student's submission for a particular assignment, including their submitted work and grade.",
+      "description": "Represents a student's submission for a particular assignment.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the AssignmentSubmission entity."
+          "description": "Unique identifier for the Submission entity."
         },
         "assignmentId": {
           "type": "string",
-          "description": "Reference to the Assignment entity. (Relationship: Assignment 1:N AssignmentSubmission)"
+          "description": "Reference to the Assignment entity this submission is for. (Relationship: Assignment 1:N Submission)"
         },
         "studentId": {
           "type": "string",
-          "description": "Reference to the Student entity who made the submission. (Relationship: Student 1:N AssignmentSubmission)"
+          "description": "Reference to the Student entity who made this submission. (Relationship: Student 1:N Submission)"
         },
         "submissionDate": {
           "type": "string",
           "description": "The date and time when the assignment was submitted.",
           "format": "date-time"
         },
-        "submittedContent": {
+        "submissionContentUri": {
           "type": "string",
-          "description": "The actual content of the submission, which could be a file path, URL, or inline text."
+          "description": "A URI or path pointing to the actual submitted content (e.g., a file, a document link).",
+          "format": "uri"
         },
-        "gradeScore": {
-          "type": "number",
-          "description": "The score received by the student for this submission."
-        },
-        "comments": {
+        "gradeId": {
           "type": "string",
-          "description": "Comments provided by the teacher regarding the submission."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the submission (e.g., 'submitted', 'graded', 'late')."
+          "description": "Reference to the Grade entity associated with this submission, if it has been graded. (Relationship: Grade 1:1 Submission)"
         }
       },
       "required": [
@@ -498,14 +382,108 @@
         "assignmentId",
         "studentId",
         "submissionDate",
-        "status"
+        "submissionContentUri"
+      ]
+    },
+    "Grade": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Grade",
+      "type": "object",
+      "description": "Represents the score and qualitative feedback given to a student for a specific assignment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Grade entity."
+        },
+        "assignmentId": {
+          "type": "string",
+          "description": "Reference to the Assignment entity this grade is associated with. (Relationship: Assignment 1:N Grade)"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the Student entity who received this grade. (Relationship: Student 1:N Grade)"
+        },
+        "score": {
+          "type": "number",
+          "description": "The numerical score obtained by the student for the assignment."
+        },
+        "feedback": {
+          "type": "string",
+          "description": "Qualitative feedback or comments provided by the teacher regarding the student's performance."
+        },
+        "gradedByTeacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher entity who performed the grading. (Relationship: Teacher 1:N Grade)"
+        },
+        "gradedDate": {
+          "type": "string",
+          "description": "The date and time when the assignment was graded.",
+          "format": "date-time"
+        },
+        "gradeLetter": {
+          "type": "string",
+          "description": "The letter grade equivalent (e.g., 'A', 'B+', 'C') derived from the score, if applicable."
+        }
+      },
+      "required": [
+        "id",
+        "assignmentId",
+        "studentId",
+        "score",
+        "gradedByTeacherId",
+        "gradedDate"
+      ]
+    },
+    "Attendance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Attendance",
+      "type": "object",
+      "description": "Records the attendance status of a student for a specific class session or date.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Attendance entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the Student entity whose attendance is being recorded. (Relationship: Student 1:N Attendance)"
+        },
+        "classId": {
+          "type": "string",
+          "description": "Reference to the Class entity for which this attendance record applies. (Relationship: Class 1:N Attendance)"
+        },
+        "date": {
+          "type": "string",
+          "description": "The specific date for which the attendance is recorded.",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "description": "The attendance status for the student on the given date (e.g., 'Present', 'Absent', 'Late', 'Excused Absent')."
+        },
+        "recordedByTeacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher entity who recorded this attendance. (Relationship: Teacher 1:N Attendance)"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any additional notes or remarks regarding the attendance record."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "classId",
+        "date",
+        "status",
+        "recordedByTeacherId"
       ]
     },
     "Exam": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Exam",
       "type": "object",
-      "description": "Defines an exam or test administered in a class, including its details.",
+      "description": "Represents an exam or test administered to students in a particular class, providing details about its structure and schedule.",
       "properties": {
         "id": {
           "type": "string",
@@ -513,57 +491,59 @@
         },
         "title": {
           "type": "string",
-          "description": "The title of the exam."
+          "description": "The title or name of the exam."
         },
         "description": {
           "type": "string",
-          "description": "A detailed description of the exam content or format."
+          "description": "A detailed description of the exam, including topics covered and format."
+        },
+        "classId": {
+          "type": "string",
+          "description": "Reference to the Class entity for which this exam is being conducted. (Relationship: Class 1:N Exam)"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to the Subject entity this exam covers. (Relationship: Subject 1:N Exam)"
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher entity who created and will administer the exam. (Relationship: Teacher 1:N Exam)"
         },
         "examDate": {
           "type": "string",
-          "description": "The date and time when the exam is scheduled.",
+          "description": "The scheduled date and time for the exam.",
           "format": "date-time"
         },
         "durationMinutes": {
           "type": "number",
           "description": "The planned duration of the exam in minutes."
         },
-        "maxScore": {
+        "maxPoints": {
           "type": "number",
-          "description": "The maximum possible score for this exam."
+          "description": "The maximum possible points achievable on the exam."
         },
         "examType": {
           "type": "string",
-          "description": "The type of exam (e.g., 'midterm', 'final', 'quiz')."
-        },
-        "classId": {
-          "type": "string",
-          "description": "Reference to the Class for which this exam is administered. (Relationship: Class 1:N Exam)"
-        },
-        "subjectId": {
-          "type": "string",
-          "description": "Reference to the Subject this exam primarily covers. (Relationship: Subject 1:N Exam)"
-        },
-        "teacherId": {
-          "type": "string",
-          "description": "Reference to the Teacher who created or is responsible for this exam. (Relationship: Teacher 1:N Exam)"
+          "description": "The category or type of exam (e.g., 'Midterm', 'Final', 'Quiz')."
         }
       },
       "required": [
         "id",
         "title",
-        "examDate",
-        "maxScore",
         "classId",
         "subjectId",
-        "teacherId"
+        "teacherId",
+        "examDate",
+        "durationMinutes",
+        "maxPoints",
+        "examType"
       ]
     },
     "ExamResult": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ExamResult",
       "type": "object",
-      "description": "Records a student's score and outcome for a particular exam.",
+      "description": "Records a student's score and feedback for a specific exam.",
       "properties": {
         "id": {
           "type": "string",
@@ -571,7 +551,7 @@
         },
         "examId": {
           "type": "string",
-          "description": "Reference to the Exam entity. (Relationship: Exam 1:N ExamResult)"
+          "description": "Reference to the Exam entity this result is for. (Relationship: Exam 1:N ExamResult)"
         },
         "studentId": {
           "type": "string",
@@ -579,16 +559,20 @@
         },
         "score": {
           "type": "number",
-          "description": "The score achieved by the student in this exam."
+          "description": "The numerical score obtained by the student on the exam."
         },
-        "resultDate": {
+        "feedback": {
           "type": "string",
-          "description": "The date when the exam result was recorded or published.",
+          "description": "Qualitative feedback or comments provided by the teacher for the exam."
+        },
+        "gradedByTeacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher entity who graded the exam. (Relationship: Teacher 1:N ExamResult)"
+        },
+        "gradedDate": {
+          "type": "string",
+          "description": "The date and time when the exam was graded.",
           "format": "date-time"
-        },
-        "comments": {
-          "type": "string",
-          "description": "Any additional comments from the teacher regarding the student's exam performance."
         }
       },
       "required": [
@@ -596,114 +580,45 @@
         "examId",
         "studentId",
         "score",
-        "resultDate"
+        "gradedByTeacherId",
+        "gradedDate"
       ]
     },
-    "FeeType": {
+    "Fee": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FeeType",
+      "title": "Fee",
       "type": "object",
-      "description": "Defines the different categories or types of fees charged by the school (e.g., 'Tuition', 'Library Fee').",
+      "description": "Represents a financial fee or charge associated with a student, managed by the school.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the FeeType entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the fee type (e.g., 'Annual Tuition', 'Sports Club Fee')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of what this fee type covers."
-        },
-        "defaultAmount": {
-          "type": "number",
-          "description": "The default amount for this fee type, used as a baseline."
-        },
-        "appliesToAcademicYear": {
-          "type": "string",
-          "description": "The academic year this fee type primarily applies to (e.g., '2024-2025')."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "description"
-      ]
-    },
-    "StudentFee": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StudentFee",
-      "type": "object",
-      "description": "Represents a specific fee amount due by a student for a particular fee type.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StudentFee entity."
+          "description": "Unique identifier for the Fee entity."
         },
         "studentId": {
           "type": "string",
-          "description": "Reference to the Student entity who owes this fee. (Relationship: Student 1:N StudentFee)"
-        },
-        "feeTypeId": {
-          "type": "string",
-          "description": "Reference to the FeeType entity this specific fee instance belongs to. (Relationship: FeeType 1:N StudentFee)"
-        },
-        "amountDue": {
-          "type": "number",
-          "description": "The exact amount the student is required to pay for this fee."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The date by which this specific fee is due.",
-          "format": "date"
-        },
-        "academicYear": {
-          "type": "string",
-          "description": "The academic year for which this fee is applicable."
-        },
-        "status": {
-          "type": "string",
-          "description": "The payment status of this fee (e.g., 'due', 'partially_paid', 'paid', 'overdue')."
+          "description": "Reference to the Student entity to whom this fee applies. (Relationship: Student 1:N Fee)"
         },
         "description": {
           "type": "string",
-          "description": "Specific notes or details about this individual student's fee."
-        }
-      },
-      "required": [
-        "id",
-        "studentId",
-        "feeTypeId",
-        "amountDue",
-        "dueDate",
-        "academicYear",
-        "status"
-      ]
-    },
-    "FeePayment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FeePayment",
-      "type": "object",
-      "description": "Records a payment made by a student (or on their behalf) towards a specific fee.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FeePayment entity."
+          "description": "A description of what the fee is for (e.g., 'Tuition Fee', 'Library Fine', 'Activity Fee')."
         },
-        "studentFeeId": {
-          "type": "string",
-          "description": "Reference to the specific StudentFee instance this payment is for. (Relationship: StudentFee 1:N FeePayment)"
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date and time when the payment was made.",
-          "format": "date-time"
-        },
-        "amountPaid": {
+        "amount": {
           "type": "number",
-          "description": "The amount of money paid in this transaction."
+          "description": "The total amount of the fee."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "The date by which the fee is due for payment.",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current payment status of the fee (e.g., 'Outstanding', 'Paid', 'Overdue', 'Waived')."
+        },
+        "paidDate": {
+          "type": "string",
+          "description": "The date and time when the fee was paid, if applicable.",
+          "format": "date-time"
         },
         "paymentMethod": {
           "type": "string",
@@ -711,26 +626,23 @@
         },
         "transactionId": {
           "type": "string",
-          "description": "A unique identifier from the payment gateway or bank for the transaction."
-        },
-        "recordedByUserId": {
-          "type": "string",
-          "description": "Reference to the external user ID (e.g., Admin or Parent) who recorded or initiated the payment. (Relationship: ExternalUser 1:N FeePayment)"
+          "description": "An identifier for the payment transaction, typically from an external payment system."
         }
       },
       "required": [
         "id",
-        "studentFeeId",
-        "paymentDate",
-        "amountPaid",
-        "paymentMethod"
+        "studentId",
+        "description",
+        "amount",
+        "dueDate",
+        "status"
       ]
     },
     "Notification": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Notification",
       "type": "object",
-      "description": "Represents a message or alert sent to a user within the application.",
+      "description": "Represents a notification message or alert sent to a user within the application, visible on their dashboard.",
       "properties": {
         "id": {
           "type": "string",
@@ -738,46 +650,41 @@
         },
         "recipientUserId": {
           "type": "string",
-          "description": "Reference to the external user authentication system ID of the recipient. (Relationship: ExternalUser 1:N Notification)"
+          "description": "Reference to the User entity who is the intended recipient of this notification. (Relationship: User 1:N Notification)"
         },
-        "title": {
+        "senderUserId": {
           "type": "string",
-          "description": "The title or subject of the notification."
+          "description": "Reference to the User entity who initiated or generated this notification (e.g., a teacher, admin). (Relationship: User 1:N Notification)"
         },
         "message": {
           "type": "string",
-          "description": "The main content of the notification message."
+          "description": "The content or body of the notification message."
         },
-        "sentDateTime": {
+        "type": {
           "type": "string",
-          "description": "The date and time when the notification was generated and sent.",
-          "format": "date-time"
+          "description": "The category or type of the notification (e.g., 'assignment_due', 'grade_posted', 'announcement', 'fee_reminder')."
         },
-        "readStatus": {
+        "read": {
           "type": "boolean",
-          "description": "Indicates whether the recipient has read the notification."
+          "description": "A boolean flag indicating whether the recipient has viewed or read the notification."
         },
-        "notificationType": {
+        "createdAt": {
           "type": "string",
-          "description": "The category or type of notification (e.g., 'assignment_due', 'grade_posted', 'announcement', 'fee_reminder')."
+          "description": "Timestamp indicating when the notification was created.",
+          "format": "date-time"
         },
         "relatedEntityId": {
           "type": "string",
-          "description": "Optional: Reference to the ID of another entity related to this notification (e.g., 'assignmentId')."
-        },
-        "relatedEntityType": {
-          "type": "string",
-          "description": "Optional: The type of the entity referenced by 'relatedEntityId' (e.g., 'Assignment', 'Exam')."
+          "description": "Optional: Reference to an entity related to the notification (e.g., Assignment ID, Class ID) for deep linking."
         }
       },
       "required": [
         "id",
         "recipientUserId",
-        "title",
         "message",
-        "sentDateTime",
-        "readStatus",
-        "notificationType"
+        "type",
+        "read",
+        "createdAt"
       ]
     }
   },
@@ -790,13 +697,19 @@
   "firestore": {
     "structure": [
       {
-        "path": "/admins/{userId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "Admin",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/Admin"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "Top-level collection for Admin users. Document ID is the Firebase Auth UID. Existence of a document in this collection grants admin privileges."
+          "description": "Stores general user information for authentication and core profile details. The document ID (`userId`) maps directly to Firebase Authentication UIDs (`request.auth.uid`). Includes 'role' for role-based access control.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, matching Firebase Authentication UID."
+            }
+          ]
         }
       },
       {
@@ -806,11 +719,11 @@
           "schema": {
             "$ref": "#/backend/entities/Student"
           },
-          "description": "Top-level collection for Student profiles. The `studentId` is the Firebase Auth `uid` for the student. Includes denormalized `parentIds` for parent-student relationship queries.",
+          "description": "Stores student-specific academic information. The document ID (`studentId`) maps to the 'id' field of the Student entity. Includes 'userId' for direct linkage to the general user account, 'parentIds' and 'classIds' for relationship-based access.",
           "params": [
             {
               "name": "studentId",
-              "description": "The unique identifier for the student, which is also their Firebase Auth `uid`."
+              "description": "The unique identifier for the Student entity."
             }
           ]
         }
@@ -822,11 +735,11 @@
           "schema": {
             "$ref": "#/backend/entities/Teacher"
           },
-          "description": "Top-level collection for Teacher profiles. The `teacherId` is the Firebase Auth `uid` for the teacher.",
+          "description": "Stores teacher-specific professional information. The document ID (`teacherId`) maps to the 'id' field of the Teacher entity. Includes 'userId' for direct linkage to the general user account, 'subjectIds' and 'classIds' for relationships.",
           "params": [
             {
               "name": "teacherId",
-              "description": "The unique identifier for the teacher, which is also their Firebase Auth `uid`."
+              "description": "The unique identifier for the Teacher entity."
             }
           ]
         }
@@ -838,11 +751,11 @@
           "schema": {
             "$ref": "#/backend/entities/Parent"
           },
-          "description": "Top-level collection for Parent profiles. The `parentId` is the Firebase Auth `uid` for the parent. Includes denormalized `studentIds` for parent-student relationship queries.",
+          "description": "Stores parent-specific information. The document ID (`parentId`) maps to the 'id' field of the Parent entity. Includes 'userId' for direct linkage to the general user account and 'studentIds' for relationship-based access.",
           "params": [
             {
               "name": "parentId",
-              "description": "The unique identifier for the parent, which is also their Firebase Auth `uid`."
+              "description": "The unique identifier for the Parent entity."
             }
           ]
         }
@@ -854,27 +767,11 @@
           "schema": {
             "$ref": "#/backend/entities/Subject"
           },
-          "description": "Top-level collection for academic subjects. Primarily managed by Admins, read-only for others.",
+          "description": "Stores details about academic subjects offered in the school. Accessible globally for listing and reference.",
           "params": [
             {
               "name": "subjectId",
-              "description": "The unique identifier for the subject."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/feeTypes/{feeTypeId}",
-        "definition": {
-          "entityName": "FeeType",
-          "schema": {
-            "$ref": "#/backend/entities/FeeType"
-          },
-          "description": "Top-level collection defining types of fees. Primarily managed by Admins, read-only for others.",
-          "params": [
-            {
-              "name": "feeTypeId",
-              "description": "The unique identifier for the fee type."
+              "description": "The unique identifier for the Subject entity."
             }
           ]
         }
@@ -886,51 +783,11 @@
           "schema": {
             "$ref": "#/backend/entities/Class"
           },
-          "description": "Top-level collection for academic classes. Includes denormalized `teacherId` to enable direct authorization for the assigned teacher.",
+          "description": "Stores details about a specific class offering. Includes denormalized 'teacherId' and 'studentIds' array for authorization independence, allowing direct checks in security rules for class members and teachers.",
           "params": [
             {
               "name": "classId",
-              "description": "The unique identifier for the class."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/classes/{classId}/enrollments/{enrollmentId}",
-        "definition": {
-          "entityName": "Enrollment",
-          "schema": {
-            "$ref": "#/backend/entities/Enrollment"
-          },
-          "description": "Subcollection for student enrollments in a specific class. Includes denormalized `studentId` and `classTeacherId` (from the parent Class) for authorization independence.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The unique identifier for the parent class."
-            },
-            {
-              "name": "enrollmentId",
-              "description": "The unique identifier for the enrollment record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/classes/{classId}/sessions/{sessionId}",
-        "definition": {
-          "entityName": "ClassSession",
-          "schema": {
-            "$ref": "#/backend/entities/ClassSession"
-          },
-          "description": "Subcollection for scheduled class sessions. Includes denormalized `classId` and `classTeacherId` (from the parent Class) for authorization independence.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The unique identifier for the parent class."
-            },
-            {
-              "name": "sessionId",
-              "description": "The unique identifier for the class session."
+              "description": "The unique identifier for the Class entity."
             }
           ]
         }
@@ -942,15 +799,83 @@
           "schema": {
             "$ref": "#/backend/entities/Assignment"
           },
-          "description": "Subcollection for assignments belonging to a specific class. Includes denormalized `classId` and `teacherId` (of the class's teacher) for authorization independence.",
+          "description": "Stores academic assignments related to a specific class. Includes denormalized 'classId', 'subjectId', and 'teacherId' for authorization independence, enabling direct rule checks without parent document lookups.",
           "params": [
             {
               "name": "classId",
-              "description": "The unique identifier for the parent class."
+              "description": "The unique identifier of the parent Class."
             },
             {
               "name": "assignmentId",
-              "description": "The unique identifier for the assignment."
+              "description": "The unique identifier for the Assignment entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/classes/{classId}/assignments/{assignmentId}/submissions/{submissionId}",
+        "definition": {
+          "entityName": "Submission",
+          "schema": {
+            "$ref": "#/backend/entities/Submission"
+          },
+          "description": "Stores student submissions for a specific assignment. Includes denormalized 'assignmentId' and 'studentId' for authorization independence, simplifying rules for submitters and teachers.",
+          "params": [
+            {
+              "name": "classId",
+              "description": "The unique identifier of the parent Class."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique identifier of the parent Assignment."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique identifier for the Submission entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/classes/{classId}/assignments/{assignmentId}/grades/{gradeId}",
+        "definition": {
+          "entityName": "Grade",
+          "schema": {
+            "$ref": "#/backend/entities/Grade"
+          },
+          "description": "Stores grades for student assignments. Includes denormalized 'assignmentId', 'studentId', and 'gradedByTeacherId' for authorization independence, allowing students, parents, and teachers to access relevant grades directly.",
+          "params": [
+            {
+              "name": "classId",
+              "description": "The unique identifier of the parent Class."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique identifier of the parent Assignment."
+            },
+            {
+              "name": "gradeId",
+              "description": "The unique identifier for the Grade entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/classes/{classId}/attendanceRecords/{attendanceId}",
+        "definition": {
+          "entityName": "Attendance",
+          "schema": {
+            "$ref": "#/backend/entities/Attendance"
+          },
+          "description": "Records attendance status for students in a class session. Includes denormalized 'classId', 'studentId', and 'recordedByTeacherId' for authorization independence, allowing direct rule checks for students, parents, and teachers.",
+          "params": [
+            {
+              "name": "classId",
+              "description": "The unique identifier of the parent Class."
+            },
+            {
+              "name": "attendanceId",
+              "description": "The unique identifier for the Attendance entity."
             }
           ]
         }
@@ -962,141 +887,84 @@
           "schema": {
             "$ref": "#/backend/entities/Exam"
           },
-          "description": "Subcollection for exams belonging to a specific class. Includes denormalized `classId`, `subjectId`, and `teacherId` (of the class's teacher) for authorization independence.",
+          "description": "Represents an exam or test for a specific class. Includes denormalized 'classId', 'subjectId', and 'teacherId' for authorization independence, simplifying access rules for class members and teachers.",
           "params": [
             {
               "name": "classId",
-              "description": "The unique identifier for the parent class."
+              "description": "The unique identifier of the parent Class."
             },
             {
               "name": "examId",
-              "description": "The unique identifier for the exam."
+              "description": "The unique identifier for the Exam entity."
             }
           ]
         }
       },
       {
-        "path": "/students/{studentId}/attendance/{attendanceId}",
-        "definition": {
-          "entityName": "Attendance",
-          "schema": {
-            "$ref": "#/backend/entities/Attendance"
-          },
-          "description": "Subcollection for a student's attendance records. `studentId` is implicit in the path. Includes denormalized `classSessionId`, `classId`, and `recordedByTeacherId` for authorization independence.",
-          "params": [
-            {
-              "name": "studentId",
-              "description": "The unique identifier for the parent student."
-            },
-            {
-              "name": "attendanceId",
-              "description": "The unique identifier for the attendance record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/students/{studentId}/assignmentSubmissions/{submissionId}",
-        "definition": {
-          "entityName": "AssignmentSubmission",
-          "schema": {
-            "$ref": "#/backend/entities/AssignmentSubmission"
-          },
-          "description": "Subcollection for a student's assignment submissions. `studentId` is implicit in the path. Includes denormalized `assignmentId`, `assignmentClassId`, and `assignmentTeacherId` for authorization independence.",
-          "params": [
-            {
-              "name": "studentId",
-              "description": "The unique identifier for the parent student."
-            },
-            {
-              "name": "submissionId",
-              "description": "The unique identifier for the assignment submission."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/students/{studentId}/examResults/{examResultId}",
+        "path": "/classes/{classId}/exams/{examId}/examResults/{examResultId}",
         "definition": {
           "entityName": "ExamResult",
           "schema": {
             "$ref": "#/backend/entities/ExamResult"
           },
-          "description": "Subcollection for a student's exam results. `studentId` is implicit in the path. Includes denormalized `examId`, `examClassId`, and `examTeacherId` for authorization independence.",
+          "description": "Records a student's score and feedback for an exam. Includes denormalized 'examId', 'studentId', and 'gradedByTeacherId' for authorization independence, allowing direct rule checks for students, parents, and teachers.",
           "params": [
             {
-              "name": "studentId",
-              "description": "The unique identifier for the parent student."
+              "name": "classId",
+              "description": "The unique identifier of the parent Class."
+            },
+            {
+              "name": "examId",
+              "description": "The unique identifier of the parent Exam."
             },
             {
               "name": "examResultId",
-              "description": "The unique identifier for the exam result."
+              "description": "The unique identifier for the ExamResult entity."
             }
           ]
         }
       },
       {
-        "path": "/students/{studentId}/studentFees/{studentFeeId}",
+        "path": "/students/{studentId}/fees/{feeId}",
         "definition": {
-          "entityName": "StudentFee",
+          "entityName": "Fee",
           "schema": {
-            "$ref": "#/backend/entities/StudentFee"
+            "$ref": "#/backend/entities/Fee"
           },
-          "description": "Subcollection for specific fees owed by a student. `studentId` is implicit in the path. Includes denormalized `feeTypeId` for authorization independence.",
+          "description": "Manages financial fees associated with a specific student. Includes denormalized 'studentId' for authorization independence, allowing students and parents to access their fee records directly.",
           "params": [
             {
               "name": "studentId",
-              "description": "The unique identifier for the parent student."
+              "description": "The unique identifier of the parent Student."
             },
             {
-              "name": "studentFeeId",
-              "description": "The unique identifier for the specific student fee."
+              "name": "feeId",
+              "description": "The unique identifier for the Fee entity."
             }
           ]
         }
       },
       {
-        "path": "/students/{studentId}/feePayments/{paymentId}",
-        "definition": {
-          "entityName": "FeePayment",
-          "schema": {
-            "$ref": "#/backend/entities/FeePayment"
-          },
-          "description": "Subcollection for payments made towards a student's fees. `studentId` is implicit in the path. Includes denormalized `studentFeeId` and `recordedByUserId` for authorization independence.",
-          "params": [
-            {
-              "name": "studentId",
-              "description": "The unique identifier for the parent student."
-            },
-            {
-              "name": "paymentId",
-              "description": "The unique identifier for the fee payment record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{recipientUserId}/notifications/{notificationId}",
+        "path": "/users/{userId}/notifications/{notificationId}",
         "definition": {
           "entityName": "Notification",
           "schema": {
             "$ref": "#/backend/entities/Notification"
           },
-          "description": "Subcollection for personalized notifications. `recipientUserId` matches `request.auth.uid` for direct authorization.",
+          "description": "Stores notification messages and alerts for a specific user. Includes denormalized 'recipientUserId' for authorization independence, ensuring only the intended recipient can read their notifications.",
           "params": [
             {
-              "name": "recipientUserId",
-              "description": "The Firebase Auth `uid` of the user who is the recipient of the notification."
+              "name": "userId",
+              "description": "The unique identifier of the recipient User."
             },
             {
               "name": "notificationId",
-              "description": "The unique identifier for the notification."
+              "description": "The unique identifier for the Notification entity."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to be highly secure, scalable, and debuggable by strictly adhering to the core design principles and strategic mandates. The primary goal is **Authorization Independence**, achieved through extensive denormalization of authorization-relevant fields directly into the documents where they are needed. This eliminates the need for `get()` calls in security rules, making rules atomic, simpler, and more performable.\n\n**Authorization Independence via Denormalization:**\n*   **User Profiles and Roles:** Each user type (Student, Teacher, Parent) has a dedicated top-level collection (`/students`, `/teachers`, `/parents`) where the document ID (`{studentId}`, `{teacherId}`, `{parentId}`) is the `userId` from Firebase Auth. This directly links `request.auth.uid` to the user's profile. Role-based access is managed through separate, lightweight existence collections (e.g., `/user_roles/admins/{userId}`), allowing atomic `exists()` checks without complex data retrieval.\n*   **Class-Related Entities:** For `ClassSession`, `Assignment`, and `Exam` documents, which are nested under a specific `Class` (`/classes/{classId}/...`), the `teacherId` of the parent `Class` is denormalized and stored as `classTeacherId` within the subcollection documents. This ensures that security rules for these subcollections can determine if the `request.auth.uid` matches the `classTeacherId` directly from the document being accessed, without fetching the parent `Class` document.\n*   **Student-Related Records:** For student-specific data like `Attendance`, `AssignmentSubmission`, and `ExamResult`, the records are nested under `/students/{studentId}/...`. This inherently provides `studentId` context. Additionally, for `Attendance`, `AssignmentSubmission`, and `ExamResult`, relevant IDs like `classId` and `teacherId` (from the associated `ClassSession`, `Assignment`, or `Exam`) are denormalized. For example, an `AssignmentSubmission` will contain `assignmentClassId` and `assignmentTeacherId` to allow the grading teacher to access it and the student/parent to view it without `get()` calls to other collections.\n*   **Fee Management:** `StudentFee` documents are nested under `/students/{studentId}/studentFees/{studentFeeId}`, and `FeePayment` under `/students/{studentId}/feePayments/{paymentId}`. Both include denormalized `studentId` (implicit in path) and `recordedByUserId` (for payments), allowing direct authorization checks.\n*   **Notifications:** Notifications are strictly private and stored under `/users/{recipientUserId}/notifications/{notificationId}`, where `recipientUserId` directly matches `request.auth.uid`. This provides immediate and clear authorization.\n\n**QAPs (Rules are not Filters):**\nThis structure strongly supports Query-Based Access Patterns (QAPs) by enabling efficient and secure `list` operations:\n*   **Structural Segregation:** Data with different security postures is separated into distinct collections (e.g., global `Subjects` vs. user-specific `Notifications`). This simplifies rules, as a collection's rules apply uniformly to all its documents.\n*   **Path-Based Ownership:** For student-specific data, nesting under `/students/{studentId}/...` means queries can inherently filter by `studentId == request.auth.uid` (for students) or `studentId` being one of the `studentIds` associated with the authenticated parent. This satisfies the QAP for retrieving all records for a specific student.\n*   **Denormalized IDs for Querying:** Teachers can list their classes by querying `/classes` where `teacherId == request.auth.uid`. They can then query for sessions, assignments, or exams within those classes using the `classTeacherId` field in the subcollection documents, enabling efficient server-side filtering (e.g., `db.collection('classes/{classId}/assignments').where('classTeacherId', '==', request.auth.uid)`). This ensures that queries only return data the user is authorized to see, eliminating the need for rules to act as client-side filters.\n\nOverall, this design prioritizes explicit authorization context within each document, clear structural segregation of data, and consistent access patterns. This results in security rules that are straightforward to write, easy to debug, and performant, avoiding the pitfalls of `get()` based authorization and client-side filtering."
+    "reasoning": "The proposed Firestore data structure for ScholarlyFlow emphasizes a secure, scalable, and debuggable design by strictly adhering to the core design principles. The primary strategy employed is **Authorization Independence via Denormalization**. This is crucial for simplifying security rules and enabling atomic operations.\n\nHere's how Authorization Independence is achieved:\n\n1.  **User-Centric Denormalization**: For entities that represent specific roles (Student, Teacher, Parent), their corresponding `userId` is explicitly stored within their document (e.g., `Student.userId`, `Teacher.userId`, `Parent.userId`). This allows rules to directly verify `request.auth.uid` against the document's `userId` for self-management, eliminating the need for `get()` calls to a parent `users` collection to infer a role or ownership.\n\n2.  **Parent Context in Subcollections**: For subcollections where access depends on attributes of a logical parent, those attributes are denormalized into the subcollection's documents. For example:\n    *   `Class` documents include `teacherId` and an array of `studentIds`. This allows rules for `Assignments`, `Exams`, `AttendanceRecords`, `Submissions`, and `Grades` to check if `request.auth.uid` matches the `teacherId` or is present in the `studentIds` array of the *current* `Class` document or any related subdocument directly, without needing to fetch the parent `Class` document via `get()`.\n    *   `Assignment` documents include `classId` and `teacherId`. Similarly, `Exam` documents include `classId` and `teacherId`.\n    *   `Submission` documents include `assignmentId` and `studentId`.\n    *   `Grade` and `ExamResult` documents include `assignmentId`/`examId`, `studentId`, and `gradedByTeacherId`.\n    *   `Attendance` documents include `classId`, `studentId`, and `recordedByTeacherId`.\n    *   `Fee` documents include `studentId`.\n    *   `Notification` documents include `recipientUserId`.\n    This denormalization ensures that all necessary authorization context is present within the document being accessed, making rules atomic, faster, and easier to debug.\n\n**QAPs (Query-Authorization Patterns) Support:**\n\n1.  **Structural Segregation**: Data with different security postures is separated into distinct collections. For instance, `/users/{userId}` stores general user data, while `/students/{studentId}`, `/teachers/{teacherId}`, and `/parents/{parentId}` store role-specific profiles. `Subjects` are globally readable, while `Classes` are more restricted.\n\n2.  **Path-Based Ownership for Private Data**: Personal user data (e.g., `/users/{userId}/notifications/{notificationId}`, `/students/{studentId}/fees/{feeId}`) is structured under the user's or student's ID, making it straightforward to implement rules like `allow read, write: if request.auth.uid == userId;`.\n\n3.  **Efficient List Queries**: Due to denormalization, `list` operations (QAPs) are highly efficient and secure:\n    *   A student can query their grades by filtering `grades` documents where `studentId == request.auth.uid` (e.g., across all assignments in their enrolled classes, or within a specific assignment subcollection).\n    *   A teacher can query assignments for their classes by filtering `assignments` documents where `teacherId == request.auth.uid`.\n    *   A parent can query their child's attendance by filtering `attendanceRecords` documents where `studentId == parent.studentId` (where `parent.studentId` is an ID from their own parent profile).\n    This structure allows client-side queries to include the necessary filters, and server-side rules to enforce those filters based on the denormalized fields, preventing unauthorized data access during list operations without complex `get()` calls for each document.\n\n4.  **Role Management (DBAC)**: The `User` entity includes a `role` field (`Admin`, `Teacher`, `Student`, `Parent`). This allows for simple, direct rule checks like `request.resource.data.role == 'Admin'` or `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'`. For more fine-grained role-based access to specific resources (e.g., a teacher accessing their assigned class's data), the `teacherId` denormalized within `Class` documents and its subcollections (Assignments, Exams, etc.) serves as the access control mechanism.\n\nThis comprehensive approach minimizes security rule complexity, enhances debugging, and ensures a scalable and performant Firestore backend."
   }
 }
-    
