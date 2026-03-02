@@ -21,13 +21,17 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
-import { useAuth, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { useCollection, useDoc } from '@/firebase/firestore/use-collection';
 import {
+  useAuth,
+  useFirestore,
+  useUser,
+  useMemoFirebase,
+  useCollection,
+  useDoc,
   setDocumentNonBlocking,
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
+} from '@/firebase';
 import type {
   Student,
   Teacher,
