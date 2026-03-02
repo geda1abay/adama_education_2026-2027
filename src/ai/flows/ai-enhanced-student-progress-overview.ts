@@ -62,7 +62,7 @@ export type GetStudentProgressOverviewResult =
 
 const prompt = ai.definePrompt({
   name: 'aiEnhancedStudentProgressOverviewPrompt',
-  model: 'gemini-2.5-flash',
+  model: 'googleai/gemini-2.5-flash',
   input: { schema: AIEnhancedStudentProgressOverviewInputSchema },
   output: { schema: AIEnhancedStudentProgressOverviewOutputSchema },
   prompt: `You are an academic advisor specialized in summarizing student performance.
