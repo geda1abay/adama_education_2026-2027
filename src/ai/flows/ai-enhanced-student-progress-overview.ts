@@ -56,6 +56,10 @@ export type AIEnhancedStudentProgressOverviewOutput = z.infer<
   typeof AIEnhancedStudentProgressOverviewOutputSchema
 >;
 
+export type GetStudentProgressOverviewResult =
+  | AIEnhancedStudentProgressOverviewOutput
+  | { error: string };
+
 const prompt = ai.definePrompt({
   name: 'aiEnhancedStudentProgressOverviewPrompt',
   input: { schema: AIEnhancedStudentProgressOverviewInputSchema },
@@ -90,29 +94,33 @@ const aiEnhancedStudentProgressOverviewFlow = ai.defineFlow(
 
 export async function getStudentProgressOverview(
   input: AIEnhancedStudentProgressOverviewInput
-): Promise<AIEnhancedStudentProgressOverviewOutput> {
+): Promise<GetStudentProgressOverviewResult> {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.trim() === '') {
-    throw new Error(
-      'The Gemini API key is missing or empty. Please add it to your .env file to use AI features.'
-    );
+    return {
+      error:
+        'The Gemini API key is missing or empty. Please add it to your .env file to use AI features.',
+    };
   }
   try {
     const result = await aiEnhancedStudentProgressOverviewFlow(input);
     if (!result) {
-      throw new Error(
-        'The AI model did not return a valid response. Please check the prompt and model configuration.'
-      );
+      return {
+        error:
+          'The AI model did not return a valid response. Please check the prompt and model configuration.',
+      };
     }
     return result;
   } catch (e: any) {
-    // Sanitize and re-throw the error to ensure it's a standard, catchable error on the client.
+    // Sanitize and return the error as data to be handled by the client.
     if (e.message.includes('API key not valid')) {
-      throw new Error(
-        'The provided Gemini API key is not valid. Please verify it in your .env file.'
-      );
+      return {
+        error:
+          'The provided Gemini API key is not valid. Please verify it in your .env file.',
+      };
     }
-    throw new Error(
-      e.message || 'An unexpected error occurred while running the AI flow.'
-    );
+    return {
+      error:
+        e.message || 'An unexpected error occurred while running the AI flow.',
+    };
   }
 }

@@ -92,20 +92,19 @@ export default function AiSummaryCard() {
         dataToSummarize.attendance.classesAttended = 45;
     }
 
-    try {
-      const result = await getStudentProgressOverview(dataToSummarize);
-      setSummary(result.summary);
-    } catch (error: any) {
-      console.error('Failed to generate summary:', error);
-      const errorMessage = error.message || 'Failed to generate AI summary. Please try again.';
+    const result = await getStudentProgressOverview(dataToSummarize);
+    setIsLoading(false);
+
+    if ('error' in result) {
+      const errorMessage = result.error;
       setError(errorMessage);
       toast({
         variant: 'destructive',
         title: 'AI Summary Error',
         description: errorMessage,
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      setSummary(result.summary);
     }
   };
 
