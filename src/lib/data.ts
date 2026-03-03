@@ -87,14 +87,87 @@ export type Appearance = {
 }
 
 // --- Mock Data Section ---
-// This data is used for UI development and placeholders.
-// In a real application, this would be replaced by data from a database.
+// This data is used for seeding the database.
 
-export const STUDENTS: Student[] = [];
-export const TEACHERS: Teacher[] = [];
-export const STUDENT_ATTENDANCE: Attendance[] = [];
-export const RECENT_EXAM_RESULTS: ExamResult[] = [];
-export const FEES_DATA: StudentFee[] = [];
+export const SEED_STUDENTS: Student[] = [
+  {
+    id: 'student-1',
+    userId: 'student-1',
+    firstName: 'Lina',
+    lastName: 'Ahmed',
+    contactEmail: 'lina.ahmed@example.com',
+    contactPhone: '+251 911 111 111',
+    gradeLevel: '10-A',
+    enrollmentDate: '2023-09-01T00:00:00.000Z',
+    dateOfBirth: '2008-05-10T00:00:00.000Z',
+    gender: 'Female',
+    address: '123 Bole, Addis Ababa',
+    parentIds: [],
+  },
+  {
+    id: 'student-2',
+    userId: 'student-2',
+    firstName: 'Biniam',
+    lastName: 'Assefa',
+    contactEmail: 'biniam.assefa@example.com',
+    contactPhone: '+251 911 222 222',
+    gradeLevel: '11-B',
+    enrollmentDate: '2022-09-01T00:00:00.000Z',
+    dateOfBirth: '2007-03-15T00:00:00.000Z',
+    gender: 'Male',
+    address: '456 Cazanchis, Addis Ababa',
+    parentIds: [],
+  },
+];
+
+export const SEED_TEACHERS: Teacher[] = [
+  {
+    id: 'teacher-1',
+    userId: 'teacher-1',
+    firstName: 'Solomon',
+    lastName: 'Taye',
+    contactEmail: 'solomon.taye@example.com',
+    contactPhone: '+251 922 111 222',
+    department: 'Mathematics',
+    hireDate: '2020-08-15T00:00:00.000Z',
+    qualification: 'M.Sc. in Mathematics',
+    address: '789 CMC, Addis Ababa',
+    classes: ['10-A', '11-B'],
+  },
+  {
+    id: 'teacher-2',
+    userId: 'teacher-2',
+    firstName: 'Fatuma',
+    lastName: 'Hassan',
+    contactEmail: 'fatuma.hassan@example.com',
+    contactPhone: '+251 922 333 444',
+    department: 'Science',
+    hireDate: '2019-07-20T00:00:00.000Z',
+    qualification: 'B.Sc. in Biology',
+    address: '101 Summit, Addis Ababa',
+    classes: ['10-C', '11-A'],
+  },
+];
+
+export const SEED_FEES: StudentFee[] = [
+    { id: 'fee-1', studentId: 'student-1', feeTypeId: 'tuition', amountDue: 12000, dueDate: '2024-09-30', academicYear: '2024-2025', status: 'paid' },
+    { id: 'fee-2', studentId: 'student-2', feeTypeId: 'tuition', amountDue: 3000, dueDate: '2024-09-30', academicYear: '2024-2025', status: 'due' },
+];
+
+export const SEED_ATTENDANCE: Attendance[] = [
+    { id: 'att-1', studentId: 'student-1', classSessionId: 'math-101-20240520', status: 'present', recordedByTeacherId: 'teacher-1'},
+    { id: 'att-2', studentId: 'student-2', classSessionId: 'sci-101-20240520', status: 'present', recordedByTeacherId: 'teacher-2'},
+    { id: 'att-3', studentId: 'student-1', classSessionId: 'math-101-20240521', status: 'present', recordedByTeacherId: 'teacher-1'},
+    { id: 'att-4', studentId: 'student-2', classSessionId: 'sci-101-20240521', status: 'absent', recordedByTeacherId: 'teacher-2'},
+    { id: 'att-5', studentId: 'student-2', classSessionId: 'sci-101-20240522', status: 'present', recordedByTeacherId: 'teacher-2'},
+];
+
+export const SEED_EXAM_RESULTS: ExamResult[] = [
+    { id: 'res-1', examId: 'math-midterm', studentId: 'student-1', subjectId: 'Mathematics', score: 95, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-1', gradedByTeacherUserId: 'teacher-1' },
+    { id: 'res-2', examId: 'science-midterm', studentId: 'student-1', subjectId: 'Science', score: 88, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-1', gradedByTeacherUserId: 'teacher-2' },
+    { id: 'res-3', examId: 'math-midterm', studentId: 'student-2', subjectId: 'Mathematics', score: 82, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-2', gradedByTeacherUserId: 'teacher-1' },
+    { id: 'res-4', examId: 'science-midterm', studentId: 'student-2', subjectId: 'Science', score: 75, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-2', gradedByTeacherUserId: 'teacher-2' },
+];
 
 
 export const ATTENDANCE_DATA = [

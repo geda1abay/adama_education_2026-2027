@@ -19,6 +19,7 @@ import {
   query,
   where,
   setDoc,
+  getDoc,
 } from 'firebase/firestore';
 import {
   createUserWithEmailAndPassword,
@@ -46,6 +47,8 @@ import type {
   SchoolInfo,
   Appearance,
 } from '@/lib/data';
+import { SEED_STUDENTS, SEED_TEACHERS, SEED_FEES, SEED_ATTENDANCE, SEED_EXAM_RESULTS } from '@/lib/data';
+
 
 type WithId<T> = T & { id: string };
 
@@ -125,13 +128,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const teachersRef = useMemoFirebase(() => collection(firestore, 'teachers'), [firestore]);
   const attendanceRef = useMemoFirebase(() => collection(firestore, 'attendance'), [firestore]);
   const feesRef = useMemoFirebase(() => collection(firestore, 'fees'), [firestore]);
+  const examResultsRef = useMemoFirebase(() => collection(firestore, 'examResults'), [firestore]);
   
   // Real-time data fetching
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(userRole === 'admin' ? studentsRef : null);
   const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(userRole === 'admin' ? teachersRef : null);
-  const { data: studentAttendance, isLoading: attendanceLoading } = useCollection<Attendance>(userRole === 'admin' ? attendanceRef : null);
+  const { data: studentAttendance, isLoading: attendanceLoading } = useCollection<Attendance>(attendanceRef);
   
-  const { data: feesData, isLoading: feesLoading } = useCollection<StudentFee>(userRole === 'admin' ? feesRef : null);
+  const { data: feesData, isLoading: feesLoading } = useCollection<StudentFee>(feesRef);
 
   const { data: userRoleDoc } = useDoc<{ role: 'admin' | 'student' | 'teacher' }>(
     firebaseUser ? doc(usersRef, firebaseUser.uid) : null
@@ -193,6 +197,71 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [isUserLoading, firebaseUser, userRoleDoc, isRoleLoading]);
+
+  // One-time database seeding
+  useEffect(() => {
+    const seedDatabase = async () => {
+      if (isUserLoading || !firestore || userRole !== 'admin') {
+        return;
+      }
+      
+      const seededRef = doc(firestore, 'meta', 'seeded');
+      const seededSnap = await getDoc(seededRef);
+
+      if (seededSnap.exists()) {
+        return; // Already seeded
+      }
+      
+      toast({ title: "Setting up demo data...", description: "Please wait a moment." });
+
+      try {
+        // Seed Students & Users
+        for (const student of SEED_STUDENTS) {
+          setDocumentNonBlocking(doc(usersRef, student.userId), {
+            id: student.userId, email: student.contactEmail, role: 'student',
+            firstName: student.firstName, lastName: student.lastName,
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          }, { merge: true });
+          setDocumentNonBlocking(doc(studentsRef, student.id), student, { merge: true });
+        }
+
+        // Seed Teachers & Users
+        for (const teacher of SEED_TEACHERS) {
+           setDocumentNonBlocking(doc(usersRef, teacher.userId), {
+            id: teacher.userId, email: teacher.contactEmail, role: 'teacher',
+            firstName: teacher.firstName, lastName: teacher.lastName,
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          }, { merge: true });
+          setDocumentNonBlocking(doc(teachersRef, teacher.id), teacher, { merge: true });
+        }
+
+        // Seed Attendance
+        for (const attendance of SEED_ATTENDANCE) {
+            setDocumentNonBlocking(doc(attendanceRef, attendance.id), attendance, { merge: true });
+        }
+
+        // Seed Fees
+         for (const fee of SEED_FEES) {
+            setDocumentNonBlocking(doc(feesRef, fee.id), fee, { merge: true });
+        }
+
+        // Seed Exam Results (into a top-level collection for simplicity)
+        for (const result of SEED_EXAM_RESULTS) {
+            setDocumentNonBlocking(doc(examResultsRef, result.id), result, { merge: true });
+        }
+
+        // Set the seeded flag
+        await setDoc(seededRef, { seeded: true, seededAt: serverTimestamp() });
+        toast({ title: "Demo Data Ready!", description: "Your application is now populated with sample data." });
+
+      } catch (error) {
+         console.error("Database seeding failed:", error);
+         toast({ variant: 'destructive', title: "Seeding Failed", description: "Could not add demo data." });
+      }
+    };
+
+    seedDatabase();
+  }, [firestore, userRole, isUserLoading, toast, usersRef, studentsRef, teachersRef, attendanceRef, feesRef, examResultsRef]);
 
 
   // Login Functions
@@ -359,14 +428,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addExamResult = async (data: Omit<ExamResult, 'id'>) => {
-     // This function is currently broken as it doesn't know the classId/examId path.
-     // Needs to be updated to take the full path for the new doc.
-     console.warn("addExamResult is not fully implemented to write to subcollections.");
-     // await addDocumentNonBlocking(examsRef, {
-     //   ...data,
-     //   resultDate: new Date().toISOString()
-     // });
-     toast({ title: 'Exam Result Added (Mock)' });
+     // For now, add to the top-level collection for simplicity.
+     await addDocumentNonBlocking(examResultsRef, {
+       ...data,
+       resultDate: new Date().toISOString()
+     });
+     toast({ title: 'Exam Result Added' });
   };
 
   const addFee = async (data: Omit<StudentFee, 'id'>) => {
@@ -459,6 +526,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       adminProfile,
       schoolInfo,
       appearance,
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      addStudent,
     ]
   );
 
