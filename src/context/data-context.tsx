@@ -92,10 +92,6 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 // In-memory store for mock users to simulate a user database
 const MOCK_USERS: { [email: string]: any } = {
     'gedaabay@gmail.com': { password: '151835', role: 'admin', profile: { name: 'Geda Abay', email: 'gedaabay@gmail.com' } },
-    'lina.ahmed@example.com': { password: 'password', role: 'student', id: 'student-1' },
-    'biniam.assefa@example.com': { password: 'password', role: 'student', id: 'student-2' },
-    'solomon.taye@example.com': { password: 'password', role: 'teacher', id: 'teacher-1' },
-    'fatuma.hassan@example.com': { password: 'password', role: 'teacher', id: 'teacher-2' },
 };
 
 export function DataProvider({ children }: { children: ReactNode }) {

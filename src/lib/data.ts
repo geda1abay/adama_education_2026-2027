@@ -89,94 +89,24 @@ export type Appearance = {
 // --- Mock Data Section ---
 // This data is used for seeding the database.
 
-export const SEED_STUDENTS: Student[] = [
-  {
-    id: 'student-1',
-    userId: 'student-1',
-    firstName: 'Lina',
-    lastName: 'Ahmed',
-    contactEmail: 'lina.ahmed@example.com',
-    contactPhone: '+251 911 111 111',
-    gradeLevel: '10-A',
-    enrollmentDate: '2023-09-01T00:00:00.000Z',
-    dateOfBirth: '2008-05-10T00:00:00.000Z',
-    gender: 'Female',
-    address: '123 Bole, Addis Ababa',
-    parentIds: [],
-  },
-  {
-    id: 'student-2',
-    userId: 'student-2',
-    firstName: 'Biniam',
-    lastName: 'Assefa',
-    contactEmail: 'biniam.assefa@example.com',
-    contactPhone: '+251 911 222 222',
-    gradeLevel: '11-B',
-    enrollmentDate: '2022-09-01T00:00:00.000Z',
-    dateOfBirth: '2007-03-15T00:00:00.000Z',
-    gender: 'Male',
-    address: '456 Cazanchis, Addis Ababa',
-    parentIds: [],
-  },
-];
+export const SEED_STUDENTS: Student[] = [];
 
-export const SEED_TEACHERS: Teacher[] = [
-  {
-    id: 'teacher-1',
-    userId: 'teacher-1',
-    firstName: 'Solomon',
-    lastName: 'Taye',
-    contactEmail: 'solomon.taye@example.com',
-    contactPhone: '+251 922 111 222',
-    department: 'Mathematics',
-    hireDate: '2020-08-15T00:00:00.000Z',
-    qualification: 'M.Sc. in Mathematics',
-    address: '789 CMC, Addis Ababa',
-    classes: ['10-A', '11-B'],
-  },
-  {
-    id: 'teacher-2',
-    userId: 'teacher-2',
-    firstName: 'Fatuma',
-    lastName: 'Hassan',
-    contactEmail: 'fatuma.hassan@example.com',
-    contactPhone: '+251 922 333 444',
-    department: 'Science',
-    hireDate: '2019-07-20T00:00:00.000Z',
-    qualification: 'B.Sc. in Biology',
-    address: '101 Summit, Addis Ababa',
-    classes: ['10-C', '11-A'],
-  },
-];
+export const SEED_TEACHERS: Teacher[] = [];
 
-export const SEED_FEES: StudentFee[] = [
-    { id: 'fee-1', studentId: 'student-1', feeTypeId: 'tuition', amountDue: 12000, dueDate: '2024-09-30', academicYear: '2024-2025', status: 'paid' },
-    { id: 'fee-2', studentId: 'student-2', feeTypeId: 'tuition', amountDue: 3000, dueDate: '2024-09-30', academicYear: '2024-2025', status: 'due' },
-];
+export const SEED_FEES: StudentFee[] = [];
 
-export const SEED_ATTENDANCE: Attendance[] = [
-    { id: 'att-1', studentId: 'student-1', classSessionId: 'math-101-20240520', status: 'present', recordedByTeacherId: 'teacher-1'},
-    { id: 'att-2', studentId: 'student-2', classSessionId: 'sci-101-20240520', status: 'present', recordedByTeacherId: 'teacher-2'},
-    { id: 'att-3', studentId: 'student-1', classSessionId: 'math-101-20240521', status: 'present', recordedByTeacherId: 'teacher-1'},
-    { id: 'att-4', studentId: 'student-2', classSessionId: 'sci-101-20240521', status: 'absent', recordedByTeacherId: 'teacher-2'},
-    { id: 'att-5', studentId: 'student-2', classSessionId: 'sci-101-20240522', status: 'present', recordedByTeacherId: 'teacher-2'},
-];
+export const SEED_ATTENDANCE: Attendance[] = [];
 
-export const SEED_EXAM_RESULTS: ExamResult[] = [
-    { id: 'res-1', examId: 'math-midterm', studentId: 'student-1', subjectId: 'Mathematics', score: 95, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-1', gradedByTeacherUserId: 'teacher-1' },
-    { id: 'res-2', examId: 'science-midterm', studentId: 'student-1', subjectId: 'Science', score: 88, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-1', gradedByTeacherUserId: 'teacher-2' },
-    { id: 'res-3', examId: 'math-midterm', studentId: 'student-2', subjectId: 'Mathematics', score: 82, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-2', gradedByTeacherUserId: 'teacher-1' },
-    { id: 'res-4', examId: 'science-midterm', studentId: 'student-2', subjectId: 'Science', score: 75, maxScore: 100, resultDate: new Date().toISOString(), studentUserId: 'student-2', gradedByTeacherUserId: 'teacher-2' },
-];
+export const SEED_EXAM_RESULTS: ExamResult[] = [];
 
 
 export const ATTENDANCE_DATA = [
-  { month: 'January', attendance: 95 },
-  { month: 'February', attendance: 96 },
-  { month: 'March', attendance: 94 },
-  { month: 'April', attendance: 97 },
-  { month: 'May', attendance: 98 },
-  { month: 'June', attendance: 99 },
+  { month: 'January', attendance: 0 },
+  { month: 'February', attendance: 0 },
+  { month: 'March', attendance: 0 },
+  { month: 'April', attendance: 0 },
+  { month: 'May', attendance: 0 },
+  { month: 'June', attendance: 0 },
 ];
 
 export const ATTENDANCE_CHART_CONFIG = {
@@ -187,12 +117,12 @@ export const ATTENDANCE_CHART_CONFIG = {
 } satisfies ChartConfig;
 
 export const PERFORMANCE_DATA = [
-  { month: 'Jan', Math: 85, Science: 88, English: 90 },
-  { month: 'Feb', Math: 86, Science: 89, English: 91 },
-  { month: 'Mar', Math: 84, Science: 87, English: 89 },
-  { month: 'Apr', Math: 88, Science: 90, English: 92 },
-  { month: 'May', Math: 90, Science: 92, English: 94 },
-  { month: 'Jun', Math: 91, Science: 93, English: 95 },
+  { month: 'Jan', Math: 0, Science: 0, English: 0 },
+  { month: 'Feb', Math: 0, Science: 0, English: 0 },
+  { month: 'Mar', Math: 0, Science: 0, English: 0 },
+  { month: 'Apr', Math: 0, Science: 0, English: 0 },
+  { month: 'May', Math: 0, Science: 0, English: 0 },
+  { month: 'Jun', Math: 0, Science: 0, English: 0 },
 ];
 
 export const PERFORMANCE_CHART_CONFIG = {
@@ -210,60 +140,33 @@ export const PERFORMANCE_CHART_CONFIG = {
   },
 } satisfies ChartConfig;
 
-export const NOTIFICATIONS = [
-  {
-    id: '1',
-    avatar: 'user-avatar-1',
-    name: 'Abebech',
-    message: 'submitted their Math assignment.',
-    time: '5 min ago',
-  },
-  {
-    id: '2',
-    avatar: 'user-avatar-2',
-    name: 'Mr. Solomon',
-    message: 'posted a new announcement for Grade 10.',
-    time: '2 hours ago',
-  },
-  {
-    id: '3',
-    avatar: 'user-avatar-3',
-    name: 'System',
-    message: 'Parent-Teacher meetings are scheduled for next week.',
-    time: '1 day ago',
-  },
-];
+export const NOTIFICATIONS: {id: string, avatar: string, name: string, message: string, time: string}[] = [];
 
-export const RECENT_ACTIVITIES = [
-  { id: '1', user: 'Admin', activity: 'Updated school settings', timestamp: '2024-05-20 10:00 AM', status: 'Completed' },
-  { id: '2', user: 'Mr. Solomon', activity: 'Graded Midterm Exams', timestamp: '2024-05-20 09:30 AM', status: 'In Progress' },
-  { id: '3', user: 'Admin', activity: 'Added a new student', timestamp: '2024-05-19 03:00 PM', status: 'Completed' },
-  { id: '4', user: 'Ms. Fatuma', activity: 'Submitted attendance for Grade 10-C', timestamp: '2024-05-19 09:00 AM', status: 'Pending Review' },
-];
+export const RECENT_ACTIVITIES: {id: string, user: string, activity: string, timestamp: string, status: string}[] = [];
 
 export const EXAM_STAT_CARDS = [
   {
     title: 'Average Score',
-    value: '88%',
-    change: '+2.1%',
+    value: '0%',
+    change: '+0%',
     icon: 'Target' as keyof typeof Icons,
   },
   {
     title: 'Top Performer',
-    value: 'Lina Ahmed',
-    change: '95% Avg',
+    value: 'N/A',
+    change: '0% Avg',
     icon: 'Award' as keyof typeof Icons,
   },
   {
     title: 'Exams Graded',
-    value: '12/15',
-    change: '3 pending',
+    value: '0/0',
+    change: '0 pending',
     icon: 'FileCheck' as keyof typeof Icons,
   },
   {
     title: 'Lowest Score',
-    value: '65%',
-    change: 'Science Final',
+    value: '0%',
+    change: 'N/A',
     icon: 'TrendingDown' as keyof typeof Icons,
   },
 ];
