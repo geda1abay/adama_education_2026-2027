@@ -7,7 +7,6 @@
  * - AIEnhancedStudentProgressOverviewOutput - The return type for the getStudentProgressOverview function.
  */
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const AIEnhancedStudentProgressOverviewInputSchema = z.object({
@@ -60,68 +59,12 @@ export type GetStudentProgressOverviewResult =
   | AIEnhancedStudentProgressOverviewOutput
   | { error: string };
 
-const prompt = ai.definePrompt({
-  name: 'aiEnhancedStudentProgressOverviewPrompt',
-  model: 'googleai/gemini-2.5-flash',
-  input: { schema: AIEnhancedStudentProgressOverviewInputSchema },
-  output: { schema: AIEnhancedStudentProgressOverviewOutputSchema },
-  prompt: `You are an academic advisor specialized in summarizing student performance.
-Your task is to provide a concise textual summary of {{studentName}}'s academic progress, highlighting their strengths and identifying clear areas for improvement based on the provided grades and attendance data.
-
-Grades:
-{{#each grades}}
-  - Subject: {{this.subject}}, Score: {{this.score}}{{#if this.maxScore}}/{{this.maxScore}}{{/if}}{{#if this.assignmentName}} (Assignment: {{this.assignmentName}}){{/if}}
-{{/each}}
-
-Attendance:
-  Total Classes: {{attendance.totalClasses}}
-  Classes Attended: {{attendance.classesAttended}}
-
-Based on this information, provide a summary of {{studentName}}'s academic progress. Focus on overall performance trends, subject-specific strengths or weaknesses, and how attendance might impact their learning. Keep the summary concise and actionable.
-`,
-});
-
-const aiEnhancedStudentProgressOverviewFlow = ai.defineFlow(
-  {
-    name: 'aiEnhancedStudentProgressOverviewFlow',
-    inputSchema: AIEnhancedStudentProgressOverviewInputSchema,
-    outputSchema: AIEnhancedStudentProgressOverviewOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    return output!;
-  }
-);
 
 export async function getStudentProgressOverview(
   input: AIEnhancedStudentProgressOverviewInput
 ): Promise<GetStudentProgressOverviewResult> {
-  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.trim() === '') {
-    return {
-      error:
-        'The Gemini API key is missing or empty. Please add it to your .env file to use AI features.',
-    };
-  }
-  try {
-    const result = await aiEnhancedStudentProgressOverviewFlow(input);
-    if (!result) {
-      return {
-        error:
-          'The AI model did not return a valid response. Please check the prompt and model configuration.',
-      };
-    }
-    return result;
-  } catch (e: any) {
-    // Sanitize and return the error as data to be handled by the client.
-    if (e.message.includes('API key not valid')) {
-      return {
-        error:
-          'The provided Gemini API key is not valid. Please verify it in your .env file.',
-      };
-    }
-    return {
-      error:
-        e.message || 'An unexpected error occurred while running the AI flow.',
-    };
-  }
+  return {
+    error:
+      'AI features are currently disconnected. This component is not functional.',
+  };
 }

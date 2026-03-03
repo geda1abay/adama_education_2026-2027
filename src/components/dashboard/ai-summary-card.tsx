@@ -17,11 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  getStudentProgressOverview,
-  type AIEnhancedStudentProgressOverviewInput,
-  type GetStudentProgressOverviewResult,
-} from '@/ai/flows/ai-enhanced-student-progress-overview';
+// AI flow import removed
 import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/context/data-context';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,81 +28,22 @@ export default function AiSummaryCard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { toast } = useToast();
-  const { students, recentExamResults, studentAttendance } = useData();
+  const { students } = useData();
 
   const handleGenerateSummary = async () => {
-    if (!selectedStudentId) {
-      toast({
-        variant: 'destructive',
-        title: 'No Student Selected',
-        description: 'Please select a student to generate a progress overview.',
-      });
-      return;
-    }
-
-    const student = students?.find(s => s.id === selectedStudentId);
-    if (!student) {
+    setIsLoading(true);
+    setError('');
+    // Simulate an error because AI is disconnected
+    setTimeout(() => {
+        const errorMessage = "AI features are currently disconnected. This component is not functional.";
+        setError(errorMessage);
         toast({
             variant: 'destructive',
-            title: 'Student Not Found',
-            description: 'The selected student could not be found.',
+            title: 'AI Feature Offline',
+            description: errorMessage,
         });
-        return;
-    }
-
-    setIsLoading(true);
-    setSummary('');
-    setError('');
-
-    // Prepare grades data
-    const grades = (recentExamResults ?? [])
-      .filter(r => r.studentId === selectedStudentId)
-      .map(result => {
-        return {
-          subject: result.subjectId,
-          score: result.score,
-          maxScore: result.maxScore,
-          assignmentName: result.examId,
-        };
-      });
-
-    // Prepare attendance data
-    const studentAttendanceRecords = (studentAttendance ?? []).filter(att => att.studentId === selectedStudentId);
-    const totalClasses = studentAttendanceRecords.length;
-    const classesAttended = studentAttendanceRecords.filter(att => att.status === 'present').length;
-
-    const dataToSummarize: AIEnhancedStudentProgressOverviewInput = {
-      studentName: `${student.firstName} ${student.lastName}`,
-      grades: grades,
-      attendance: {
-        totalClasses: totalClasses,
-        classesAttended: classesAttended,
-      },
-    };
-    
-    // Add mock data if no real data is available, so the AI has something to work with.
-    if (dataToSummarize.grades.length === 0) {
-        dataToSummarize.grades.push({ subject: 'General', score: 85, maxScore: 100, assignmentName: 'Sample Exam' });
-    }
-    if (dataToSummarize.attendance.totalClasses === 0) {
-        dataToSummarize.attendance.totalClasses = 50;
-        dataToSummarize.attendance.classesAttended = 45;
-    }
-
-    const result = await getStudentProgressOverview(dataToSummarize);
-    setIsLoading(false);
-
-    if ('error' in result) {
-      const errorMessage = result.error;
-      setError(errorMessage);
-      toast({
-        variant: 'destructive',
-        title: 'AI Summary Error',
-        description: errorMessage,
-      });
-    } else {
-      setSummary(result.summary);
-    }
+        setIsLoading(false);
+    }, 500);
   };
 
   return (
@@ -154,43 +91,9 @@ export default function AiSummaryCard() {
             {error && (
               <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
-                <AlertTitle>AI Feature Error</AlertTitle>
+                <AlertTitle>AI Feature Offline</AlertTitle>
                 <AlertDescription>
                   {error}
-                  {error.includes('API key') && (
-                    <div className="mt-2 text-xs">
-                      <p className="font-semibold">To fix this:</p>
-                      <ol className="list-decimal list-inside space-y-1 mt-1">
-                        <li>
-                          <a
-                            href="https://aistudio.google.com/app/apikey"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline"
-                          >
-                            Create or get your Gemini API Key
-                          </a>
-                          .
-                        </li>
-                        <li>
-                          In your project's root directory, open the{' '}
-                          <code>.env</code> file.
-                        </li>
-                        <li>
-                          Add the following line, pasting your key after the
-                          `=` sign:
-                          <pre className="mt-1 p-2 rounded-md bg-muted/50 font-mono text-xs">
-                            GEMINI_API_KEY=your_key_here
-                          </pre>
-                        </li>
-                        <li>
-                          <strong>Important:</strong> After saving the <code>.env</code> file,
-                          you must <strong>restart your application server</strong> for the new key to
-                          be recognized.
-                        </li>
-                      </ol>
-                    </div>
-                  )}
                 </AlertDescription>
               </Alert>
             )}
