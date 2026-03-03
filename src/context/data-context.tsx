@@ -229,7 +229,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       const attendanceRef = collection(firestore, 'attendance');
       const feesRef = collection(firestore, 'fees');
-      const examResultsRef = collection(firestore, 'examResults');
+      const examResultsRef = collectionGroup(firestore, 'examResults');
 
       try {
         // Seed Students & Users
@@ -254,17 +254,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
         // Seed Attendance
         for (const attendance of SEED_ATTENDANCE) {
-            setDocumentNonBlocking(doc(attendanceRef, attendance.id), attendance, { merge: true });
+            addDocumentNonBlocking(attendanceRef, attendance);
         }
 
         // Seed Fees
          for (const fee of SEED_FEES) {
-            setDocumentNonBlocking(doc(feesRef, fee.id), fee, { merge: true });
+            addDocumentNonBlocking(feesRef, fee);
         }
 
-        // Seed Exam Results (into a top-level collection for simplicity)
+        // Seed Exam Results (into subcollections for correctness)
         for (const result of SEED_EXAM_RESULTS) {
-            setDocumentNonBlocking(doc(examResultsRef, result.id), result, { merge: true });
+            // This assumes a class structure that we might not have yet.
+            // For seeding, let's just place them where rules might find them,
+            // even if the class documents don't exist. This is a simplification for demo data.
+            const resultRef = doc(firestore, `classes/class-1/exams/exam-1/examResults/${result.id}`);
+            setDocumentNonBlocking(resultRef, result, { merge: true });
         }
 
         // Set the seeded flag
@@ -287,6 +291,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       return null; // Success
     } catch (error: any) {
+      if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('identity-toolkit-api-has-not-been-used'))) {
+        return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
+      }
       if (error.code === 'auth/invalid-credential' && email === 'admin@example.com') {
         try {
           const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -305,6 +312,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
           }
           return "Failed to create new admin user account.";
         } catch (createError: any) {
+          if (createError.code === 'auth/operation-not-allowed' || (createError.message && createError.message.includes('identity-toolkit-api-has-not-been-used'))) {
+            return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
+          }
           console.error('Failed to auto-create admin user:', createError);
           return createError.message || "An unknown error occurred during admin account creation.";
         }
@@ -320,6 +330,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       return null;
     } catch (error: any) {
+      if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('identity-toolkit-api-has-not-been-used'))) {
+        return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
+      }
       console.error('Student login failed:', error);
       return error.message || 'An unknown error occurred.';
     }
@@ -330,6 +343,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       return null;
     } catch (error: any) {
+      if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('identity-toolkit-api-has-not-been-used'))) {
+        return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
+      }
       console.error('Teacher login failed:', error);
       return error.message || 'An unknown error occurred.';
     }
@@ -440,8 +456,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addExamResult = async (data: Omit<ExamResult, 'id'>) => {
      // For now, add to the top-level collection for simplicity.
-     const examResultsRef = collection(firestore, 'examResults');
-     await addDocumentNonBlocking(examResultsRef, {
+     const examResultsRef = collectionGroup(firestore, 'examResults');
+     await addDocumentNonBlocking(collection(firestore, 'examResults'), {
        ...data,
        resultDate: new Date().toISOString()
      });
