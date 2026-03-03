@@ -113,6 +113,20 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+const getAuthErrorMessage = (error: any): string => {
+  if (error.message && error.message.includes('identity-toolkit-api-has-not-been-used')) {
+    return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
+  }
+  if (error.code === 'auth/operation-not-allowed') {
+    return 'The "Email/Password" sign-in provider is not enabled. Please enable it in your Firebase Console (Authentication > Sign-in method).';
+  }
+  if (error.code === 'auth/invalid-credential') {
+    return 'Invalid email or password. Please check your credentials and try again.';
+  }
+  return error.message || 'An unknown authentication error occurred.';
+};
+
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const auth = useAuth();
@@ -287,9 +301,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       return null; // Success
     } catch (error: any) {
-      if (error.message && error.message.includes('identity-toolkit-api-has-not-been-used')) {
-        return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
-      }
+      // Special case: If admin user doesn't exist, create it.
       if (error.code === 'auth/invalid-credential' && email === 'admin@example.com') {
         try {
           const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -304,23 +316,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
-            return null; // Success after creation
+            // After creation, log them in automatically (the auth state will change).
+            return null; 
           }
-          return "Failed to create new admin user account.";
+           return "Failed to create new admin user account.";
         } catch (createError: any) {
-          if (createError.code === 'auth/operation-not-allowed') {
-            return 'Could not create admin account. Please ensure the "Email/Password" sign-in provider is enabled in your Firebase Console (Authentication > Sign-in method).';
-          }
-           if (createError.message && createError.message.includes('identity-toolkit-api-has-not-been-used')) {
-            return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
-          }
-          return createError.message || "An unknown error occurred during admin account creation.";
+          // If creation fails, return a specific error message from the helper.
+          return getAuthErrorMessage(createError);
         }
       }
-      if (error.code === 'auth/invalid-credential') {
-        return 'Invalid email or password. Please try again.';
-      }
-      return error.message || 'An unknown login error occurred.';
+      // For all other errors, use the helper.
+      return getAuthErrorMessage(error);
     }
   };
 
@@ -329,16 +335,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       return null;
     } catch (error: any) {
-      if (error.message && error.message.includes('identity-toolkit-api-has-not-been-used')) {
-        return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
-      }
-      if (error.code === 'auth/operation-not-allowed') {
-        return 'Email/Password sign-in is not enabled for this project. Please enable it in the Firebase Console under Authentication > Sign-in method.';
-      }
-      if (error.code === 'auth/invalid-credential') {
-        return 'Invalid email or password. Please try again.';
-      }
-      return error.message || 'An unknown error occurred.';
+      return getAuthErrorMessage(error);
     }
   };
 
@@ -347,18 +344,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       return null;
     } catch (error: any) {
-      if (error.message && error.message.includes('identity-toolkit-api-has-not-been-used')) {
-        return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
-      }
-      if (error.code === 'auth/operation-not-allowed') {
-        return 'Email/Password sign-in is not enabled for this project. Please enable it in the Firebase Console under Authentication > Sign-in method.';
-      }
-      if (error.code === 'auth/invalid-credential') {
-        return 'Invalid email or password. Please try again.';
-      }
-      return error.message || 'An unknown error occurred.';
+      return getAuthErrorMessage(error);
     }
   };
+
 
   const logout = async () => {
     await signOut(auth);
@@ -400,10 +389,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       toast({ title: 'Student Added', description: `${data.firstName} has been added.` });
     } catch (error: any) {
-      let errorMessage = error.message;
-      if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = 'Could not create student account. Please ensure the "Email/Password" sign-in provider is enabled in your Firebase Console.';
-      }
+      const errorMessage = getAuthErrorMessage(error);
       toast({ variant: 'destructive', title: 'Error Adding Student', description: errorMessage });
     }
   };
@@ -449,10 +435,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       toast({ title: 'Teacher Added', description: `${data.firstName} has been added.` });
     } catch (error: any) {
-      let errorMessage = error.message;
-      if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = 'Could not create teacher account. Please ensure the "Email/Password" sign-in provider is enabled in your Firebase Console.';
-      }
+      const errorMessage = getAuthErrorMessage(error);
       toast({ variant: 'destructive', title: 'Error Adding Teacher', description: errorMessage });
     }
   };
