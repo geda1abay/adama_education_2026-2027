@@ -18,6 +18,7 @@ import {
   collectionGroup,
   query,
   where,
+  setDoc,
 } from 'firebase/firestore';
 import {
   createUserWithEmailAndPassword,
@@ -177,8 +178,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setIsRoleLoading(false);
         } else {
           // If the user document doesn't exist, they have no role.
-          setIsRoleLoading(false);
-          setUserRole(null);
+          // This can happen briefly after user creation.
+          // We don't set role to null immediately, but wait for doc.
+           if (isRoleLoading) {
+            // still waiting for doc, do nothing
+           } else {
+            setUserRole(null)
+           }
         }
       } else {
         // No user, no role
@@ -186,16 +192,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
       }
     }
-  }, [isUserLoading, firebaseUser, userRoleDoc]);
+  }, [isUserLoading, firebaseUser, userRoleDoc, isRoleLoading]);
 
 
   // Login Functions
   const adminLogin = async (email: string, password: string): Promise<boolean> => {
-     try {
+    try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // After sign-in, the role will be determined by the useEffect above.
       return !!userCredential.user;
-    } catch (error) {
+    } catch (error: any) {
+      // If login fails, it could be that the admin user doesn't exist yet.
+      // For a new project, we'll attempt to create the admin user on the first login.
+      if (error.code === 'auth/invalid-credential' && email === 'admin@example.com') {
+        try {
+          const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
+          if (newUserCredential.user) {
+            // User created via Auth, now create the corresponding user document in Firestore.
+            const userDocRef = doc(usersRef, newUserCredential.user.uid);
+            // Use await here to ensure the role document is created before proceeding.
+            await setDoc(userDocRef, {
+              id: newUserCredential.user.uid,
+              email: email,
+              role: 'admin',
+              firstName: 'Admin',
+              lastName: 'User',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+            
+            // Logged in via creation.
+            return true;
+          }
+        } catch (createError: any) {
+          // If creation also fails (e.g., weak password), log it and fail the login.
+          console.error('Failed to auto-create admin user:', createError);
+          return false;
+        }
+      }
+      
+      // For any other errors, log them and indicate login failure.
       console.error('Admin login failed:', error);
       return false;
     }
