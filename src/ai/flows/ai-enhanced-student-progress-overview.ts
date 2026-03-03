@@ -9,6 +9,7 @@
 
 import { z } from 'zod';
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const AIEnhancedStudentProgressOverviewInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
@@ -87,7 +88,7 @@ const studentProgressFlow = ai.defineFlow(
     outputSchema: AIEnhancedStudentProgressOverviewOutputSchema,
   },
   async (input) => {
-    const { output } = await studentProgressPrompt(input);
+    const { output } = await studentProgressPrompt(input, { model: googleAI.model('gemini-1.5-flash-latest') });
     return output!;
   }
 );
