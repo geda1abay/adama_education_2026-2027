@@ -126,6 +126,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const usersRef = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
   const studentsRef = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
   const teachersRef = useMemoFirebase(() => collection(firestore, 'teachers'), [firestore]);
+  const attendanceRef = useMemoFirebase(() => collection(firestore, 'attendance'), [firestore]);
+  const feesRef = useMemoFirebase(() => collection(firestore, 'fees'), [firestore]);
   
   // Real-time data fetching
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(userRole === 'admin' ? studentsRef : null);
@@ -133,21 +135,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   
   const attendanceQuery = useMemoFirebase(() => {
     if (!userRole || !firebaseUser) return null;
-    const ref = collection(firestore, 'attendance');
-    if (userRole === 'admin') return ref;
-    if (userRole === 'student') return query(ref, where('studentId', '==', firebaseUser.uid));
-    if (userRole === 'teacher') return query(ref, where('recordedByTeacherId', '==', firebaseUser.uid));
+    if (userRole === 'admin') return attendanceRef;
+    if (userRole === 'student') return query(attendanceRef, where('studentId', '==', firebaseUser.uid));
+    if (userRole === 'teacher') return query(attendanceRef, where('recordedByTeacherId', '==', firebaseUser.uid));
     return null;
-  }, [firestore, firebaseUser, userRole]);
+  }, [firestore, firebaseUser, userRole, attendanceRef]);
   const { data: studentAttendance, isLoading: attendanceLoading } = useCollection<Attendance>(attendanceQuery);
 
   const feesQuery = useMemoFirebase(() => {
     if (!userRole || !firebaseUser) return null;
-    const ref = collection(firestore, 'fees');
-    if (userRole === 'admin') return ref;
-    if (userRole === 'student') return query(ref, where('studentId', '==', firebaseUser.uid));
+    if (userRole === 'admin') return feesRef;
+    if (userRole === 'student') return query(feesRef, where('studentId', '==', firebaseUser.uid));
     return null;
-  }, [firestore, firebaseUser, userRole]);
+  }, [firestore, firebaseUser, userRole, feesRef]);
   const { data: feesData, isLoading: feesLoading } = useCollection<StudentFee>(feesQuery);
 
   const { data: userRoleDoc } = useDoc<{ role: 'admin' | 'student' | 'teacher' }>(
@@ -227,10 +227,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       toast({ title: "Setting up demo data...", description: "Please wait a moment." });
       
-      const attendanceRef = collection(firestore, 'attendance');
-      const feesRef = collection(firestore, 'fees');
-      const examResultsRef = collectionGroup(firestore, 'examResults');
-
       try {
         // Seed Students & Users
         for (const student of SEED_STUDENTS) {
@@ -282,7 +278,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
 
     seedDatabase();
-  }, [firestore, userRole, isUserLoading, toast, usersRef, studentsRef, teachersRef]);
+  }, [firestore, userRole, isUserLoading, toast, usersRef, studentsRef, teachersRef, attendanceRef, feesRef]);
 
 
   // Login Functions
@@ -312,7 +308,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
           }
           return "Failed to create new admin user account.";
         } catch (createError: any) {
-          if (createError.code === 'auth/operation-not-allowed' || (createError.message && createError.message.includes('identity-toolkit-api-has-not-been-used'))) {
+          if (createError.code === 'auth/operation-not-allowed') {
+            return 'Could not create admin account. Please ensure the "Email/Password" sign-in provider is enabled in your Firebase Console (Authentication > Sign-in method).';
+          }
+          if (createError.message && createError.message.includes('identity-toolkit-api-has-not-been-used')) {
             return 'Firebase Authentication API is not enabled for this project. Please go to the Firebase Console, select your project, navigate to the Authentication section, and click "Get started" to enable it.';
           }
           console.error('Failed to auto-create admin user:', createError);
@@ -390,9 +389,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDocumentNonBlocking(studentDocRef, newStudent, { merge: true });
 
       toast({ title: 'Student Added', description: `${data.firstName} has been added.` });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding student:", error);
-      toast({ variant: 'destructive', title: 'Error Adding Student', description: (error as Error).message });
+      let errorMessage = error.message;
+      if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Could not create student account. Please ensure the "Email/Password" sign-in provider is enabled in your Firebase Console.';
+      }
+      toast({ variant: 'destructive', title: 'Error Adding Student', description: errorMessage });
     }
   };
 
@@ -436,9 +439,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDocumentNonBlocking(teacherDocRef, newTeacher, { merge: true });
 
       toast({ title: 'Teacher Added', description: `${data.firstName} has been added.` });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding teacher:", error);
-      toast({ variant: 'destructive', title: 'Error Adding Teacher', description: (error as Error).message });
+      let errorMessage = error.message;
+      if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Could not create teacher account. Please ensure the "Email/Password" sign-in provider is enabled in your Firebase Console.';
+      }
+      toast({ variant: 'destructive', title: 'Error Adding Teacher', description: errorMessage });
     }
   };
   
@@ -449,7 +456,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const addAttendance = async (data: Omit<Attendance, 'id'>) => {
-    const attendanceRef = collection(firestore, 'attendance');
     await addDocumentNonBlocking(attendanceRef, data);
     toast({ title: 'Attendance Added' });
   };
@@ -465,7 +471,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addFee = async (data: Omit<StudentFee, 'id'>) => {
-    const feesRef = collection(firestore, 'fees');
     await addDocumentNonBlocking(feesRef, data);
     toast({ title: 'Fee Record Added' });
   };
