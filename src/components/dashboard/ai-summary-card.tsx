@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-// AI flow import removed
+import { getStudentProgressOverview } from '@/ai/flows/ai-enhanced-student-progress-overview';
 import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/context/data-context';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -28,22 +28,51 @@ export default function AiSummaryCard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { toast } = useToast();
-  const { students } = useData();
+  const { students, recentExamResults, studentAttendance } = useData();
 
   const handleGenerateSummary = async () => {
+    if (!selectedStudentId) return;
+
+    const student = students?.find(s => s.id === selectedStudentId);
+    if (!student) return;
+
     setIsLoading(true);
+    setSummary('');
     setError('');
-    // Simulate an error because AI is disconnected
-    setTimeout(() => {
-        const errorMessage = "AI features are currently disconnected. This component is not functional.";
-        setError(errorMessage);
-        toast({
-            variant: 'destructive',
-            title: 'AI Feature Offline',
-            description: errorMessage,
-        });
-        setIsLoading(false);
-    }, 500);
+
+    // Prepare data for the AI flow
+    const grades = (recentExamResults || [])
+        .filter(r => r.studentId === selectedStudentId)
+        .map(r => ({ subject: r.subjectId, score: r.score, maxScore: r.maxScore, assignmentName: r.examId }));
+
+    const attendanceRecords = (studentAttendance || []).filter(a => a.studentId === selectedStudentId);
+    const totalClasses = attendanceRecords.length;
+    const classesAttended = attendanceRecords.filter(a => a.status === 'present').length;
+
+    const input = {
+        studentName: `${student.firstName} ${student.lastName}`,
+        grades,
+        attendance: {
+            totalClasses,
+            classesAttended
+        }
+    };
+
+    const result = await getStudentProgressOverview(input);
+
+    if ('summary' in result) {
+      setSummary(result.summary);
+    } else {
+      const errorMessage = result.error || 'Failed to generate summary.';
+      setError(errorMessage);
+      toast({
+        variant: 'destructive',
+        title: 'AI Generation Failed',
+        description: errorMessage,
+      });
+    }
+
+    setIsLoading(false);
   };
 
   return (
@@ -91,7 +120,7 @@ export default function AiSummaryCard() {
             {error && (
               <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
-                <AlertTitle>AI Feature Offline</AlertTitle>
+                <AlertTitle>AI Generation Failed</AlertTitle>
                 <AlertDescription>
                   {error}
                 </AlertDescription>

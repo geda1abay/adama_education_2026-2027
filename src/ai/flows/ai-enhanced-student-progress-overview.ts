@@ -8,6 +8,7 @@
  */
 
 import { z } from 'zod';
+import { ai } from '@/ai/genkit';
 
 const AIEnhancedStudentProgressOverviewInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
@@ -59,12 +60,49 @@ export type GetStudentProgressOverviewResult =
   | AIEnhancedStudentProgressOverviewOutput
   | { error: string };
 
+const studentProgressPrompt = ai.definePrompt({
+    name: 'studentProgressPrompt',
+    input: { schema: AIEnhancedStudentProgressOverviewInputSchema },
+    output: { schema: AIEnhancedStudentProgressOverviewOutputSchema },
+    prompt: `You are a helpful teaching assistant. Your task is to provide a concise and insightful academic progress overview for a student named {{{studentName}}}.
+
+Analyze the following data:
+- Grades: {{{json grades}}}
+- Attendance: {{{json attendance}}}
+
+Based on this data, generate a summary. The summary should:
+1. Start with a general statement about the student's overall performance.
+2. Identify and praise their strengths (e.g., strong subjects, consistent high scores).
+3. Gently point out areas for improvement (e.g., subjects with lower scores, poor attendance).
+4. Conclude with a positive and encouraging remark.
+
+Keep the summary to about 3-4 sentences.
+`,
+});
+
+const studentProgressFlow = ai.defineFlow(
+  {
+    name: 'studentProgressFlow',
+    inputSchema: AIEnhancedStudentProgressOverviewInputSchema,
+    outputSchema: AIEnhancedStudentProgressOverviewOutputSchema,
+  },
+  async (input) => {
+    const { output } = await studentProgressPrompt(input);
+    return output!;
+  }
+);
+
 
 export async function getStudentProgressOverview(
   input: AIEnhancedStudentProgressOverviewInput
 ): Promise<GetStudentProgressOverviewResult> {
-  return {
-    error:
-      'AI features are currently disconnected. This component is not functional.',
-  };
+    try {
+        const summary = await studentProgressFlow(input);
+        return summary;
+    } catch (e: any) {
+        console.error(e);
+        return {
+            error: e.message || 'An unexpected error occurred while generating the AI summary.',
+        };
+    }
 }
