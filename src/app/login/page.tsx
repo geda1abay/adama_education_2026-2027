@@ -22,8 +22,8 @@ export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { adminLogin, firebaseUser, isUserLoading, userRole } = useData();
-    const [email, setEmail] = useState('gedaabay@gmail.com');
-    const [password, setPassword] = useState('151835');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -86,6 +86,7 @@ export default function LoginPage() {
               <Input 
                 id="password" 
                 type="password"
+                placeholder="••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)} 
                 required 
