@@ -23,7 +23,7 @@ export default function LoginPage() {
     const { toast } = useToast();
     const { adminLogin, firebaseUser, isUserLoading, userRole } = useData();
     const [email, setEmail] = useState('gedaabay@gmail.com');
-    const [password, setPassword] = useState('password');
+    const [password, setPassword] = useState('151835');
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
