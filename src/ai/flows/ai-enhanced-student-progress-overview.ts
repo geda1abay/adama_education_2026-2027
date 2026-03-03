@@ -9,7 +9,6 @@
 
 import { z } from 'zod';
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const AIEnhancedStudentProgressOverviewInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
@@ -61,15 +60,18 @@ export type GetStudentProgressOverviewResult =
   | AIEnhancedStudentProgressOverviewOutput
   | { error: string };
 
-const studentProgressPrompt = ai.definePrompt({
-    name: 'studentProgressPrompt',
-    input: { schema: AIEnhancedStudentProgressOverviewInputSchema },
-    output: { schema: AIEnhancedStudentProgressOverviewOutputSchema },
-    prompt: `You are a helpful teaching assistant. Your task is to provide a concise and insightful academic progress overview for a student named {{{studentName}}}.
+const studentProgressFlow = ai.defineFlow(
+  {
+    name: 'studentProgressFlow',
+    inputSchema: AIEnhancedStudentProgressOverviewInputSchema,
+    outputSchema: AIEnhancedStudentProgressOverviewOutputSchema,
+  },
+  async (input) => {
+    const prompt = `You are a helpful teaching assistant. Your task is to provide a concise and insightful academic progress overview for a student named ${input.studentName}.
 
 Analyze the following data:
-- Grades: {{{json grades}}}
-- Attendance: {{{json attendance}}}
+- Grades: ${JSON.stringify(input.grades)}
+- Attendance: ${JSON.stringify(input.attendance)}
 
 Based on this data, generate a summary. The summary should:
 1. Start with a general statement about the student's overall performance.
@@ -78,17 +80,14 @@ Based on this data, generate a summary. The summary should:
 4. Conclude with a positive and encouraging remark.
 
 Keep the summary to about 3-4 sentences.
-`,
-});
+`;
 
-const studentProgressFlow = ai.defineFlow(
-  {
-    name: 'studentProgressFlow',
-    inputSchema: AIEnhancedStudentProgressOverviewInputSchema,
-    outputSchema: AIEnhancedStudentProgressOverviewOutputSchema,
-  },
-  async (input) => {
-    const { output } = await studentProgressPrompt(input, { model: 'googleai/gemini-1.5-flash' });
+    const { output } = await ai.generate({
+        model: 'googleai/gemini-1.5-flash',
+        prompt: prompt,
+        output: { schema: AIEnhancedStudentProgressOverviewOutputSchema },
+    });
+    
     return output!;
   }
 );
