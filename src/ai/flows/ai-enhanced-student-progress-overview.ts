@@ -88,7 +88,7 @@ const studentProgressFlow = ai.defineFlow(
     outputSchema: AIEnhancedStudentProgressOverviewOutputSchema,
   },
   async (input) => {
-    const { output } = await studentProgressPrompt(input, { model: 'gemini-1.5-flash' });
+    const { output } = await studentProgressPrompt(input, { model: 'googleai/gemini-1.5-flash' });
     return output!;
   }
 );
