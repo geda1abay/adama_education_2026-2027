@@ -126,16 +126,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const usersRef = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
   const studentsRef = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
   const teachersRef = useMemoFirebase(() => collection(firestore, 'teachers'), [firestore]);
-  const attendanceRef = useMemoFirebase(() => collection(firestore, 'attendance'), [firestore]);
-  const feesRef = useMemoFirebase(() => collection(firestore, 'fees'), [firestore]);
-  const examResultsRef = useMemoFirebase(() => collection(firestore, 'examResults'), [firestore]);
   
   // Real-time data fetching
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(userRole === 'admin' ? studentsRef : null);
   const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(userRole === 'admin' ? teachersRef : null);
-  const { data: studentAttendance, isLoading: attendanceLoading } = useCollection<Attendance>(attendanceRef);
   
-  const { data: feesData, isLoading: feesLoading } = useCollection<StudentFee>(feesRef);
+  const attendanceQuery = useMemoFirebase(() => {
+    if (!userRole || !firebaseUser) return null;
+    const ref = collection(firestore, 'attendance');
+    if (userRole === 'admin') return ref;
+    if (userRole === 'student') return query(ref, where('studentId', '==', firebaseUser.uid));
+    if (userRole === 'teacher') return query(ref, where('recordedByTeacherId', '==', firebaseUser.uid));
+    return null;
+  }, [firestore, firebaseUser, userRole]);
+  const { data: studentAttendance, isLoading: attendanceLoading } = useCollection<Attendance>(attendanceQuery);
+
+  const feesQuery = useMemoFirebase(() => {
+    if (!userRole || !firebaseUser) return null;
+    const ref = collection(firestore, 'fees');
+    if (userRole === 'admin') return ref;
+    if (userRole === 'student') return query(ref, where('studentId', '==', firebaseUser.uid));
+    return null;
+  }, [firestore, firebaseUser, userRole]);
+  const { data: feesData, isLoading: feesLoading } = useCollection<StudentFee>(feesQuery);
 
   const { data: userRoleDoc } = useDoc<{ role: 'admin' | 'student' | 'teacher' }>(
     firebaseUser ? doc(usersRef, firebaseUser.uid) : null
@@ -213,6 +226,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       
       toast({ title: "Setting up demo data...", description: "Please wait a moment." });
+      
+      const attendanceRef = collection(firestore, 'attendance');
+      const feesRef = collection(firestore, 'fees');
+      const examResultsRef = collection(firestore, 'examResults');
 
       try {
         // Seed Students & Users
@@ -261,7 +278,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
 
     seedDatabase();
-  }, [firestore, userRole, isUserLoading, toast, usersRef, studentsRef, teachersRef, attendanceRef, feesRef, examResultsRef]);
+  }, [firestore, userRole, isUserLoading, toast, usersRef, studentsRef, teachersRef]);
 
 
   // Login Functions
@@ -423,12 +440,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const addAttendance = async (data: Omit<Attendance, 'id'>) => {
+    const attendanceRef = collection(firestore, 'attendance');
     await addDocumentNonBlocking(attendanceRef, data);
     toast({ title: 'Attendance Added' });
   };
 
   const addExamResult = async (data: Omit<ExamResult, 'id'>) => {
      // For now, add to the top-level collection for simplicity.
+     const examResultsRef = collection(firestore, 'examResults');
      await addDocumentNonBlocking(examResultsRef, {
        ...data,
        resultDate: new Date().toISOString()
@@ -437,6 +456,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addFee = async (data: Omit<StudentFee, 'id'>) => {
+    const feesRef = collection(firestore, 'fees');
     await addDocumentNonBlocking(feesRef, data);
     toast({ title: 'Fee Record Added' });
   };

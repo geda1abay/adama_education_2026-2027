@@ -188,23 +188,35 @@ service cloud.firestore {
     }
     
     // ---------------------------------------------------------------------
-    // Student-Specific Subcollections
+    // Top-Level Data Rules (Fees, Attendance)
     // ---------------------------------------------------------------------
+
+    /**
+     * @description Admin can manage all fees. Students can query their own fees.
+     * @path /fees/{feeId}
+     * @allow Admins can list/read all fees. Students can query fees where their UID matches studentId.
+     * @principle Role-based access for lists and ownership for individual documents.
+     */
+    match /fees/{feeId} {
+      allow get: if isAdmin() || (resource.data.studentId == request.auth.uid);
+      allow list: if isAdmin() || (request.query.where.studentId is string && request.query.where.studentId == request.auth.uid);
+      allow write: if isAdmin();
+    }
     
     /**
-     * @description A student and their parents can view fee information. Writes are restricted.
-     * @path /students/{studentId}/fees/{feeId}
-     * @allow (get) a student viewing their own fee.
-     * @deny (create) a student trying to add or change a fee.
-     * @principle Inherits read access from parent document, restricts writes. Assumes denormalization of UIDs.
+     * @description Admin can manage attendance. Students/teachers can query their relevant records.
+     * @path /attendance/{attendanceId}
+     * @allow Admins can list all. Students/teachers query by their UID.
+     * @principle Role-based access for lists and ownership checks for writes.
      */
-    match /students/{studentId}/fees/{feeId} {
-        allow get, list: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/students/$(studentId)).data.userId) || isStudentParent(get(/databases/$(database)/documents/students/$(studentId)).data));
-        allow create: if false; // TODO: Add admin/finance role access.
-        allow update: if false; // TODO: Add admin/finance role access.
-        allow delete: if false;
+    match /attendance/{attendanceId} {
+      allow get: if isAdmin() || (resource.data.studentId == request.auth.uid) || (resource.data.recordedByTeacherId == request.auth.uid);
+      allow list: if isAdmin() ||
+                     (request.query.where.studentId is string && request.query.where.studentId == request.auth.uid) ||
+                     (request.query.where.recordedByTeacherId is string && request.query.where.recordedByTeacherId == request.auth.uid);
+      allow write: if isAdmin() || (request.resource.data.recordedByTeacherId == request.auth.uid);
     }
-
+    
     // ---------------------------------------------------------------------
     // Academic Data Rules (Public & Collaborative)
     // ---------------------------------------------------------------------
@@ -277,20 +289,6 @@ service cloud.firestore {
       allow get, list: if isClassTeacher(classId) || isOwner(resource.data.studentUserId) || isStudentParent(resource.data);
       allow create: if isClassTeacher(classId) && request.resource.data.gradedByTeacherUserId == request.auth.uid;
       allow update: if resource != null && isClassTeacher(classId) && request.resource.data.gradedByTeacherUserId == resource.data.gradedByTeacherUserId;
-      allow delete: if resource != null && isClassTeacher(classId);
-    }
-    
-    /**
-     * @description Teachers record attendance. Students and their parents can view attendance records.
-     * @path /classes/{classId}/attendanceRecords/{attendanceId}
-     * @allow (get) a student viewing their attendance for a class session.
-     * @deny (create) a student marking themselves as 'Present'.
-     * @principle Role-based writes (teacher) and relational-based reads (student, parent).
-     */
-    match /classes/{classId}/attendanceRecords/{attendanceId} {
-      allow get, list: if isClassTeacher(classId) || isOwner(resource.data.studentUserId) || isStudentParent(resource.data);
-      allow create: if isClassTeacher(classId) && request.resource.data.recordedByTeacherUserId == request.auth.uid;
-      allow update: if resource != null && isClassTeacher(classId) && request.resource.data.recordedByTeacherUserId == resource.data.recordedByTeacherUserId;
       allow delete: if resource != null && isClassTeacher(classId);
     }
 
