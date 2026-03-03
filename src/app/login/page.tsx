@@ -36,14 +36,14 @@ export default function LoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        const success = await adminLogin(email, password);
-        if (success) {
+        const errorMessage = await adminLogin(email, password);
+        if (!errorMessage) {
             router.push('/dashboard');
         } else {
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: 'Invalid credentials or you are not an admin.',
+                description: errorMessage,
             });
             setIsLoading(false);
         }

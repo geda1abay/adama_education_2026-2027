@@ -37,15 +37,15 @@ export default function TeacherLoginPage() {
         e.preventDefault();
         setIsSubmitting(true);
         
-        const success = await loginTeacher(email, password);
+        const errorMessage = await loginTeacher(email, password);
 
-        if (success) {
+        if (!errorMessage) {
             router.push('/teacher/dashboard');
         } else {
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: 'Invalid email or password. Please try again.',
+                description: errorMessage,
             });
             setIsSubmitting(false);
         }

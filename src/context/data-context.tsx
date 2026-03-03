@@ -78,9 +78,9 @@ interface DataContextType {
   appearance: WithId<Appearance> | null;
 
   // Functions
-  adminLogin: (email: string, password: string) => Promise<boolean>;
-  loginStudent: (email: string, password: string) => Promise<boolean>;
-  loginTeacher: (email: string, password: string) => Promise<boolean>;
+  adminLogin: (email: string, password: string) => Promise<string | null>;
+  loginStudent: (email: string, password: string) => Promise<string | null>;
+  loginTeacher: (email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
 
   addStudent: (
@@ -282,20 +282,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   // Login Functions
-  const adminLogin = async (email: string, password: string): Promise<boolean> => {
+  const adminLogin = async (email: string, password: string): Promise<string | null> => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return !!userCredential.user;
+      await signInWithEmailAndPassword(auth, email, password);
+      return null; // Success
     } catch (error: any) {
-      // If login fails, it could be that the admin user doesn't exist yet.
-      // For a new project, we'll attempt to create the admin user on the first login.
       if (error.code === 'auth/invalid-credential' && email === 'admin@example.com') {
         try {
           const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
           if (newUserCredential.user) {
-            // User created via Auth, now create the corresponding user document in Firestore.
             const userDocRef = doc(usersRef, newUserCredential.user.uid);
-            // Use await here to ensure the role document is created before proceeding.
             await setDoc(userDocRef, {
               id: newUserCredential.user.uid,
               email: email,
@@ -305,40 +301,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
-            
-            // Logged in via creation.
-            return true;
+            return null; // Success after creation
           }
+          return "Failed to create new admin user account.";
         } catch (createError: any) {
-          // If creation also fails (e.g., weak password), log it and fail the login.
           console.error('Failed to auto-create admin user:', createError);
-          return false;
+          return createError.message || "An unknown error occurred during admin account creation.";
         }
       }
       
-      // For any other errors, log them and indicate login failure.
       console.error('Admin login failed:', error);
-      return false;
+      return error.message || 'An unknown login error occurred.';
     }
   };
 
-  const loginStudent = async (email: string, password: string): Promise<boolean> => {
+  const loginStudent = async (email: string, password: string): Promise<string | null> => {
      try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return !!userCredential.user;
-    } catch (error) {
+      await signInWithEmailAndPassword(auth, email, password);
+      return null;
+    } catch (error: any) {
       console.error('Student login failed:', error);
-      return false;
+      return error.message || 'An unknown error occurred.';
     }
   };
 
-  const loginTeacher = async (email: string, password: string): Promise<boolean> => {
+  const loginTeacher = async (email: string, password: string): Promise<string | null> => {
      try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return !!userCredential.user;
-    } catch (error) {
+      await signInWithEmailAndPassword(auth, email, password);
+      return null;
+    } catch (error: any) {
       console.error('Teacher login failed:', error);
-      return false;
+      return error.message || 'An unknown error occurred.';
     }
   };
 
