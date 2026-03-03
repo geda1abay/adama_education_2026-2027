@@ -3,9 +3,10 @@
 import Link from "next/link"
 import { Bot } from "lucide-react"
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/context/data-context";
+import ReCAPTCHA from "react-google-recaptcha";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -25,6 +26,10 @@ export default function LoginPage() {
     const [email, setEmail] = useState('admin@example.com');
     const [password, setPassword] = useState('password');
     const [isLoading, setIsLoading] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+    const recaptchaRef = useRef<ReCAPTCHA>(null);
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+
 
     useEffect(() => {
       if (!isUserLoading && firebaseUser && userRole === 'admin') {
@@ -45,6 +50,8 @@ export default function LoginPage() {
                 description: errorMessage,
             });
             setIsLoading(false);
+            recaptchaRef.current?.reset();
+            setRecaptchaToken(null);
         }
     };
 
@@ -92,7 +99,16 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isLoading}>
+             {siteKey && (
+              <div className="grid gap-2 justify-center">
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={siteKey}
+                  onChange={setRecaptchaToken}
+                />
+              </div>
+            )}
+            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isLoading || (!!siteKey && !recaptchaToken)}>
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </form>

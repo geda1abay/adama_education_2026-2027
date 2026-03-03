@@ -2,8 +2,9 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { GraduationCap } from "lucide-react"
+import ReCAPTCHA from "react-google-recaptcha";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +27,10 @@ export default function StudentLoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+    const recaptchaRef = useRef<ReCAPTCHA>(null);
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+
 
     useEffect(() => {
         if (!isUserLoading && firebaseUser && userRole === 'student') {
@@ -48,6 +53,8 @@ export default function StudentLoginPage() {
                 description: errorMessage,
             });
             setIsSubmitting(false);
+            recaptchaRef.current?.reset();
+            setRecaptchaToken(null);
         }
     };
 
@@ -109,7 +116,16 @@ export default function StudentLoginPage() {
                 disabled={isSubmitting}
                 />
             </div>
-                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isSubmitting}>
+             {siteKey && (
+              <div className="grid gap-2 justify-center">
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={siteKey}
+                  onChange={setRecaptchaToken}
+                />
+              </div>
+            )}
+                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" disabled={isSubmitting || (!!siteKey && !recaptchaToken)}>
                 {isSubmitting ? 'Logging in...' : 'Login'}
                 </Button>
           </form>
