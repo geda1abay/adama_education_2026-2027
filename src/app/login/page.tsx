@@ -22,7 +22,7 @@ export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { adminLogin, firebaseUser, isUserLoading, userRole } = useData();
-    const [email, setEmail] = useState('admin@example.com');
+    const [email, setEmail] = useState('gedaabay@gmail.com');
     const [password, setPassword] = useState('password');
     const [isLoading, setIsLoading] = useState(false);
 

@@ -91,7 +91,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // In-memory store for mock users to simulate a user database
 const MOCK_USERS: { [email: string]: any } = {
-    'admin@example.com': { password: 'password', role: 'admin', profile: { name: 'Admin User', email: 'admin@example.com' } },
+    'gedaabay@gmail.com': { password: 'password', role: 'admin', profile: { name: 'Geda Abay', email: 'gedaabay@gmail.com' } },
     'lina.ahmed@example.com': { password: 'password', role: 'student', id: 'student-1' },
     'biniam.assefa@example.com': { password: 'password', role: 'student', id: 'student-2' },
     'solomon.taye@example.com': { password: 'password', role: 'teacher', id: 'teacher-1' },
@@ -114,7 +114,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [currentStudent, setCurrentStudent] = useState<WithId<Student> | null>(null);
   const [currentTeacher, setCurrentTeacher] = useState<WithId<Teacher> | null>(null);
 
-  const [adminProfile, setAdminProfile] = useState<WithId<AdminProfile> | null>({ id: 'admin-profile', name: 'Admin', email: 'admin@example.com' });
+  const [adminProfile, setAdminProfile] = useState<WithId<AdminProfile> | null>({ id: 'admin-profile', name: 'Geda Abay', email: 'gedaabay@gmail.com' });
   const [schoolInfo, setSchoolInfo] = useState<WithId<SchoolInfo> | null>({id: 'school-info', name: 'Adama Model', address: 'Adama, Ethiopia', contact: '+251 912 345 678'});
   const [appearance, setAppearance] = useState<WithId<Appearance> | null>({id: 'appearance', theme: '259 71% 50%', darkMode: false});
   const [isLoading, setIsLoading] = useState(false); // General loading state
