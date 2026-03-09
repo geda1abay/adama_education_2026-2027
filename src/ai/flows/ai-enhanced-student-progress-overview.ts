@@ -82,13 +82,12 @@ Based on this data, generate a summary. The summary should:
 Keep the summary to about 3-4 sentences.
 `;
 
-    const { output } = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
+    const { text } = await ai.generate({
+        model: 'googleai/gemini-pro',
         prompt: prompt,
-        output: { schema: AIEnhancedStudentProgressOverviewOutputSchema },
     });
     
-    return output!;
+    return { summary: text };
   }
 );
 
