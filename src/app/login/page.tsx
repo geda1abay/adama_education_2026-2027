@@ -111,7 +111,7 @@ export default function LoginPage() {
       <div className="hidden bg-muted lg:flex items-center justify-center p-8 bg-gradient-to-br from-primary to-accent">
         <div className="text-center text-white">
             <GraduationCap className="mx-auto h-24 w-24 mb-4" />
-            <h2 className="text-4xl font-headline font-bold">Prompt Adama Model</h2>
+            <h2 className="text-4xl font-headline font-bold">Adama Model</h2>
             <p className="mt-2 text-lg">The Future of School Management</p>
         </div>
       </div>

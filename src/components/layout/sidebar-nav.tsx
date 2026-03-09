@@ -4,7 +4,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Bot,
   GraduationCap,
   LayoutDashboard,
   Settings,
@@ -36,7 +35,7 @@ export default function SidebarNav() {
           href="/dashboard"
           className="flex items-center gap-2 font-headline text-lg font-semibold"
         >
-          <Bot className="h-6 w-6 text-sidebar-primary" />
+          <GraduationCap className="h-6 w-6 text-sidebar-primary" />
           <span>{schoolInfo?.name || 'Adama Model'}</span>
         </Link>
       </div>
