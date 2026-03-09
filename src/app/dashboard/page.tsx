@@ -6,7 +6,6 @@ import AttendanceChart from '@/components/dashboard/attendance-chart';
 import PerformanceChart from '@/components/dashboard/performance-chart';
 import RecentActivitiesTable from '@/components/dashboard/recent-activities-table';
 import NotificationsPanel from '@/components/dashboard/notifications-panel';
-import AiSummaryCard from '@/components/dashboard/ai-summary-card';
 import { useData } from '@/context/data-context';
 import type { LucideIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
@@ -101,7 +100,6 @@ export default function DashboardPage() {
            <RecentActivitiesTable />
         </div>
         <div className="flex flex-col gap-6">
-            <AiSummaryCard />
             <AttendanceChart />
             <NotificationsPanel />
         </div>
