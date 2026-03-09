@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link"
-import { Bot } from "lucide-react"
+import { GraduationCap } from "lucide-react"
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -110,8 +110,8 @@ export default function LoginPage() {
       </div>
       <div className="hidden bg-muted lg:flex items-center justify-center p-8 bg-gradient-to-br from-primary to-accent">
         <div className="text-center text-white">
-            <Bot className="mx-auto h-24 w-24 mb-4" />
-            <h2 className="text-4xl font-headline font-bold">Adama Model</h2>
+            <GraduationCap className="mx-auto h-24 w-24 mb-4" />
+            <h2 className="text-4xl font-headline font-bold">Prompt Adama Model</h2>
             <p className="mt-2 text-lg">The Future of School Management</p>
         </div>
       </div>
