@@ -74,10 +74,10 @@ interface DataContextType {
   ) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
   addAttendance: (
-    attendanceData: Omit<Attendance, 'id'>
+    attendanceData: Omit<Attendance, 'id' | 'classSessionId' | 'recordedByTeacherId'>
   ) => Promise<void>;
   addExamResult: (
-    examResultData: Omit<ExamResult, 'id'>
+    examResultData: Omit<ExamResult, 'id' | 'resultDate' | 'studentUserId' | 'gradedByTeacherUserId' | 'parentUserIds' | 'comments'>
   ) => Promise<void>;
   addFee: (feeData: Omit<StudentFee, 'id'>) => Promise<void>;
 
@@ -203,14 +203,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Teacher Deleted' });
   };
   
-  const addAttendance = async (data: any) => {
-    const newAttendance: Attendance = { ...data, id: generateId() };
+  const addAttendance = async (data: Omit<Attendance, 'id' | 'classSessionId' | 'recordedByTeacherId'>) => {
+    const newAttendance: Attendance = {
+      ...data,
+      id: generateId(),
+      classSessionId: 'default-session', // Default value
+      recordedByTeacherId: currentUser?.uid || 'unknown-user', // Use logged-in user
+    };
     setStudentAttendance(prev => [...(prev || []), newAttendance]);
     toast({ title: 'Attendance Added' });
   };
 
-  const addExamResult = async (data: any) => {
-     const newResult: ExamResult = { ...data, id: generateId(), resultDate: new Date().toISOString() };
+  const addExamResult = async (data: Omit<ExamResult, 'id' | 'resultDate' | 'studentUserId' | 'gradedByTeacherUserId' | 'parentUserIds' | 'comments'>) => {
+     const student = students.find(s => s.id === data.studentId);
+    if (!student) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Student not found.' });
+        return;
+    }
+    const newResult: ExamResult = {
+      ...data,
+      id: generateId(),
+      resultDate: new Date().toISOString(),
+      studentUserId: student.userId,
+      gradedByTeacherUserId: currentUser?.uid || 'unknown-teacher',
+    };
      setRecentExamResults(prev => [...(prev || []), newResult]);
      toast({ title: 'Exam Result Added' });
   };
