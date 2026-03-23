@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   File,
+  FileUp,
   ListFilter,
   MoreHorizontal,
   PlusCircle,
+  Trash,
   Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -54,11 +56,16 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Student } from '@/lib/data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function StudentsPage() {
-  const { students, addStudent, deleteStudent, isLoading } = useData();
+  const { students, addStudent, deleteStudent, isLoading, importStudents, clearStudentsByClass } = useData();
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const router = useRouter();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isClearClassDialogOpen, setIsClearClassDialogOpen] = useState(false);
+  const [classToClear, setClassToClear] = useState<string>('');
 
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
@@ -95,6 +102,43 @@ export default function StudentsPage() {
     await addStudent(data);
     setIsAddStudentDialogOpen(false);
   };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      // Basic CSV parsing: assumes header row and format:
+      // firstName,lastName,contactEmail,gradeLevel,contactPhone,password
+      const lines = text.split('\n').slice(1); // skip header
+      const newStudents = lines.filter(line => line.trim() !== '').map(line => {
+        const [firstName, lastName, contactEmail, gradeLevel, contactPhone, password] = line.split(',').map(field => field.trim());
+        return { firstName, lastName, contactEmail, gradeLevel, contactPhone, password };
+      });
+      
+      if (newStudents.length > 0 && newStudents.every(s => s.firstName && s.lastName && s.contactEmail && s.gradeLevel && s.contactPhone && s.password)) {
+        await importStudents(newStudents);
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input value to allow re-uploading the same file
+    event.target.value = ''; 
+  };
+  
+  const handleClearClass = async () => {
+      if (classToClear) {
+          await clearStudentsByClass(classToClear);
+          setIsClearClassDialogOpen(false);
+          setClassToClear('');
+      }
+  };
+
 
   const studentTableCard = (
     <Card>
@@ -242,12 +286,63 @@ export default function StudentsPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleImportClick}>
+                <FileUp className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Import
+                </span>
+            </Button>
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                style={{ display: 'none' }}
+                onChange={handleFileImport}
+            />
             <Button size="sm" variant="outline" className="h-8 gap-1">
               <File className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                 Export
               </span>
             </Button>
+             <AlertDialog open={isClearClassDialogOpen} onOpenChange={setIsClearClassDialogOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="destructive" className="h-8 gap-1">
+                        <Trash className="h-3.5 w-3.5" />
+                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                            Clear by Class
+                        </span>
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Clear Students by Class</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action will permanently delete all students from the selected class. This cannot be undone.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="my-4">
+                        <Select onValueChange={setClassToClear} value={classToClear}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a class to clear" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {uniqueClasses.map((cls) => (
+                                    <SelectItem key={cls} value={cls}>
+                                        {cls}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setClassToClear('')}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearClass} disabled={!classToClear}>
+                        Continue
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             <Button onClick={() => setIsAddStudentDialogOpen(true)} size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">

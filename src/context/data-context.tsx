@@ -80,6 +80,8 @@ interface DataContextType {
     examResultData: Omit<ExamResult, 'id' | 'resultDate' | 'studentUserId' | 'gradedByTeacherUserId' | 'parentUserIds' | 'comments'>
   ) => Promise<void>;
   addFee: (feeData: Omit<StudentFee, 'id'>) => Promise<void>;
+  importStudents: (newStudents: (Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string })[]) => Promise<void>;
+  clearStudentsByClass: (gradeLevel: string) => Promise<void>;
 
   updateAdminProfile: (data: Partial<AdminProfile>) => void;
   updateSchoolInfo: (data: Partial<SchoolInfo>) => void;
@@ -204,11 +206,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const addAttendance = async (data: Omit<Attendance, 'id' | 'classSessionId' | 'recordedByTeacherId'>) => {
+    const teacherId = currentTeacher?.id || (userRole === 'admin' ? 'admin-user' : 'unknown-user');
     const newAttendance: Attendance = {
       ...data,
       id: generateId(),
       classSessionId: 'default-session', // Default value
-      recordedByTeacherId: currentUser?.uid || 'unknown-user', // Use logged-in user
+      recordedByTeacherId: teacherId, // Use logged-in user
     };
     setStudentAttendance(prev => [...(prev || []), newAttendance]);
     toast({ title: 'Attendance Added' });
@@ -220,12 +223,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         toast({ variant: 'destructive', title: 'Error', description: 'Student not found.' });
         return;
     }
+    const teacherId = currentTeacher?.id || (userRole === 'admin' ? 'admin-user' : 'unknown-user');
     const newResult: ExamResult = {
       ...data,
       id: generateId(),
       resultDate: new Date().toISOString(),
       studentUserId: student.userId,
-      gradedByTeacherUserId: currentUser?.uid || 'unknown-teacher',
+      gradedByTeacherUserId: teacherId,
     };
      setRecentExamResults(prev => [...(prev || []), newResult]);
      toast({ title: 'Exam Result Added' });
@@ -251,6 +255,44 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const toggleDarkMode = () => {
     setAppearance((prev) => (prev ? { ...prev, darkMode: !prev.darkMode } : null));
   };
+  
+  const importStudents = async (newStudentsData: any[]) => {
+    const newStudentsWithIds = newStudentsData.map(data => {
+        const newId = generateId();
+        const newStudent: Student = {
+        ...data,
+        id: newId,
+        userId: newId,
+        enrollmentDate: new Date().toISOString(),
+        dateOfBirth: new Date().toISOString(),
+        gender: 'Not Specified',
+        address: 'Not Specified',
+        parentIds: [],
+        };
+        MOCK_USERS[data.contactEmail as keyof typeof MOCK_USERS] = { password: data.password, role: 'student', id: newId };
+        return newStudent;
+    });
+
+    setStudents(prev => [...(prev || []), ...newStudentsWithIds]);
+    toast({ title: `${newStudentsWithIds.length} students imported successfully.` });
+  };
+
+  const clearStudentsByClass = async (gradeLevel: string) => {
+    const studentsToKeep: WithId<Student>[] = [];
+    const studentsToDelete = students.filter(s => s.gradeLevel === gradeLevel);
+    
+    students.forEach(student => {
+        if (student.gradeLevel !== gradeLevel) {
+            studentsToKeep.push(student);
+        } else {
+            delete MOCK_USERS[student.contactEmail as keyof typeof MOCK_USERS];
+        }
+    });
+
+    setStudents(studentsToKeep);
+    toast({ title: `Cleared ${studentsToDelete.length} students from ${gradeLevel}.` });
+  };
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && appearance) {
@@ -287,6 +329,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addAttendance,
       addExamResult,
       addFee,
+      importStudents,
+      clearStudentsByClass,
       updateAdminProfile,
       updateSchoolInfo,
       setTheme,
