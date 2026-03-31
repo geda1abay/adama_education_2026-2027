@@ -93,8 +93,24 @@ export default function StudentAccountPage() {
                     <span>{new Date(student.enrollmentDate).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Parent Contact:</span>
+                    <span className="font-semibold text-muted-foreground">Date of Birth:</span>
+                    <span>{new Date(student.dateOfBirth).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Gender:</span>
+                    <span>{student.gender}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Address:</span>
+                    <span className="text-right">{student.address}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Student Phone:</span>
                     <span>{student.contactPhone}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Parent Phone:</span>
+                    <span>{student.parentPhone}</span>
                 </div>
             </CardContent>
           </Card>

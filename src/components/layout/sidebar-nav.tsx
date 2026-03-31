@@ -36,7 +36,7 @@ export default function SidebarNav() {
           className="flex items-center gap-2 font-headline text-lg font-semibold"
         >
           <GraduationCap className="h-6 w-6 text-sidebar-primary" />
-          <span>{schoolInfo?.name || 'Adama Model'}</span>
+          <span>{schoolInfo?.name || 'Adama City Education Bureau'}</span>
         </Link>
       </div>
       <div className="flex-1">

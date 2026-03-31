@@ -33,9 +33,12 @@ import { useData } from '@/context/data-context';
 import { AddExamResultDialog } from '@/components/dashboard/add-exam-result-dialog';
 import type { ExamResult, Student } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { downloadCsv } from '@/lib/export';
 
 export default function ExamsPage() {
   const { students, recentExamResults, addExamResult, isLoading } = useData();
+  const { toast } = useToast();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   const [isAddExamResultDialogOpen, setIsAddExamResultDialogOpen] = useState(false);
   
@@ -55,13 +58,13 @@ export default function ExamsPage() {
     });
   };
 
-  const getStudentById = (studentId: string) => students?.find(s => s.id === studentId);
+  const getStudentByName = (studentName: string) => students?.find(s => `${s.firstName} ${s.lastName}` === studentName);
 
   const filteredResults = useMemo(() => {
     if (!recentExamResults || !students) return [];
-    const studentIdToClassMap = new Map(students.map(s => [s.id, s.gradeLevel]));
+    const studentNameToClassMap = new Map(students.map(s => [`${s.firstName} ${s.lastName}`, s.gradeLevel]));
     return recentExamResults.filter((result) => {
-      const studentClass = studentIdToClassMap.get(result.studentId);
+      const studentClass = studentNameToClassMap.get(result.studentName);
       return classFilters.length === 0 || (studentClass && classFilters.includes(studentClass));
     });
   }, [classFilters, students, recentExamResults]);
@@ -71,24 +74,26 @@ export default function ExamsPage() {
     if (!students || !recentExamResults) return statsMap;
 
     const allStudentAverages = students.map(student => {
-      const studentExamResults = recentExamResults.filter(r => r.studentId === student.id);
+      const studentName = `${student.firstName} ${student.lastName}`;
+      const studentExamResults = recentExamResults.filter(r => r.studentName === studentName);
       const totalScore = studentExamResults.reduce((acc, r) => acc + r.score, 0);
       const totalMaxScore = studentExamResults.reduce((acc, r) => acc + (r.maxScore || 100), 0);
       const average = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
-      return { studentId: student.id, studentClass: student.gradeLevel, average, totalScore };
+      return { studentName, studentClass: student.gradeLevel, average, totalScore };
     });
 
     students.forEach(student => {
-      const studentData = allStudentAverages.find(s => s.studentId === student.id);
+      const studentName = `${student.firstName} ${student.lastName}`;
+      const studentData = allStudentAverages.find(s => s.studentName === studentName);
       if (!studentData) return;
 
       const studentsInClass = allStudentAverages.filter(s => s.studentClass === student.gradeLevel);
       studentsInClass.sort((a, b) => b.average - a.average);
       
-      const rankIndex = studentsInClass.findIndex(s => s.studentId === student.id);
+      const rankIndex = studentsInClass.findIndex(s => s.studentName === studentName);
       const rank = rankIndex !== -1 ? `${rankIndex + 1}/${studentsInClass.length}` : 'N/A';
 
-      statsMap.set(student.id, {
+      statsMap.set(studentName, {
         totalScore: studentData.totalScore,
         averagePercentage: studentData.average.toFixed(2),
         rank: rank,
@@ -98,10 +103,48 @@ export default function ExamsPage() {
     return statsMap;
   }, [students, recentExamResults]);
 
-  const handleAddExamResult = async (data: Omit<ExamResult, 'id' | 'resultDate' | 'comments'>) => {
+  const handleAddExamResult = async (data: Parameters<typeof addExamResult>[0]) => {
     await addExamResult(data);
     setIsAddExamResultDialogOpen(false);
-  }
+  };
+
+  const handleExportResults = () => {
+    if (filteredResults.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Nothing to export',
+        description: 'There are no exam results in the current view.',
+      });
+      return;
+    }
+
+    downloadCsv(
+      'exam-results-export.csv',
+      ['Result ID', 'Student Name', 'Class', 'Subject', 'Score', 'Max Score', 'Result Date', 'Graded By', 'Total Score', 'Average', 'Class Rank'],
+      filteredResults.map((result) => {
+        const student = getStudentByName(result.studentName);
+        const stats = studentStats.get(result.studentName) || { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
+        return [
+          result.id,
+          result.studentName,
+          student?.gradeLevel || 'N/A',
+          result.subjectName,
+          result.score,
+          result.maxScore || 100,
+          new Date(result.resultDate).toLocaleDateString(),
+          result.gradedByTeacherName,
+          stats.totalScore,
+          `${stats.averagePercentage}%`,
+          stats.rank,
+        ];
+      })
+    );
+
+    toast({
+      title: 'Export complete',
+      description: `${filteredResults.length} exam results downloaded.`,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -144,7 +187,7 @@ export default function ExamsPage() {
                 Add Result
               </span>
             </Button>
-          <Button className="w-full sm:w-auto bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+          <Button className="w-full sm:w-auto bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90" onClick={handleExportResults}>
             <FileDown className="mr-2 h-4 w-4" />
             Export Results
           </Button>
@@ -195,15 +238,15 @@ export default function ExamsPage() {
                     </TableRow>
                 ))
             ) : filteredResults.map((result) => {
-              const student = getStudentById(result.studentId);
-              const stats = studentStats.get(result.studentId) || { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
+              const student = getStudentByName(result.studentName);
+              const stats = studentStats.get(result.studentName) || { totalScore: 0, averagePercentage: '0.00', rank: 'N/A' };
               return (
               <TableRow key={result.id}>
-                <TableCell className="font-medium">{student?.firstName} {student?.lastName || ''}</TableCell>
+                <TableCell className="font-medium">{result.studentName}</TableCell>
                 <TableCell>
                   <Badge variant="outline">{student?.gradeLevel || 'N/A'}</Badge>
                 </TableCell>
-                <TableCell>{result.subjectId}</TableCell>
+                <TableCell>{result.subjectName}</TableCell>
                 <TableCell className="text-right">{result.score}/{result.maxScore || 100}</TableCell>
                 <TableCell className="text-right">{stats.totalScore}</TableCell>
                 <TableCell className="text-right">{stats.averagePercentage}%</TableCell>

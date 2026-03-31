@@ -13,16 +13,16 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isUserLoading, isRoleLoading, firebaseUser, isAdmin } = useData();
+  const { isUserLoading, isRoleLoading, sessionUser, isAdmin } = useData();
   const router = useRouter();
 
   const isLoading = isUserLoading || isRoleLoading;
 
   useEffect(() => {
-    if (!isLoading && (!firebaseUser || !isAdmin)) {
+    if (!isLoading && (!sessionUser || !isAdmin)) {
       router.push('/login');
     }
-  }, [isLoading, firebaseUser, isAdmin, router]);
+  }, [isLoading, sessionUser, isAdmin, router]);
 
   if (isLoading || !isAdmin) {
     return (

@@ -31,9 +31,12 @@ import { useData } from '@/context/data-context';
 import { AddFeeDialog } from '@/components/dashboard/add-fee-dialog';
 import type { StudentFee } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { downloadCsv } from '@/lib/export';
 
 export default function FeesPage() {
   const { students, feesData, addFee, isLoading } = useData();
+  const { toast } = useToast();
   const [classFilters, setClassFilters] = useState<string[]>([]);
   const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
   
@@ -53,12 +56,10 @@ export default function FeesPage() {
     });
   };
 
-  const getStudentById = (studentId: string) => students?.find(s => s.id === studentId);
-
   const filteredFees = useMemo(() => {
     if (!feesData || !students) return [];
     return feesData.filter((fee) => {
-      const student = getStudentById(fee.studentId);
+      const student = students.find((item) => `${item.firstName} ${item.lastName}` === fee.studentName);
       return classFilters.length === 0 || (student && classFilters.includes(student.gradeLevel));
     });
   }, [classFilters, feesData, students]);
@@ -76,10 +77,43 @@ export default function FeesPage() {
     }
   };
 
-  const handleAddFee = async (data: Omit<StudentFee, 'id' | 'description'>) => {
+  const handleAddFee = async (data: Omit<StudentFee, 'id'>) => {
     await addFee(data);
     setIsAddFeeDialogOpen(false);
   }
+
+  const handleExportFees = () => {
+    if (filteredFees.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Nothing to export',
+        description: 'There are no fee records in the current view.',
+      });
+      return;
+    }
+
+    downloadCsv(
+      'fees-export.csv',
+      ['Fee ID', 'Student Name', 'Class', 'Amount', 'Date', 'Academic Year', 'Status'],
+      filteredFees.map((fee) => {
+        const student = students?.find((item) => `${item.firstName} ${item.lastName}` === fee.studentName);
+        return [
+          fee.id,
+          fee.studentName,
+          student?.gradeLevel || 'N/A',
+          fee.amount,
+          new Date(fee.feeDate).toLocaleDateString(),
+          fee.academicYear,
+          fee.status,
+        ];
+      })
+    );
+
+    toast({
+      title: 'Export complete',
+      description: `${filteredFees.length} fee records downloaded.`,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -116,7 +150,7 @@ export default function FeesPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          <Button size="sm" variant="outline" className="h-8 gap-1">
+          <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleExportFees}>
               <FileDown className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                 Export
@@ -159,15 +193,15 @@ export default function FeesPage() {
                     </TableRow>
                  ))
               ) : filteredFees.map((fee) => {
-                 const student = getStudentById(fee.studentId);
+                 const student = students?.find((item) => `${item.firstName} ${item.lastName}` === fee.studentName);
                  return (
                   <TableRow key={fee.id}>
-                    <TableCell className="font-medium">{student?.firstName} {student?.lastName || ''}</TableCell>
+                    <TableCell className="font-medium">{fee.studentName}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{student?.gradeLevel || 'N/A'}</Badge>
                     </TableCell>
-                    <TableCell>Birr {fee.amountDue.toFixed(2)}</TableCell>
-                    <TableCell>{new Date(fee.dueDate).toLocaleDateString()}</TableCell>
+                    <TableCell>Birr {fee.amount.toFixed(2)}</TableCell>
+                    <TableCell>{new Date(fee.feeDate).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={getStatusVariant(fee.status)}>{fee.status}</Badge>
                     </TableCell>

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import StatCard from '@/components/dashboard/stat-card';
 import AttendanceChart from '@/components/dashboard/attendance-chart';
+import { AiProgressOverview } from '@/components/dashboard/ai-progress-overview';
 import PerformanceChart from '@/components/dashboard/performance-chart';
 import RecentActivitiesTable from '@/components/dashboard/recent-activities-table';
 import NotificationsPanel from '@/components/dashboard/notifications-panel';
@@ -13,13 +14,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function DashboardPage() {
-  const { students, teachers, feesData, studentAttendance, isLoading } = useData();
+  const { students, teachers, feesData, studentAttendance, recentExamResults, isLoading } = useData();
 
   const totalFeesCollected = useMemo(() => {
     if (!feesData) return 0;
     return feesData
       .filter((fee) => fee.status === 'paid')
-      .reduce((acc, fee) => acc + fee.amountDue, 0);
+      .reduce((acc, fee) => acc + fee.amount, 0);
   }, [feesData]);
 
   const averageAttendance = useMemo(() => {
@@ -93,6 +94,18 @@ export default function DashboardPage() {
           ))
         )}
       </div>
+
+      {isLoading ? (
+        <Skeleton className="h-[320px] w-full" />
+      ) : (
+        <AiProgressOverview
+          students={students || []}
+          teachers={teachers || []}
+          recentExamResults={recentExamResults || []}
+          studentAttendance={studentAttendance || []}
+          feesData={feesData || []}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-6">

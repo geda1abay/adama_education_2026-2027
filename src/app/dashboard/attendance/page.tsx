@@ -62,26 +62,21 @@ export default function AttendancePage() {
     });
   }, [classFilters, students]);
 
-  // For this example, let's just show attendance for "June"
-  const currentMonth = 'June';
   const attendanceForMonth = useMemo(() => {
-    if (!studentAttendance) return [];
-    // This is a simplified logic. A real app would filter by a selected month.
-    // We group all attendance records by studentId for simplicity.
+    if (!studentAttendance) return new Map<string, { daysPresent: number; totalDays: number }>();
     const attendanceMap = new Map<string, { daysPresent: number; totalDays: number }>();
     studentAttendance.forEach(att => {
-        const existing = attendanceMap.get(att.studentId) || { daysPresent: 0, totalDays: 0 };
-        // This is not a perfect aggregation but good for demo
+        const existing = attendanceMap.get(att.studentName) || { daysPresent: 0, totalDays: 0 };
         existing.daysPresent += att.status === 'present' ? 1 : 0;
-        existing.totalDays += 1; // each record is a session
-        attendanceMap.set(att.studentId, existing);
+        existing.totalDays += 1;
+        attendanceMap.set(att.studentName, existing);
     });
     return attendanceMap;
   }, [studentAttendance]);
 
-  const getStudentAttendance = (studentId: string) => {
-    return attendanceForMonth.get(studentId);
-  }
+  const getStudentAttendance = (studentName: string) => {
+    return attendanceForMonth.get(studentName);
+  };
   
   const getAttendanceColor = (percentage: number) => {
     if (percentage > 90) return 'bg-green-500';
@@ -89,7 +84,7 @@ export default function AttendancePage() {
     return 'bg-red-500';
   }
 
-  const handleAddAttendance = async (data: Omit<Attendance, 'id' | 'recordedByTeacherId' | 'classSessionId'> & { studentId: string }) => {
+  const handleAddAttendance = async (data: Omit<Attendance, 'id' | 'recordedByTeacherName'>) => {
     await addAttendance(data);
     setIsAddAttendanceDialogOpen(false);
   }
@@ -166,7 +161,7 @@ export default function AttendancePage() {
                     </TableRow>
                 ))
             ) : filteredStudents.map((student) => {
-              const attendance = getStudentAttendance(student.id);
+              const attendance = getStudentAttendance(`${student.firstName} ${student.lastName}`);
               const totalDays = attendance?.totalDays || 0;
               const daysPresent = attendance?.daysPresent || 0;
               const percentage = totalDays > 0 ? (daysPresent / totalDays) * 100 : 0;

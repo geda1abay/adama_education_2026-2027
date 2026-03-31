@@ -31,24 +31,29 @@ export default function TeacherDashboardPage() {
 
   const myStudents = useMemo(() => {
     if (!teacher || !students) return [];
-    // Teacher's classes logic needs to be defined. Assuming a teacher is linked to a class.
-    // This is a placeholder. Real logic depends on how classes and teachers are linked.
-    // For now, let's assume a teacher's department is linked to a student's class somehow or just show a few students.
-    // A more robust implementation would link teachers to classes they teach.
-    // Example: teacher.classes = ["10-A", "10-B"].
-    // Let's assume for now the teacher can see all students.
-    return students;
+
+    const teacherClasses = (teacher.classes || [])
+      .map((className) => className.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (teacherClasses.length === 0) {
+      return [];
+    }
+
+    return students.filter((student) =>
+      teacherClasses.includes(student.gradeLevel.trim().toLowerCase())
+    );
   }, [teacher, students]);
   
   const getImage = (avatarId: string) => PlaceHolderImages.find((img) => img.id === avatarId);
 
-  const handleAddAttendance = async (data: Omit<Attendance, 'id' | 'recordedByTeacherId' | 'classSessionId'> & { studentId: string }) => {
+  const handleAddAttendance = async (data: Omit<Attendance, 'id' | 'recordedByTeacherName'>) => {
     await addAttendance(data);
     setIsAddAttendanceDialogOpen(false);
   };
   
-  const handleAddExamResult = async (data: Omit<ExamResult, 'id' | 'resultDate' | 'comments'>) => {
-    await addExamResult({ ...data, subjectId: teacher?.department || data.subjectId });
+  const handleAddExamResult = async (data: Parameters<typeof addExamResult>[0]) => {
+    await addExamResult({ ...data, subjectName: teacher?.department || data.subjectName });
     setIsAddExamResultDialogOpen(false);
   };
 
@@ -118,7 +123,11 @@ export default function TeacherDashboardPage() {
       <Card>
         <CardHeader>
             <CardTitle>My Students</CardTitle>
-            <CardDescription>A list of students you can manage.</CardDescription>
+            <CardDescription>
+              {teacher.classes && teacher.classes.length > 0
+                ? `Students from ${teacher.classes.join(', ')}.`
+                : 'No class has been assigned to your account yet.'}
+            </CardDescription>
         </CardHeader>
         <CardContent>
            <Table>
@@ -129,13 +138,23 @@ export default function TeacherDashboardPage() {
                   </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
-                  <TableHead className="hidden md:table-cell">
-                    Parent Contact
-                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">DOB</TableHead>
+                  <TableHead className="hidden xl:table-cell">Gender</TableHead>
+                  <TableHead className="hidden xl:table-cell">Address</TableHead>
+                  <TableHead className="hidden md:table-cell">Student Phone</TableHead>
+                  <TableHead className="hidden lg:table-cell">Parent Phone</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {myStudents.map((student) => {
+                {myStudents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      {teacher.classes && teacher.classes.length > 0
+                        ? 'No students found in your assigned classes.'
+                        : 'Ask an administrator to assign one or more classes to your account.'}
+                    </TableCell>
+                  </TableRow>
+                ) : myStudents.map((student) => {
                   const avatar = getImage('user-avatar-1');
                   return (
                     <TableRow key={student.id}>
@@ -157,8 +176,20 @@ export default function TeacherDashboardPage() {
                       <TableCell>
                         <Badge variant="outline">{student.gradeLevel}</Badge>
                       </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {new Date(student.dateOfBirth).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        {student.gender}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell max-w-[220px] truncate">
+                        {student.address}
+                      </TableCell>
                       <TableCell className="hidden md:table-cell">
                         {student.contactPhone}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {student.parentPhone}
                       </TableCell>
                     </TableRow>
                   );

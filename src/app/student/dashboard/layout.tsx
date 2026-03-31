@@ -11,16 +11,16 @@ export default function StudentDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isUserLoading, isRoleLoading, firebaseUser, userRole } = useData();
+  const { isUserLoading, isRoleLoading, sessionUser, userRole } = useData();
   const router = useRouter();
 
   const isLoading = isUserLoading || isRoleLoading;
 
   useEffect(() => {
-    if (!isLoading && (!firebaseUser || userRole !== 'student')) {
+    if (!isLoading && (!sessionUser || userRole !== 'student')) {
       router.push('/student/login');
     }
-  }, [isLoading, firebaseUser, userRole, router]);
+  }, [isLoading, sessionUser, userRole, router]);
 
   if (isLoading || userRole !== 'student') {
     return (

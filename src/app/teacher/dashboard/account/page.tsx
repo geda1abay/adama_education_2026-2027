@@ -85,12 +85,24 @@ export default function TeacherAccountPage() {
             </CardHeader>
             <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Date of Birth:</span>
+                    <span>{new Date(teacher.dateOfBirth).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Gender:</span>
+                    <span>{teacher.gender}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Department:</span>
                     <span>{teacher.department}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Contact:</span>
                     <span>{teacher.contactPhone}</span>
+                </div>
+                 <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Address:</span>
+                    <span className="text-right">{teacher.address}</span>
                 </div>
                  <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Hire Date:</span>

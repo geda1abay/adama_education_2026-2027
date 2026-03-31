@@ -20,7 +20,10 @@ export default function StudentDetailsPage() {
   const { students, recentExamResults, isLoading } = useData();
 
   const student = useMemo(() => students?.find((s) => s.id === studentId), [students, studentId]);
-  const examResults = useMemo(() => recentExamResults?.filter((r) => r.studentId === studentId), [recentExamResults, studentId]);
+  const examResults = useMemo(() => {
+    const studentName = student ? `${student.firstName} ${student.lastName}` : '';
+    return recentExamResults?.filter((r) => r.studentName === studentName);
+  }, [recentExamResults, student]);
 
   const avatar = PlaceHolderImages.find((img) => img.id === 'user-avatar-1');
 
@@ -33,15 +36,16 @@ export default function StudentDetailsPage() {
 
     const studentsInClass = students?.filter(s => s.gradeLevel === student.gradeLevel) || [];
     const studentAverages = studentsInClass.map(s => {
-      const studentExams = recentExamResults?.filter(r => r.studentId === s.id) || [];
+      const studentName = `${s.firstName} ${s.lastName}`;
+      const studentExams = recentExamResults?.filter(r => r.studentName === studentName) || [];
       const totalStudentScore = studentExams.reduce((acc, r) => acc + r.score, 0);
       const totalStudentMaxScore = studentExams.reduce((acc, r) => acc + (r.maxScore || 100), 0);
       const average = totalStudentMaxScore > 0 ? (totalStudentScore / totalStudentMaxScore) * 100 : 0;
-      return { studentId: s.id, average };
+      return { studentName, average };
     });
     
     studentAverages.sort((a, b) => b.average - a.average);
-    const rank = studentAverages.findIndex(s => s.studentId === studentId) + 1;
+    const rank = studentAverages.findIndex(s => s.studentName === `${student.firstName} ${student.lastName}`) + 1;
     
     return {
         totalScore,
@@ -119,12 +123,32 @@ export default function StudentDetailsPage() {
                     <span>{student.parentIds?.join(', ') || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-muted-foreground">Contact:</span>
+                    <span className="font-semibold text-muted-foreground">Student Phone:</span>
                     <span>{student.contactPhone}</span>
                 </div>
-                 <div className="flex justify-between border-t pt-2">
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Parent Phone:</span>
+                    <span>{student.parentPhone}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
                     <span className="font-semibold text-muted-foreground">Email:</span>
                     <span className="truncate">{student.contactEmail}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Date of Birth:</span>
+                    <span>{new Date(student.dateOfBirth).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Gender:</span>
+                    <span>{student.gender}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Address:</span>
+                    <span className="text-right">{student.address}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-muted-foreground">Enrollment Date:</span>
+                    <span>{new Date(student.enrollmentDate).toLocaleDateString()}</span>
                 </div>
             </CardContent>
           </Card>
@@ -174,7 +198,7 @@ export default function StudentDetailsPage() {
                         <TableBody>
                             {examResults && examResults.length > 0 ? examResults.map((result) => (
                             <TableRow key={result.id}>
-                                <TableCell>{result.subjectId}</TableCell>
+                                <TableCell>{result.subjectName}</TableCell>
                                 <TableCell className="text-right">{result.score}/{result.maxScore || 100}</TableCell>
                             </TableRow>
                             )) : (

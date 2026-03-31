@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   File,
+  FileUp,
   ListFilter,
   MoreHorizontal,
   PlusCircle,
@@ -53,10 +55,19 @@ import {
 import { AddTeacherDialog } from '@/components/dashboard/add-teacher-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Teacher } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
+import { downloadCsv, parseCsv } from '@/lib/export';
+import { ResetPasswordDialog } from '@/components/dashboard/reset-password-dialog';
+
+const DEFAULT_IMPORT_PASSWORD = '123456';
 
 export default function TeachersPage() {
-  const { teachers, addTeacher, deleteTeacher, isLoading } = useData();
+  const { teachers, addTeacher, deleteTeacher, resetTeacherPassword, importTeachers, isLoading } = useData();
+  const { toast } = useToast();
   const [isAddTeacherDialogOpen, setIsAddTeacherDialogOpen] = useState(false);
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [teacherPasswordTarget, setTeacherPasswordTarget] = useState<Teacher | null>(null);
 
   const getImage = (avatarId: string) =>
     PlaceHolderImages.find((img) => img.id === avatarId);
@@ -79,9 +90,84 @@ export default function TeachersPage() {
     });
   };
   
-  const handleAddTeacher = async (data: Omit<Teacher, 'id' | 'userId' | 'hireDate' | 'qualification' | 'address'> & { password?: string }) => {
+  const handleAddTeacher = async (data: Parameters<typeof addTeacher>[0]) => {
     await addTeacher(data);
     setIsAddTeacherDialogOpen(false);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      const [headerRow, ...dataRows] = parseCsv(text);
+      const headerIndex = new Map((headerRow || []).map((header, index) => [header.trim().toLowerCase(), index]));
+
+      const newTeachers = dataRows
+        .filter((row) => row.some((value) => value))
+        .map((row) => ({
+          firstName: row[headerIndex.get('first name') ?? -1] || '',
+          lastName: row[headerIndex.get('last name') ?? -1] || '',
+          dateOfBirth: row[headerIndex.get('date of birth') ?? -1] || '',
+          gender: row[headerIndex.get('gender') ?? -1] || '',
+          address: row[headerIndex.get('address') ?? -1] || '',
+          contactEmail: row[headerIndex.get('login email') ?? headerIndex.get('email') ?? -1] || '',
+          contactPhone: row[headerIndex.get('phone') ?? headerIndex.get('contact') ?? -1] || '',
+          department: row[headerIndex.get('department') ?? -1] || '',
+          classes: row[headerIndex.get('classes') ?? -1] || '',
+          password: row[headerIndex.get('login password') ?? headerIndex.get('password') ?? -1] || DEFAULT_IMPORT_PASSWORD,
+        }));
+
+      if (newTeachers.length > 0 && newTeachers.every((teacher) => teacher.firstName && teacher.lastName && teacher.contactEmail && teacher.contactPhone && teacher.department)) {
+        await importTeachers(newTeachers);
+      }
+    };
+
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  const handleExportTeachers = () => {
+    if (filteredTeachers.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Nothing to export',
+        description: 'There are no teachers in the current view.',
+      });
+      return;
+    }
+
+    downloadCsv(
+      'teachers-export.csv',
+      ['Teacher ID', 'First Name', 'Last Name', 'Date of Birth', 'Gender', 'Address', 'Email', 'Phone', 'Hire Date', 'Department', 'Qualification', 'Classes', 'Login Email', 'Login Password'],
+      filteredTeachers.map((teacher) => [
+        teacher.id,
+        teacher.firstName,
+        teacher.lastName,
+        teacher.dateOfBirth.slice(0, 10),
+        teacher.gender,
+        teacher.address,
+        teacher.contactEmail,
+        teacher.contactPhone,
+        teacher.hireDate.slice(0, 10),
+        teacher.department,
+        teacher.qualification,
+        teacher.classes?.join(', ') || '',
+        teacher.contactEmail,
+        DEFAULT_IMPORT_PASSWORD,
+      ])
+    );
+
+    toast({
+      title: 'Export complete',
+      description: `${filteredTeachers.length} teacher records downloaded.`,
+    });
   };
 
   const filteredTeachers = useMemo(() => {
@@ -110,9 +196,10 @@ export default function TeachersPage() {
               </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Department</TableHead>
-              <TableHead className="hidden md:table-cell">
-                Contact
-              </TableHead>
+              <TableHead className="hidden lg:table-cell">DOB</TableHead>
+              <TableHead className="hidden xl:table-cell">Gender</TableHead>
+              <TableHead className="hidden xl:table-cell">Address</TableHead>
+              <TableHead className="hidden md:table-cell">Contact</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -125,6 +212,9 @@ export default function TeachersPage() {
                     <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell className="hidden xl:table-cell"><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className="hidden xl:table-cell"><Skeleton className="h-5 w-36" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                 </TableRow>
@@ -151,6 +241,15 @@ export default function TeachersPage() {
                   <TableCell>
                     <Badge variant="outline">{teacher.department}</Badge>
                   </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {new Date(teacher.dateOfBirth).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell">
+                    {teacher.gender}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell max-w-[220px] truncate">
+                    {teacher.address}
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {teacher.contactPhone}
                   </TableCell>
@@ -168,7 +267,8 @@ export default function TeachersPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/dashboard/teachers/${teacher.id}`)}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setTeacherPasswordTarget(teacher)}>Reset Password</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -239,12 +339,25 @@ export default function TeachersPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" variant="outline" className="h-8 gap-1">
+            <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleExportTeachers}>
               <File className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                 Export
               </span>
             </Button>
+            <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleImportClick}>
+              <FileUp className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Import
+              </span>
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              style={{ display: 'none' }}
+              onChange={handleFileImport}
+            />
             <Button onClick={() => setIsAddTeacherDialogOpen(true)} size="sm" className="h-8 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
@@ -259,6 +372,21 @@ export default function TeachersPage() {
         open={isAddTeacherDialogOpen}
         onOpenChange={setIsAddTeacherDialogOpen}
         onTeacherAdd={handleAddTeacher}
+      />
+      <ResetPasswordDialog
+        open={Boolean(teacherPasswordTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTeacherPasswordTarget(null);
+          }
+        }}
+        title="Reset Teacher Password"
+        description={teacherPasswordTarget ? `Set a new login password for ${teacherPasswordTarget.firstName} ${teacherPasswordTarget.lastName}.` : ''}
+        onSubmitPassword={async (password) => {
+          if (teacherPasswordTarget) {
+            await resetTeacherPassword(teacherPasswordTarget.id, password);
+          }
+        }}
       />
     </div>
   );

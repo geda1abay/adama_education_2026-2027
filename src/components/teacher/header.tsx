@@ -38,7 +38,7 @@ export default function TeacherHeader() {
           className="flex items-center gap-2 font-headline text-lg font-semibold"
         >
           <BookUser className="h-6 w-6 text-primary" />
-          <span>Adama Model Teacher Portal</span>
+          <span>Adama City Education Bureau Teacher Portal</span>
         </Link>
 
       <div className="ml-auto flex items-center gap-4">

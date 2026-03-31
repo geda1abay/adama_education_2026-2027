@@ -4,7 +4,6 @@ import * as Icons from 'lucide-react';
 // Matches /students/{studentId} schema in backend.json
 export type Student = {
   id: string; // Document ID
-  userId: string; // Auth UID
   firstName: string;
   lastName: string;
   dateOfBirth: string; // ISO date string
@@ -12,6 +11,7 @@ export type Student = {
   address: string;
   contactEmail: string;
   contactPhone: string;
+  parentPhone: string;
   enrollmentDate: string; // ISO date string
   gradeLevel: string;
   parentIds: string[];
@@ -20,9 +20,10 @@ export type Student = {
 // Matches /teachers/{teacherId} schema in backend.json
 export type Teacher = {
   id: string; // Document ID
-  userId: string; // Auth UID
   firstName: string;
   lastName: string;
+  dateOfBirth: string; // ISO date string
+  gender: string;
   contactEmail: string;
   contactPhone: string;
   address: string;
@@ -35,38 +36,31 @@ export type Teacher = {
 // Matches /students/{studentId}/studentFees/{studentFeeId}
 export type StudentFee = {
   id: string;
-  studentId: string;
-  feeTypeId: string;
-  amountDue: number;
-  dueDate: string; // ISO date string
+  studentName: string;
+  amount: number;
+  feeDate: string; // ISO date string
   academicYear: string;
   status: 'paid' | 'due' | 'overdue';
-  description?: string;
 };
 
 // Matches /students/{studentId}/attendance/{attendanceId}
 export type Attendance = {
   id: string;
-  studentId: string;
-  classSessionId: string; // You may want a proper classes collection
+  studentName: string;
+  recordedByTeacherName: string;
+  subjectName: string;
   status: 'present' | 'absent' | 'late' | 'excused';
-  recordedByTeacherId: string;
 };
 
 // Matches /students/{studentId}/examResults/{examResultId}
 export type ExamResult = {
   id: string;
-  examId: string;
-  studentId: string;
-  subjectId: string;
+  studentName: string;
+  subjectName: string;
   score: number;
   maxScore: number;
   resultDate: string; // ISO date-time string
-  comments?: string;
-  // Denormalized fields for security rules
-  studentUserId: string;
-  gradedByTeacherUserId: string;
-  parentUserIds?: string[];
+  gradedByTeacherName: string;
 };
 
 // Settings types

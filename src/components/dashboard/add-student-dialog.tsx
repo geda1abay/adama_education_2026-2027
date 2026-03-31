@@ -26,9 +26,14 @@ import { Button } from '@/components/ui/button';
 const studentSchema = z.object({
   firstName: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
   lastName: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
+  dateOfBirth: z.string().min(1, { message: 'Date of birth is required.' }),
+  gender: z.string().min(1, { message: 'Gender is required.' }),
+  address: z.string().min(3, { message: 'Address is required.' }),
   contactEmail: z.string().email({ message: 'Invalid email address.' }),
   gradeLevel: z.string().min(1, { message: 'Class is required.' }),
   contactPhone: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
+  parentPhone: z.string().min(10, { message: 'Parent phone must be at least 10 digits.' }),
+  enrollmentDate: z.string().min(1, { message: 'Enrollment date is required.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
@@ -46,9 +51,14 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
     defaultValues: {
       firstName: '',
       lastName: '',
+      dateOfBirth: '',
+      gender: '',
+      address: '',
       contactEmail: '',
       gradeLevel: '',
       contactPhone: '',
+      parentPhone: '',
+      enrollmentDate: '',
       password: '',
     },
   });
@@ -60,15 +70,15 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Student</DialogTitle>
           <DialogDescription>
-            Enter the details of the new student. An authentication account will be created.
+            Enter the details of the new student. The system will assign the student ID automatically.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="max-h-[calc(90vh-8rem)] space-y-4 overflow-y-auto pr-2">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -97,6 +107,45 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Birth</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Male / Female" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Adama, Ethiopia" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="contactEmail"
@@ -131,6 +180,32 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
                   <FormLabel>Contact Phone</FormLabel>
                   <FormControl>
                     <Input placeholder="+251..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="parentPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Parent Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="+251..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="enrollmentDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enrollment Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

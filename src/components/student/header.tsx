@@ -38,7 +38,7 @@ export default function StudentHeader() {
           className="flex items-center gap-2 font-headline text-lg font-semibold"
         >
           <GraduationCap className="h-6 w-6 text-primary" />
-          <span>Adama Model Portal</span>
+          <span>Adama City Education Bureau Portal</span>
         </Link>
 
       <div className="ml-auto flex items-center gap-4">

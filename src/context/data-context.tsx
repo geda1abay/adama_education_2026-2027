@@ -2,87 +2,131 @@
 
 import React, {
   createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useEffect,
   useCallback,
+  useContext,
+  useEffect,
   useMemo,
+  useState,
+  type ReactNode,
 } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type {
-  Student,
-  Teacher,
-  StudentFee,
+  AdminProfile,
+  Appearance,
   Attendance,
   ExamResult,
-  AdminProfile,
   SchoolInfo,
-  Appearance,
+  Student,
+  StudentFee,
+  Teacher,
 } from '@/lib/data';
-import { SEED_STUDENTS, SEED_TEACHERS, SEED_FEES, SEED_ATTENDANCE, SEED_EXAM_RESULTS } from '@/lib/data';
-
-// This is a simple ID generator for mock data since we can't use external libraries like uuid.
-const generateId = () => Math.random().toString(36).substring(2, 11);
-
 
 type WithId<T> = T & { id: string };
+type UserRole = 'admin' | 'student' | 'teacher';
+
+type Snapshot = {
+  students: WithId<Student>[];
+  teachers: WithId<Teacher>[];
+  studentAttendance: WithId<Attendance>[];
+  recentExamResults: WithId<ExamResult>[];
+  feesData: WithId<StudentFee>[];
+  adminProfile: WithId<AdminProfile> | null;
+  schoolInfo: WithId<SchoolInfo> | null;
+  appearance: WithId<Appearance> | null;
+};
+
+type SessionUser = {
+  uid: string;
+  email: string;
+  role: UserRole;
+  linkedId: string | null;
+  name: string;
+};
 
 interface DataContextType {
-  // Data
   students: WithId<Student>[] | null;
   teachers: WithId<Teacher>[] | null;
   studentAttendance: WithId<Attendance>[] | null;
   recentExamResults: WithId<ExamResult>[] | null;
   feesData: WithId<StudentFee>[] | null;
-
-  // Loading states
   isLoading: boolean;
   isUserLoading: boolean;
   isRoleLoading: boolean;
-
-  // Auth & Role
-  firebaseUser: any | null; // Keep for compatibility, but will be a mock object
-  userRole: 'admin' | 'student' | 'teacher' | null;
+  sessionUser: SessionUser | null;
+  userRole: UserRole | null;
   isAdmin: boolean;
   currentStudent: WithId<Student> | null;
   currentTeacher: WithId<Teacher> | null;
-
-  // Settings
   adminProfile: WithId<AdminProfile> | null;
   schoolInfo: WithId<SchoolInfo> | null;
   appearance: WithId<Appearance> | null;
-
-  // Functions
   adminLogin: (email: string, password: string) => Promise<string | null>;
   loginStudent: (email: string, password: string) => Promise<string | null>;
   loginTeacher: (email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
-
-  addStudent: (
-    studentData: Omit<
-      Student,
-      'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'
-    > & { password?: string }
-  ) => Promise<void>;
+  addStudent: (studentData: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    contactEmail: string;
+    contactPhone: string;
+    parentPhone: string;
+    enrollmentDate: string;
+    gradeLevel: string;
+    password?: string;
+  }) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addTeacher: (
-    teacherData: Omit<
-      Teacher,
-      'id' | 'userId' | 'hireDate' | 'qualification' | 'address'
-    > & { classes?: string; password?: string }
-  ) => Promise<void>;
+  addTeacher: (teacherData: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    contactEmail: string;
+    contactPhone: string;
+    department: string;
+    classes?: string;
+    password?: string;
+  }) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
-  addAttendance: (
-    attendanceData: Omit<Attendance, 'id' | 'classSessionId' | 'recordedByTeacherId'>
-  ) => Promise<void>;
-  addExamResult: (
-    examResultData: Omit<ExamResult, 'id' | 'resultDate' | 'studentUserId' | 'gradedByTeacherUserId' | 'parentUserIds' | 'comments'>
-  ) => Promise<void>;
+  resetStudentPassword: (studentId: string, password: string) => Promise<void>;
+  resetTeacherPassword: (teacherId: string, password: string) => Promise<void>;
+  addAttendance: (attendanceData: Omit<Attendance, 'id' | 'recordedByTeacherName'>) => Promise<void>;
+  addExamResult: (examResultData: {
+    studentName: string;
+    subjectName: string;
+    score: number;
+    maxScore: number;
+  }) => Promise<void>;
   addFee: (feeData: Omit<StudentFee, 'id'>) => Promise<void>;
-  importStudents: (newStudents: (Omit<Student, 'id' | 'userId' | 'parentIds' | 'enrollmentDate' | 'dateOfBirth' | 'gender' | 'address'> & { password?: string })[]) => Promise<void>;
+  importStudents: (newStudents: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth?: string;
+    gender?: string;
+    address?: string;
+    contactEmail: string;
+    contactPhone: string;
+    parentPhone?: string;
+    enrollmentDate?: string;
+    gradeLevel: string;
+    password?: string;
+  }[]) => Promise<void>;
+  importTeachers: (newTeachers: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth?: string;
+    gender?: string;
+    address?: string;
+    contactEmail: string;
+    contactPhone: string;
+    department: string;
+    classes?: string;
+    password?: string;
+  }[]) => Promise<void>;
   clearStudentsByClass: (gradeLevel: string) => Promise<void>;
-
   updateAdminProfile: (data: Partial<AdminProfile>) => void;
   updateSchoolInfo: (data: Partial<SchoolInfo>) => void;
   setTheme: (theme: string) => void;
@@ -90,252 +134,316 @@ interface DataContextType {
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+const SESSION_STORAGE_KEY = 'school-dashboard-session';
 
-// In-memory store for mock users to simulate a user database
-const MOCK_USERS: { [email: string]: any } = {
-    'gedaabay@gmail.com': { password: '151835', role: 'admin', profile: { name: 'Geda Abay', email: 'gedaabay@gmail.com' } },
+const EMPTY_SNAPSHOT: Snapshot = {
+  students: [],
+  teachers: [],
+  studentAttendance: [],
+  recentExamResults: [],
+  feesData: [],
+  adminProfile: null,
+  schoolInfo: null,
+  appearance: null,
 };
+
+async function parseResponse<T>(response: Response) {
+  const body = await response.json();
+  if (!response.ok) {
+    throw new Error((body as { error?: string }).error || 'Request failed.');
+  }
+
+  return body as T;
+}
+
+function getStoredSession() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawValue) as SessionUser;
+  } catch {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return null;
+  }
+}
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  
-  // Local state for data
-  const [students, setStudents] = useState<WithId<Student>[]>(SEED_STUDENTS);
-  const [teachers, setTeachers] = useState<WithId<Teacher>[]>(SEED_TEACHERS);
-  const [feesData, setFeesData] = useState<WithId<StudentFee>[]>(SEED_FEES);
-  const [studentAttendance, setStudentAttendance] = useState<WithId<Attendance>[]>(SEED_ATTENDANCE);
-  const [recentExamResults, setRecentExamResults] = useState<WithId<ExamResult>[]>(SEED_EXAM_RESULTS);
-  
-  // Local state for auth and settings
-  const [userRole, setUserRole] = useState<'admin' | 'student' | 'teacher' | null>(null);
-  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY_SNAPSHOT);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [currentStudent, setCurrentStudent] = useState<WithId<Student> | null>(null);
   const [currentTeacher, setCurrentTeacher] = useState<WithId<Teacher> | null>(null);
 
-  const [adminProfile, setAdminProfile] = useState<WithId<AdminProfile> | null>({ id: 'admin-profile', name: 'Geda Abay', email: 'gedaabay@gmail.com' });
-  const [schoolInfo, setSchoolInfo] = useState<WithId<SchoolInfo> | null>({id: 'school-info', name: 'Adama Model', address: 'Adama, Ethiopia', contact: '+251 912 345 678'});
-  const [appearance, setAppearance] = useState<WithId<Appearance> | null>({id: 'appearance', theme: '259 71% 50%', darkMode: false});
-  const [isLoading, setIsLoading] = useState(false); // General loading state
+  const hydrateSession = useCallback((nextSnapshot: Snapshot, nextSession: SessionUser | null) => {
+    setSessionUser(nextSession);
+    setUserRole(nextSession?.role || null);
 
-  const login = async (email: string, password: string, expectedRole: 'admin' | 'student' | 'teacher'): Promise<string | null> => {
-    setIsLoading(true);
-    const user = MOCK_USERS[email as keyof typeof MOCK_USERS];
-    if (user && user.password === password && user.role === expectedRole) {
-      setUserRole(user.role);
-      const mockUser = { uid: user.id || email, email };
-      setCurrentUser(mockUser);
-      if (user.role === 'student') {
-        const studentProfile = students.find(s => s.id === user.id);
-        setCurrentStudent(studentProfile || null);
-      }
-      if (user.role === 'teacher') {
-        const teacherProfile = teachers.find(t => t.id === user.id);
-        setCurrentTeacher(teacherProfile || null);
-      }
-      if(user.role === 'admin') {
-        setAdminProfile(user.profile as any);
-      }
-      setIsLoading(false);
-      return null;
+    if (!nextSession) {
+      setCurrentStudent(null);
+      setCurrentTeacher(null);
+      return;
     }
-    setIsLoading(false);
-    return 'Invalid email or password.';
-  }
 
-  const adminLogin = (email: string, password: string) => login(email, password, 'admin');
-  const loginStudent = (email: string, password: string) => login(email, password, 'student');
-  const loginTeacher = (email: string, password: string) => login(email, password, 'teacher');
+    if (nextSession.role === 'student') {
+      setCurrentStudent(
+        nextSnapshot.students.find((student) => student.id === nextSession.linkedId) || null
+      );
+      setCurrentTeacher(null);
+      return;
+    }
 
-  const logout = async () => {
-    setUserRole(null);
-    setCurrentUser(null);
+    if (nextSession.role === 'teacher') {
+      setCurrentTeacher(
+        nextSnapshot.teachers.find((teacher) => teacher.id === nextSession.linkedId) || null
+      );
+      setCurrentStudent(null);
+      return;
+    }
+
     setCurrentStudent(null);
     setCurrentTeacher(null);
-  };
-  
-  const addStudent = async (data: any) => {
-    const newId = generateId();
-    const newStudent: Student = {
-      ...data,
-      id: newId,
-      userId: newId,
-      enrollmentDate: new Date().toISOString(),
-      dateOfBirth: new Date().toISOString(),
-      gender: 'Not Specified',
-      address: 'Not Specified',
-      parentIds: [],
-    };
-    setStudents(prev => [...(prev || []), newStudent]);
-    // Add to mock users for login
-    MOCK_USERS[data.contactEmail as keyof typeof MOCK_USERS] = { password: data.password, role: 'student', id: newId };
-    toast({ title: 'Student Added' });
-  };
+  }, []);
 
-  const deleteStudent = async (studentId: string) => {
-    const studentToDelete = students.find(s => s.id === studentId);
-    setStudents(prev => prev?.filter(s => s.id !== studentId) || []);
-    if(studentToDelete) {
-        delete MOCK_USERS[studentToDelete.contactEmail];
+  const refreshSnapshot = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const nextSnapshot = await parseResponse<Snapshot>(await fetch('/api/bootstrap', { cache: 'no-store' }));
+      setSnapshot(nextSnapshot);
+      hydrateSession(nextSnapshot, getStoredSession());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load MySQL data.';
+      toast({ variant: 'destructive', title: 'Database Error', description: message });
+    } finally {
+      setIsLoading(false);
     }
-    toast({ title: 'Student Deleted' });
-  };
-  
-  const addTeacher = async (data: any) => {
-    const newId = generateId();
-    const newTeacher: Teacher = {
-      ...data,
-      id: newId,
-      userId: newId,
-      hireDate: new Date().toISOString(),
-      qualification: 'Not specified',
-      address: 'Not specified',
-      classes: data.classes ? data.classes.split(',').map((c:string) => c.trim()) : [],
-    };
-    setTeachers(prev => [...(prev || []), newTeacher]);
-    MOCK_USERS[data.contactEmail as keyof typeof MOCK_USERS] = { password: data.password, role: 'teacher', id: newId };
-    toast({ title: 'Teacher Added' });
-  };
-  
-  const deleteTeacher = async (teacherId: string) => {
-    const teacherToDelete = teachers.find(t => t.id === teacherId);
-    setTeachers(prev => prev?.filter(t => t.id !== teacherId) || []);
-     if(teacherToDelete) {
-        delete MOCK_USERS[teacherToDelete.contactEmail];
-    }
-    toast({ title: 'Teacher Deleted' });
-  };
-  
-  const addAttendance = async (data: Omit<Attendance, 'id' | 'classSessionId' | 'recordedByTeacherId'>) => {
-    const teacherId = currentTeacher?.id || (userRole === 'admin' ? 'admin-user' : 'unknown-user');
-    const newAttendance: Attendance = {
-      ...data,
-      id: generateId(),
-      classSessionId: 'default-session', // Default value
-      recordedByTeacherId: teacherId, // Use logged-in user
-    };
-    setStudentAttendance(prev => [...(prev || []), newAttendance]);
-    toast({ title: 'Attendance Added' });
-  };
-
-  const addExamResult = async (data: Omit<ExamResult, 'id' | 'resultDate' | 'studentUserId' | 'gradedByTeacherUserId' | 'parentUserIds' | 'comments'>) => {
-     const student = students.find(s => s.id === data.studentId);
-    if (!student) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Student not found.' });
-        return;
-    }
-    const teacherId = currentTeacher?.id || (userRole === 'admin' ? 'admin-user' : 'unknown-user');
-    const newResult: ExamResult = {
-      ...data,
-      id: generateId(),
-      resultDate: new Date().toISOString(),
-      studentUserId: student.userId,
-      gradedByTeacherUserId: teacherId,
-    };
-     setRecentExamResults(prev => [...(prev || []), newResult]);
-     toast({ title: 'Exam Result Added' });
-  };
-
-  const addFee = async (data: any) => {
-    const newFee: StudentFee = { ...data, id: generateId() };
-    setFeesData(prev => [...(prev || []), newFee]);
-    toast({ title: 'Fee Record Added' });
-  };
-
-  const updateAdminProfile = (data: Partial<AdminProfile>) => {
-    setAdminProfile((prev) => (prev ? { ...prev, ...data } : null));
-    toast({ title: 'Profile Updated' });
-  };
-  const updateSchoolInfo = (data: Partial<SchoolInfo>) => {
-    setSchoolInfo((prev) => (prev ? { ...prev, ...data } : null));
-    toast({ title: 'School Info Updated' });
-  };
-  const setTheme = (theme: string) => {
-    setAppearance((prev) => (prev ? { ...prev, theme } : null));
-  };
-  const toggleDarkMode = () => {
-    setAppearance((prev) => (prev ? { ...prev, darkMode: !prev.darkMode } : null));
-  };
-  
-  const importStudents = async (newStudentsData: any[]) => {
-    const newStudentsWithIds = newStudentsData.map(data => {
-        const newId = generateId();
-        const newStudent: Student = {
-        ...data,
-        id: newId,
-        userId: newId,
-        enrollmentDate: new Date().toISOString(),
-        dateOfBirth: new Date().toISOString(),
-        gender: 'Not Specified',
-        address: 'Not Specified',
-        parentIds: [],
-        };
-        MOCK_USERS[data.contactEmail as keyof typeof MOCK_USERS] = { password: data.password, role: 'student', id: newId };
-        return newStudent;
-    });
-
-    setStudents(prev => [...(prev || []), ...newStudentsWithIds]);
-    toast({ title: `${newStudentsWithIds.length} students imported successfully.` });
-  };
-
-  const clearStudentsByClass = async (gradeLevel: string) => {
-    const studentsToKeep: WithId<Student>[] = [];
-    const studentsToDelete = students.filter(s => s.gradeLevel === gradeLevel);
-    
-    students.forEach(student => {
-        if (student.gradeLevel !== gradeLevel) {
-            studentsToKeep.push(student);
-        } else {
-            delete MOCK_USERS[student.contactEmail as keyof typeof MOCK_USERS];
-        }
-    });
-
-    setStudents(studentsToKeep);
-    toast({ title: `Cleared ${studentsToDelete.length} students from ${gradeLevel}.` });
-  };
-
+  }, [hydrateSession, toast]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && appearance) {
-      document.documentElement.classList.toggle('dark', appearance.darkMode);
-      document.documentElement.style.setProperty('--primary', appearance.theme);
-    }
-  }, [appearance]);
+    void refreshSnapshot();
+  }, [refreshSnapshot]);
 
-  const value: DataContextType = {
-      students,
-      teachers,
-      studentAttendance,
-      recentExamResults,
-      feesData,
-      isLoading: isLoading,
-      isUserLoading: isLoading,
-      isRoleLoading: isLoading,
-      firebaseUser: currentUser,
-      userRole,
-      isAdmin: userRole === 'admin',
-      currentStudent,
-      currentTeacher,
-      adminProfile,
-      schoolInfo,
-      appearance,
-      adminLogin,
-      loginStudent,
-      loginTeacher,
-      logout,
-      addStudent,
-      deleteStudent,
-      addTeacher,
-      deleteTeacher,
-      addAttendance,
-      addExamResult,
-      addFee,
-      importStudents,
-      clearStudentsByClass,
-      updateAdminProfile,
-      updateSchoolInfo,
-      setTheme,
-      toggleDarkMode,
-  };
+  useEffect(() => {
+    if (typeof window !== 'undefined' && snapshot.appearance) {
+      document.documentElement.classList.toggle('dark', snapshot.appearance.darkMode);
+      document.documentElement.style.setProperty('--primary', snapshot.appearance.theme);
+    }
+  }, [snapshot.appearance]);
+
+  const login = useCallback(
+    async (email: string, password: string, role: UserRole) => {
+      setIsLoading(true);
+      try {
+        const result = await parseResponse<{ user: SessionUser }>(
+          await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, role }),
+          })
+        );
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(result.user));
+        }
+
+        const nextSnapshot = await parseResponse<Snapshot>(await fetch('/api/bootstrap', { cache: 'no-store' }));
+        setSnapshot(nextSnapshot);
+        hydrateSession(nextSnapshot, result.user);
+        return null;
+      } catch (error) {
+        return error instanceof Error ? error.message : 'Login failed.';
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [hydrateSession]
+  );
+
+  const mutate = useCallback(
+    async (action: string, payload: unknown, successTitle: string) => {
+      setIsLoading(true);
+      try {
+        const nextSnapshot = await parseResponse<Snapshot>(
+          await fetch('/api/mutate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action,
+              payload,
+              actorId: sessionUser?.uid || 'admin-user',
+            }),
+          })
+        );
+
+        setSnapshot(nextSnapshot);
+        hydrateSession(nextSnapshot, sessionUser);
+        toast({ title: successTitle });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Database update failed.';
+        toast({ variant: 'destructive', title: 'Database Error', description: message });
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [hydrateSession, sessionUser, toast]
+  );
+
+  const adminLogin = useCallback((email: string, password: string) => login(email, password, 'admin'), [login]);
+  const loginStudent = useCallback((email: string, password: string) => login(email, password, 'student'), [login]);
+  const loginTeacher = useCallback((email: string, password: string) => login(email, password, 'teacher'), [login]);
+
+  const logout = useCallback(async () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+    hydrateSession(snapshot, null);
+  }, [hydrateSession, snapshot]);
+
+  const addStudent = useCallback(async (data: DataContextType['addStudent'] extends (arg: infer T) => Promise<void> ? T : never) => {
+    await mutate('addStudent', data, 'Student Added');
+  }, [mutate]);
+
+  const deleteStudent = useCallback(async (studentId: string) => {
+    await mutate('deleteStudent', { studentId }, 'Student Deleted');
+  }, [mutate]);
+
+  const addTeacher = useCallback(async (data: DataContextType['addTeacher'] extends (arg: infer T) => Promise<void> ? T : never) => {
+    await mutate('addTeacher', data, 'Teacher Added');
+  }, [mutate]);
+
+  const deleteTeacher = useCallback(async (teacherId: string) => {
+    await mutate('deleteTeacher', { teacherId }, 'Teacher Deleted');
+  }, [mutate]);
+
+  const resetStudentPassword = useCallback(async (studentId: string, password: string) => {
+    await mutate('resetStudentPassword', { studentId, password }, 'Student Password Reset');
+  }, [mutate]);
+
+  const resetTeacherPassword = useCallback(async (teacherId: string, password: string) => {
+    await mutate('resetTeacherPassword', { teacherId, password }, 'Teacher Password Reset');
+  }, [mutate]);
+
+  const addAttendance = useCallback(async (data: Omit<Attendance, 'id' | 'recordedByTeacherName'>) => {
+    await mutate('addAttendance', data, 'Attendance Added');
+  }, [mutate]);
+
+  const addExamResult = useCallback(async (data: DataContextType['addExamResult'] extends (arg: infer T) => Promise<void> ? T : never) => {
+    await mutate('addExamResult', data, 'Exam Result Added');
+  }, [mutate]);
+
+  const addFee = useCallback(async (data: Omit<StudentFee, 'id'>) => {
+    await mutate('addFee', data, 'Fee Record Added');
+  }, [mutate]);
+
+  const importStudents = useCallback(async (students: DataContextType['importStudents'] extends (arg: infer T) => Promise<void> ? T : never) => {
+    await mutate('importStudents', { students }, `${students.length} students imported successfully.`);
+  }, [mutate]);
+
+  const importTeachers = useCallback(async (teachers: DataContextType['importTeachers'] extends (arg: infer T) => Promise<void> ? T : never) => {
+    await mutate('importTeachers', { teachers }, `${teachers.length} teachers imported successfully.`);
+  }, [mutate]);
+
+  const clearStudentsByClass = useCallback(async (gradeLevel: string) => {
+    await mutate('clearStudentsByClass', { gradeLevel }, `Cleared students from ${gradeLevel}.`);
+  }, [mutate]);
+
+  const updateAdminProfile = useCallback((data: Partial<AdminProfile>) => {
+    void mutate('updateAdminProfile', data, 'Profile Updated');
+  }, [mutate]);
+
+  const updateSchoolInfo = useCallback((data: Partial<SchoolInfo>) => {
+    void mutate('updateSchoolInfo', data, 'School Info Updated');
+  }, [mutate]);
+
+  const setTheme = useCallback((theme: string) => {
+    void mutate('updateAppearance', { theme }, 'Theme Updated');
+  }, [mutate]);
+
+  const toggleDarkMode = useCallback(() => {
+    void mutate('updateAppearance', { darkMode: !snapshot.appearance?.darkMode }, 'Appearance Updated');
+  }, [mutate, snapshot.appearance?.darkMode]);
+
+  const value = useMemo<DataContextType>(() => ({
+    students: snapshot.students,
+    teachers: snapshot.teachers,
+    studentAttendance: snapshot.studentAttendance,
+    recentExamResults: snapshot.recentExamResults,
+    feesData: snapshot.feesData,
+    isLoading,
+    isUserLoading: isLoading,
+    isRoleLoading: isLoading,
+    sessionUser,
+    userRole,
+    isAdmin: userRole === 'admin',
+    currentStudent,
+    currentTeacher,
+    adminProfile: snapshot.adminProfile,
+    schoolInfo: snapshot.schoolInfo,
+    appearance: snapshot.appearance,
+    adminLogin,
+    loginStudent,
+    loginTeacher,
+    logout,
+    addStudent,
+    deleteStudent,
+    addTeacher,
+    deleteTeacher,
+    resetStudentPassword,
+    resetTeacherPassword,
+    addAttendance,
+    addExamResult,
+    addFee,
+    importStudents,
+    importTeachers,
+    clearStudentsByClass,
+    updateAdminProfile,
+    updateSchoolInfo,
+    setTheme,
+    toggleDarkMode,
+  }), [
+    addAttendance,
+    addExamResult,
+    addFee,
+    addStudent,
+    addTeacher,
+    adminLogin,
+    clearStudentsByClass,
+    currentStudent,
+    currentTeacher,
+    deleteStudent,
+    deleteTeacher,
+    resetStudentPassword,
+    resetTeacherPassword,
+    importStudents,
+    importTeachers,
+    isLoading,
+    loginStudent,
+    loginTeacher,
+    logout,
+    sessionUser,
+    setTheme,
+    snapshot.adminProfile,
+    snapshot.appearance,
+    snapshot.feesData,
+    snapshot.recentExamResults,
+    snapshot.schoolInfo,
+    snapshot.studentAttendance,
+    snapshot.students,
+    snapshot.teachers,
+    toggleDarkMode,
+    updateAdminProfile,
+    updateSchoolInfo,
+    userRole,
+  ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

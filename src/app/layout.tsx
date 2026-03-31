@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Providers } from '@/context/providers';
 
 export const metadata: Metadata = {
-  title: 'Adama Model',
+  title: 'Adama City Education Bureau',
   description: 'A Modern School Management System',
 };
 

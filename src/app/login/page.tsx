@@ -21,16 +21,16 @@ import { Label } from "@/components/ui/label"
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const { adminLogin, firebaseUser, isUserLoading, userRole } = useData();
+    const { adminLogin, sessionUser, isUserLoading, userRole } = useData();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-      if (!isUserLoading && firebaseUser && userRole === 'admin') {
+      if (!isUserLoading && sessionUser && userRole === 'admin') {
         router.push('/dashboard');
       }
-    }, [firebaseUser, isUserLoading, userRole, router]);
+    }, [sessionUser, isUserLoading, userRole, router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,7 +48,7 @@ export default function LoginPage() {
         }
     };
 
-    if (isUserLoading || (firebaseUser && userRole)) {
+    if (isUserLoading || (sessionUser && userRole)) {
       return (
         <div className="flex h-screen items-center justify-center">
           <p>Loading...</p>
@@ -111,7 +111,7 @@ export default function LoginPage() {
       <div className="hidden bg-muted lg:flex items-center justify-center p-8 bg-gradient-to-br from-primary to-accent">
         <div className="text-center text-white">
             <GraduationCap className="mx-auto h-24 w-24 mb-4" />
-            <h2 className="text-4xl font-headline font-bold">Adama Model</h2>
+            <h2 className="text-4xl font-headline font-bold">Adama City Education Bureau</h2>
             <p className="mt-2 text-lg">The Future of School Management</p>
         </div>
       </div>

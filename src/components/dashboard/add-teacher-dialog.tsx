@@ -26,6 +26,9 @@ import { Button } from '@/components/ui/button';
 const teacherSchema = z.object({
   firstName: z.string().min(2, { message: 'First name is required.' }),
   lastName: z.string().min(2, { message: 'Last name is required.' }),
+  dateOfBirth: z.string().min(1, { message: 'Date of birth is required.' }),
+  gender: z.string().min(1, { message: 'Gender is required.' }),
+  address: z.string().min(3, { message: 'Address is required.' }),
   contactEmail: z.string().email({ message: 'Invalid email address.' }),
   department: z.string().min(2, { message: 'Department is required.' }),
   classes: z.string().optional(),
@@ -47,6 +50,9 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
     defaultValues: {
       firstName: '',
       lastName: '',
+      dateOfBirth: '',
+      gender: '',
+      address: '',
       contactEmail: '',
       department: '',
       classes: '',
@@ -62,7 +68,7 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Teacher</DialogTitle>
           <DialogDescription>
@@ -70,7 +76,7 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="max-h-[calc(90vh-8rem)] space-y-4 overflow-y-auto pr-2">
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                 control={form.control}
@@ -99,6 +105,45 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
                 )}
                 />
             </div>
+            <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Birth</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Male / Female" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Adama, Ethiopia" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="contactEmail"

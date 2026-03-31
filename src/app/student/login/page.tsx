@@ -21,17 +21,17 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function StudentLoginPage() {
     const router = useRouter();
-    const { loginStudent, firebaseUser, isUserLoading, userRole } = useData();
+    const { loginStudent, sessionUser, isUserLoading, userRole } = useData();
     const { toast } = useToast();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        if (!isUserLoading && firebaseUser && userRole === 'student') {
+        if (!isUserLoading && sessionUser && userRole === 'student') {
             router.push('/student/dashboard');
         }
-    }, [firebaseUser, isUserLoading, userRole, router]);
+    }, [sessionUser, isUserLoading, userRole, router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,7 +51,7 @@ export default function StudentLoginPage() {
         }
     };
 
-    if (isUserLoading || (firebaseUser && userRole)) {
+    if (isUserLoading || (sessionUser && userRole)) {
       return (
         <div className="flex h-screen items-center justify-center">
           <p>Loading...</p>
@@ -64,7 +64,7 @@ export default function StudentLoginPage() {
       <div className="hidden bg-muted lg:flex items-center justify-center p-8 bg-gradient-to-br from-primary to-accent">
         <div className="text-center text-white">
             <GraduationCap className="mx-auto h-24 w-24 mb-4" />
-            <h2 className="text-4xl font-headline font-bold">Adama Model Student Portal</h2>
+            <h2 className="text-4xl font-headline font-bold">Adama City Education Bureau Student Portal</h2>
             <p className="mt-2 text-lg">Your academic journey starts here.</p>
         </div>
       </div>
