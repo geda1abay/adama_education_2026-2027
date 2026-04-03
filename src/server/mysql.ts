@@ -27,13 +27,13 @@ type SessionUser = {
 type StudentInput = {
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
-  gender: string;
-  address: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
   contactEmail: string;
   contactPhone: string;
   parentPhone?: string;
-  enrollmentDate: string;
+  enrollmentDate?: string;
   gradeLevel: string;
   parentIds?: string[];
   password?: string;
@@ -42,15 +42,15 @@ type StudentInput = {
 type TeacherInput = {
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
-  gender: string;
-  address: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
   contactEmail: string;
   contactPhone: string;
-  hireDate: string;
+  hireDate?: string;
   department: string;
-  qualification: string;
-  classes?: string[];
+  qualification?: string;
+  classes?: string[] | string;
   password?: string;
 };
 
@@ -67,8 +67,16 @@ type ExamResultInput = {
   subjectName: string;
   score: number;
   maxScore: number;
-  resultDate: string;
+  resultDate?: string;
   gradedByTeacherName?: string;
+};
+
+type FeeInput = {
+  studentName: string;
+  amount: number;
+  feeDate?: string;
+  academicYear: string;
+  status: 'paid' | 'due' | 'overdue';
 };
 
 export type AppSnapshot = {
@@ -160,6 +168,30 @@ function toIsoString(value: unknown) {
   }
 
   return new Date(value as string | number | Date).toISOString();
+}
+
+function toDbTimestamp(value?: string) {
+  if (!value) {
+    return new Date().toISOString();
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
+function normalizeClasses(classes?: string[] | string) {
+  if (Array.isArray(classes)) {
+    return classes.map((value) => value.trim()).filter(Boolean);
+  }
+
+  if (typeof classes === 'string') {
+    return classes
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+
+  return [] as string[];
 }
 
 async function hasTable(tableName: string) {
@@ -455,13 +487,13 @@ export async function addStudentRecord(data: StudentInput) {
       Number(studentId),
       data.firstName,
       data.lastName,
-      data.dateOfBirth,
-      data.gender,
-      data.address,
+      toDbTimestamp(data.dateOfBirth),
+      data.gender || 'Not Specified',
+      data.address || 'Not Specified',
       data.contactEmail,
       data.contactPhone,
       data.parentPhone || 'Not Specified',
-      data.enrollmentDate,
+      toDbTimestamp(data.enrollmentDate),
       data.gradeLevel,
       JSON.stringify(data.parentIds || []),
     ]
@@ -510,6 +542,8 @@ export async function deleteStudentRecord(studentId: string) {
 export async function addTeacherRecord(data: TeacherInput) {
   await bootstrapDatabase();
 
+  const normalizedClasses = normalizeClasses(data.classes);
+
   const teacherId = await getNextSequentialId('teachers');
   await query(
     `
@@ -523,15 +557,15 @@ export async function addTeacherRecord(data: TeacherInput) {
       Number(teacherId),
       data.firstName,
       data.lastName,
-      data.dateOfBirth,
-      data.gender,
+      toDbTimestamp(data.dateOfBirth),
+      data.gender || 'Not Specified',
       data.contactEmail,
       data.contactPhone,
-      data.address,
-      data.hireDate,
+      data.address || 'Not Specified',
+      toDbTimestamp(data.hireDate),
       data.department,
-      data.qualification,
-      JSON.stringify(data.classes || []),
+      data.qualification || data.department || 'Not Specified',
+      JSON.stringify(normalizedClasses),
     ]
   );
 
@@ -612,7 +646,26 @@ export async function addExamResultRecord(payload: ExamResultInput, actorId?: st
       INSERT INTO exam_results (student_name, subject_name, score, max_score, result_date, graded_by_teacher_name)
       VALUES ($1, $2, $3, $4, $5, $6)
     `,
-    [payload.studentName, payload.subjectName, payload.score, payload.maxScore, payload.resultDate, gradedByTeacherName]
+    [
+      payload.studentName,
+      payload.subjectName,
+      payload.score,
+      payload.maxScore,
+      toDbTimestamp(payload.resultDate),
+      gradedByTeacherName,
+    ]
+  );
+}
+
+export async function addFeeRecord(payload: FeeInput) {
+  await bootstrapDatabase();
+
+  await query(
+    `
+      INSERT INTO student_fees (student_name, amount, fee_date, academic_year, status)
+      VALUES ($1, $2, $3, $4, $5)
+    `,
+    [payload.studentName, payload.amount, toDbTimestamp(payload.feeDate), payload.academicYear, payload.status]
   );
 }
 
