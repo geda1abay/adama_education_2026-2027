@@ -657,6 +657,62 @@ export async function addExamResultRecord(payload: ExamResultInput, actorId?: st
   );
 }
 
+export async function updateAttendanceRecord(id: string, payload: Partial<AttendanceInput>) {
+  await bootstrapDatabase();
+  const sets: string[] = [];
+  const vals: any[] = [];
+  let i = 1;
+
+  if (payload.status) {
+    sets.push(`status = $${i++}`);
+    vals.push(payload.status);
+  }
+  if (payload.subjectName) {
+    sets.push(`subject_name = $${i++}`);
+    vals.push(payload.subjectName);
+  }
+
+  if (sets.length === 0) return;
+
+  vals.push(Number(id));
+  await query(`UPDATE attendance SET ${sets.join(', ')} WHERE id = $${i}`, vals);
+}
+
+export async function deleteAttendanceRecord(id: string) {
+  await bootstrapDatabase();
+  await query(`DELETE FROM attendance WHERE id = $1`, [Number(id)]);
+}
+
+export async function updateExamResultRecord(id: string, payload: Partial<ExamResultInput>) {
+  await bootstrapDatabase();
+  const sets: string[] = [];
+  const vals: any[] = [];
+  let i = 1;
+
+  if (payload.score !== undefined) {
+    sets.push(`score = $${i++}`);
+    vals.push(payload.score);
+  }
+  if (payload.maxScore !== undefined) {
+    sets.push(`max_score = $${i++}`);
+    vals.push(payload.maxScore);
+  }
+  if (payload.subjectName) {
+    sets.push(`subject_name = $${i++}`);
+    vals.push(payload.subjectName);
+  }
+
+  if (sets.length === 0) return;
+
+  vals.push(Number(id));
+  await query(`UPDATE exam_results SET ${sets.join(', ')} WHERE id = $${i}`, vals);
+}
+
+export async function deleteExamResultRecord(id: string) {
+  await bootstrapDatabase();
+  await query(`DELETE FROM exam_results WHERE id = $1`, [Number(id)]);
+}
+
 export async function addFeeRecord(payload: FeeInput) {
   await bootstrapDatabase();
 

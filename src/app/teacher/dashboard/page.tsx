@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, History } from 'lucide-react';
 import { AddAttendanceDialog } from '@/components/dashboard/add-attendance-dialog';
 import { AddExamResultDialog } from '@/components/dashboard/add-exam-result-dialog';
-import type { Attendance, ExamResult } from '@/lib/data';
+import { StudentHistoryDialog } from '@/components/dashboard/student-history-dialog';
+import type { Attendance, ExamResult, Student } from '@/lib/data';
 
 export default function TeacherDashboardPage() {
   const { 
@@ -26,6 +27,8 @@ export default function TeacherDashboardPage() {
 
   const [isAddAttendanceDialogOpen, setIsAddAttendanceDialogOpen] = useState(false);
   const [isAddExamResultDialogOpen, setIsAddExamResultDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   
   const isLoading = isUserLoading;
 
@@ -143,6 +146,7 @@ export default function TeacherDashboardPage() {
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
                   <TableHead className="hidden md:table-cell">Student Phone</TableHead>
                   <TableHead className="hidden lg:table-cell">Parent Phone</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,6 +195,20 @@ export default function TeacherDashboardPage() {
                       <TableCell className="hidden lg:table-cell">
                         {student.parentPhone}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 gap-1"
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setIsHistoryDialogOpen(true);
+                          }}
+                        >
+                          <History className="h-4 w-4" />
+                          <span className="sr-only sm:not-sr-only">History</span>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -216,6 +234,11 @@ export default function TeacherDashboardPage() {
         onExamResultAdd={handleAddExamResult}
         students={myStudents}
         defaultSubject={teacher.department}
+      />
+      <StudentHistoryDialog
+        open={isHistoryDialogOpen}
+        onOpenChange={setIsHistoryDialogOpen}
+        student={selectedStudent}
       />
     </div>
   );

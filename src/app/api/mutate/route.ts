@@ -16,6 +16,10 @@ import {
   updateAdminProfileRecord,
   updateAppearanceRecord,
   updateSchoolInfoRecord,
+  updateAttendanceRecord,
+  deleteAttendanceRecord,
+  updateExamResultRecord,
+  deleteExamResultRecord,
 } from '@/server/mysql';
 
 export async function POST(request: NextRequest) {
@@ -46,6 +50,18 @@ export async function POST(request: NextRequest) {
         break;
       case 'addExamResult':
         await addExamResultRecord(payload, actorId || 'admin-user');
+        break;
+      case 'updateAttendance':
+        await updateAttendanceRecord(payload.id, payload.data);
+        break;
+      case 'deleteAttendance':
+        await deleteAttendanceRecord(payload.id);
+        break;
+      case 'updateExamResult':
+        await updateExamResultRecord(payload.id, payload.data);
+        break;
+      case 'deleteExamResult':
+        await deleteExamResultRecord(payload.id);
         break;
       case 'addFee':
         await addFeeRecord(payload);

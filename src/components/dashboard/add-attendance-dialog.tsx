@@ -58,6 +58,18 @@ export function AddAttendanceDialog({ open, onOpenChange, onAttendanceAdd, stude
     },
   });
 
+  // Reset form when dialog opens
+  useMemo(() => {
+    if (open) {
+      form.reset({
+        studentName: '',
+        subjectName: '',
+        status: 'present',
+      });
+      setStudentSearch('');
+    }
+  }, [open, form]);
+
   const filteredStudents = useMemo(() => {
     const query = studentSearch.trim().toLowerCase();
     if (!query) {

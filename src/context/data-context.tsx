@@ -100,6 +100,10 @@ interface DataContextType {
     score: number;
     maxScore: number;
   }) => Promise<void>;
+  updateAttendance: (id: string, data: Partial<Omit<Attendance, 'id' | 'recordedByTeacherName'>>) => Promise<void>;
+  deleteAttendance: (id: string) => Promise<void>;
+  updateExamResult: (id: string, data: Partial<Omit<ExamResult, 'id' | 'gradedByTeacherName'>>) => Promise<void>;
+  deleteExamResult: (id: string) => Promise<void>;
   addFee: (feeData: Omit<StudentFee, 'id'>) => Promise<void>;
   importStudents: (newStudents: {
     firstName: string;
@@ -340,6 +344,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await mutate('addExamResult', data, 'Exam Result Added');
   }, [mutate]);
 
+  const updateAttendance = useCallback(async (id: string, data: Partial<Omit<Attendance, 'id' | 'recordedByTeacherName'>>) => {
+    await mutate('updateAttendance', { id, data }, 'Attendance Updated');
+  }, [mutate]);
+
+  const deleteAttendance = useCallback(async (id: string) => {
+    await mutate('deleteAttendance', { id }, 'Attendance Deleted');
+  }, [mutate]);
+
+  const updateExamResult = useCallback(async (id: string, data: Partial<Omit<ExamResult, 'id' | 'gradedByTeacherName'>>) => {
+    await mutate('updateExamResult', { id, data }, 'Exam Result Updated');
+  }, [mutate]);
+
+  const deleteExamResult = useCallback(async (id: string) => {
+    await mutate('deleteExamResult', { id }, 'Exam Result Deleted');
+  }, [mutate]);
+
   const addFee = useCallback(async (data: Omit<StudentFee, 'id'>) => {
     await mutate('addFee', data, 'Fee Record Added');
   }, [mutate]);
@@ -401,6 +421,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     resetTeacherPassword,
     addAttendance,
     addExamResult,
+    updateAttendance,
+    deleteAttendance,
+    updateExamResult,
+    deleteExamResult,
     addFee,
     importStudents,
     importTeachers,
@@ -411,7 +435,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     toggleDarkMode,
   }), [
     addAttendance,
+    updateAttendance,
+    deleteAttendance,
     addExamResult,
+    updateExamResult,
+    deleteExamResult,
     addFee,
     addStudent,
     addTeacher,
@@ -441,6 +469,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     snapshot.teachers,
     toggleDarkMode,
     updateAdminProfile,
+    updateAttendance,
+    updateExamResult,
     updateSchoolInfo,
     userRole,
   ]);
