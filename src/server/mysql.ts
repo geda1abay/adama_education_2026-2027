@@ -93,7 +93,13 @@ export type AppSnapshot = {
 let poolInstance: Pool | null = null;
 
 function getDatabaseConfig() {
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL;
+
+  // Strip channel_binding param which pg library doesn't support natively
+  if (connectionString) {
+    connectionString = connectionString.replace(/[&?]channel_binding=[^&]*/g, '');
+  }
+
   const useSsl = connectionString?.includes('sslmode=require') || process.env.PGSSLMODE === 'require' || process.env.NODE_ENV === 'production';
 
   if (connectionString) {
@@ -102,6 +108,8 @@ function getDatabaseConfig() {
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
     };
   }
+
+  console.warn('[DB] DATABASE_URL not set, falling back to localhost config.');
 
   return {
     host: process.env.POSTGRES_HOST || process.env.PGHOST || '127.0.0.1',
