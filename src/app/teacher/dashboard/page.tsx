@@ -9,8 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PlusCircle, History } from 'lucide-react';
+import { PlusCircle, History, Filter } from 'lucide-react';
 import { AddAttendanceDialog } from '@/components/dashboard/add-attendance-dialog';
 import { AddExamResultDialog } from '@/components/dashboard/add-exam-result-dialog';
 import { StudentHistoryDialog } from '@/components/dashboard/student-history-dialog';
@@ -29,24 +30,33 @@ export default function TeacherDashboardPage() {
   const [isAddExamResultDialogOpen, setIsAddExamResultDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<string>('all');
   
   const isLoading = isUserLoading;
+
+  const teacherClasses = useMemo(() => {
+    if (!teacher) return [];
+    return (teacher.classes || []).map((c) => c.trim()).filter(Boolean);
+  }, [teacher]);
 
   const myStudents = useMemo(() => {
     if (!teacher || !students) return [];
 
-    const teacherClasses = (teacher.classes || [])
-      .map((className) => className.trim().toLowerCase())
-      .filter(Boolean);
+    const lowerClasses = teacherClasses.map((c) => c.toLowerCase());
 
-    if (teacherClasses.length === 0) {
-      return [];
-    }
+    if (lowerClasses.length === 0) return [];
 
     return students.filter((student) =>
-      teacherClasses.includes(student.gradeLevel.trim().toLowerCase())
+      lowerClasses.includes(student.gradeLevel.trim().toLowerCase())
     );
-  }, [teacher, students]);
+  }, [teacher, students, teacherClasses]);
+
+  const filteredStudents = useMemo(() => {
+    if (selectedClass === 'all') return myStudents;
+    return myStudents.filter(
+      (s) => s.gradeLevel.trim().toLowerCase() === selectedClass.toLowerCase()
+    );
+  }, [myStudents, selectedClass]);
   
   const getImage = (avatarId: string) => PlaceHolderImages.find((img) => img.id === avatarId);
 
@@ -102,12 +112,12 @@ export default function TeacherDashboardPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
         <div>
             <h1 className="text-3xl font-bold font-headline">Welcome, {teacherName}!</h1>
             <p className="text-muted-foreground">Here are the students you can manage.</p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="sm:ml-auto flex items-center gap-2 flex-wrap">
             <Button onClick={() => setIsAddAttendanceDialogOpen(true)} size="sm" className="h-8 gap-1">
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
@@ -125,12 +135,34 @@ export default function TeacherDashboardPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle>My Students</CardTitle>
-            <CardDescription>
-              {teacher.classes && teacher.classes.length > 0
-                ? `Students from ${teacher.classes.join(', ')}.`
-                : 'No class has been assigned to your account yet.'}
-            </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <CardTitle>My Students</CardTitle>
+              <CardDescription>
+                {teacherClasses.length > 0
+                  ? `Students from ${teacherClasses.join(', ')}.`
+                  : 'No class has been assigned to your account yet.'}
+              </CardDescription>
+            </div>
+            {teacherClasses.length > 1 && (
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                  <SelectTrigger className="w-[180px] h-8">
+                    <SelectValue placeholder="Filter by class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Classes</SelectItem>
+                    {teacherClasses.map((cls) => (
+                      <SelectItem key={cls} value={cls}>
+                        {cls}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
            <Table>
@@ -150,15 +182,15 @@ export default function TeacherDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {myStudents.length === 0 ? (
+                {filteredStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground">
                       {teacher.classes && teacher.classes.length > 0
                         ? 'No students found in your assigned classes.'
                         : 'Ask an administrator to assign one or more classes to your account.'}
                     </TableCell>
                   </TableRow>
-                ) : myStudents.map((student) => {
+                ) : filteredStudents.map((student) => {
                   const avatar = getImage('user-avatar-1');
                   return (
                     <TableRow key={student.id}>
@@ -216,8 +248,8 @@ export default function TeacherDashboardPage() {
             </Table>
         </CardContent>
          <CardFooter>
-            <div className="text-xs text-muted-foreground">
-            Showing <strong>{myStudents.length}</strong> students.
+             <div className="text-xs text-muted-foreground">
+            Showing <strong>{filteredStudents.length}</strong> of <strong>{myStudents.length}</strong> students.
             </div>
         </CardFooter>
       </Card>
@@ -226,13 +258,13 @@ export default function TeacherDashboardPage() {
         open={isAddAttendanceDialogOpen}
         onOpenChange={setIsAddAttendanceDialogOpen}
         onAttendanceAdd={handleAddAttendance}
-        students={myStudents}
+        students={filteredStudents}
       />
       <AddExamResultDialog
         open={isAddExamResultDialogOpen}
         onOpenChange={setIsAddExamResultDialogOpen}
         onExamResultAdd={handleAddExamResult}
-        students={myStudents}
+        students={filteredStudents}
         defaultSubject={teacher.department}
       />
       <StudentHistoryDialog
