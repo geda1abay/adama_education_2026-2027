@@ -62,9 +62,10 @@ import { ResetPasswordDialog } from '@/components/dashboard/reset-password-dialo
 const DEFAULT_IMPORT_PASSWORD = '123456';
 
 export default function TeachersPage() {
-  const { teachers, addTeacher, deleteTeacher, resetTeacherPassword, importTeachers, isLoading } = useData();
+  const { teachers, addTeacher, updateTeacher, deleteTeacher, resetTeacherPassword, importTeachers, isLoading } = useData();
   const { toast } = useToast();
   const [isAddTeacherDialogOpen, setIsAddTeacherDialogOpen] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [teacherPasswordTarget, setTeacherPasswordTarget] = useState<Teacher | null>(null);
@@ -93,6 +94,12 @@ export default function TeachersPage() {
   const handleAddTeacher = async (data: Parameters<typeof addTeacher>[0]) => {
     await addTeacher(data);
     setIsAddTeacherDialogOpen(false);
+  };
+
+  const handleEditTeacher = async (data: Parameters<typeof addTeacher>[0]) => {
+    if (!editingTeacher) return;
+    await updateTeacher(editingTeacher.id, data);
+    setEditingTeacher(null);
   };
 
   const handleImportClick = () => {
@@ -268,6 +275,7 @@ export default function TeachersPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => router.push(`/dashboard/teachers/${teacher.id}`)}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEditingTeacher(teacher)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setTeacherPasswordTarget(teacher)}>Reset Password</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialog>
@@ -372,6 +380,27 @@ export default function TeachersPage() {
         open={isAddTeacherDialogOpen}
         onOpenChange={setIsAddTeacherDialogOpen}
         onTeacherAdd={handleAddTeacher}
+      />
+      <AddTeacherDialog
+        open={Boolean(editingTeacher)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingTeacher(null);
+          }
+        }}
+        onTeacherAdd={handleEditTeacher}
+        mode="edit"
+        initialValues={editingTeacher ? {
+          firstName: editingTeacher.firstName,
+          lastName: editingTeacher.lastName,
+          dateOfBirth: editingTeacher.dateOfBirth.slice(0, 10),
+          gender: editingTeacher.gender,
+          address: editingTeacher.address,
+          contactEmail: editingTeacher.contactEmail,
+          department: editingTeacher.department,
+          classes: editingTeacher.classes?.join(', ') || '',
+          contactPhone: editingTeacher.contactPhone,
+        } : undefined}
       />
       <ResetPasswordDialog
         open={Boolean(teacherPasswordTarget)}

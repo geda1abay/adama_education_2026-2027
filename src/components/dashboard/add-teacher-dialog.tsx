@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,7 +34,7 @@ const teacherSchema = z.object({
   department: z.string().min(2, { message: 'Department is required.' }),
   classes: z.string().optional(),
   contactPhone: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  password: z.string().optional(),
 });
 
 type TeacherFormValues = z.infer<typeof teacherSchema>;
@@ -41,10 +42,18 @@ type TeacherFormValues = z.infer<typeof teacherSchema>;
 interface AddTeacherDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTeacherAdd: (teacher: TeacherFormValues) => void;
+  onTeacherAdd: (teacher: TeacherFormValues) => void | Promise<void>;
+  initialValues?: Partial<TeacherFormValues>;
+  mode?: 'add' | 'edit';
 }
 
-export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeacherDialogProps) {
+export function AddTeacherDialog({
+  open,
+  onOpenChange,
+  onTeacherAdd,
+  initialValues,
+  mode = 'add',
+}: AddTeacherDialogProps) {
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherSchema),
     defaultValues: {
@@ -61,8 +70,32 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
     },
   });
 
-  const onSubmit = (data: TeacherFormValues) => {
-    onTeacherAdd(data);
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    form.reset({
+      firstName: initialValues?.firstName || '',
+      lastName: initialValues?.lastName || '',
+      dateOfBirth: initialValues?.dateOfBirth || '',
+      gender: initialValues?.gender || '',
+      address: initialValues?.address || '',
+      contactEmail: initialValues?.contactEmail || '',
+      department: initialValues?.department || '',
+      classes: initialValues?.classes || '',
+      contactPhone: initialValues?.contactPhone || '',
+      password: '',
+    });
+  }, [form, initialValues, open]);
+
+  const onSubmit = async (data: TeacherFormValues) => {
+    if (mode === 'add' && (!data.password || data.password.length < 6)) {
+      form.setError('password', { message: 'Password must be at least 6 characters.' });
+      return;
+    }
+
+    await onTeacherAdd(data);
     form.reset();
   };
 
@@ -70,40 +103,42 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Teacher</DialogTitle>
+          <DialogTitle>{mode === 'edit' ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
           <DialogDescription>
-            Enter the details of the new teacher. An authentication account will be created.
+            {mode === 'edit'
+              ? 'Update the teacher details. Leave the password blank to keep the current password.'
+              : 'Enter the details of the new teacher. An authentication account will be created.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="max-h-[calc(90vh-8rem)] space-y-4 overflow-y-auto pr-2">
             <div className="grid grid-cols-2 gap-4">
-                <FormField
+              <FormField
                 control={form.control}
                 name="firstName"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
-                        <Input placeholder="Solomon" {...field} />
+                      <Input placeholder="Solomon" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
+              />
+              <FormField
                 control={form.control}
                 name="lastName"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                        <Input placeholder="Taye" {...field} />
+                      <Input placeholder="Taye" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
+              />
             </div>
             <FormField
               control={form.control}
@@ -201,9 +236,9 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>{mode === 'edit' ? 'New Password (optional)' : 'Password'}</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••" {...field} />
+                    <Input type="password" placeholder="******" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -215,7 +250,7 @@ export function AddTeacherDialog({ open, onOpenChange, onTeacherAdd }: AddTeache
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit">Add Teacher</Button>
+              <Button type="submit">{mode === 'edit' ? 'Save Changes' : 'Add Teacher'}</Button>
             </DialogFooter>
           </form>
         </Form>

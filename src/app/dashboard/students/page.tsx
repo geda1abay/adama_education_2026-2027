@@ -64,9 +64,10 @@ import { ResetPasswordDialog } from '@/components/dashboard/reset-password-dialo
 const DEFAULT_IMPORT_PASSWORD = '123456';
 
 export default function StudentsPage() {
-  const { students, addStudent, deleteStudent, resetStudentPassword, isLoading, importStudents, clearStudentsByClass } = useData();
+  const { students, addStudent, updateStudent, deleteStudent, resetStudentPassword, isLoading, importStudents, clearStudentsByClass } = useData();
   const { toast } = useToast();
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const router = useRouter();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,6 +121,24 @@ export default function StudentsPage() {
   }) => {
     await addStudent(data);
     setIsAddStudentDialogOpen(false);
+  };
+
+  const handleEditStudent = async (data: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    contactEmail: string;
+    contactPhone: string;
+    parentPhone: string;
+    enrollmentDate: string;
+    gradeLevel: string;
+    password?: string;
+  }) => {
+    if (!editingStudent) return;
+    await updateStudent(editingStudent.id, data);
+    setEditingStudent(null);
   };
   
   const handleImportClick = () => {
@@ -306,6 +325,7 @@ export default function StudentsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id}`)}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEditingStudent(student)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setStudentPasswordTarget(student)}>Reset Password</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialog>
@@ -448,6 +468,28 @@ export default function StudentsPage() {
         open={isAddStudentDialogOpen}
         onOpenChange={setIsAddStudentDialogOpen}
         onStudentAdd={handleAddStudent}
+      />
+      <AddStudentDialog
+        open={Boolean(editingStudent)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingStudent(null);
+          }
+        }}
+        onStudentAdd={handleEditStudent}
+        mode="edit"
+        initialValues={editingStudent ? {
+          firstName: editingStudent.firstName,
+          lastName: editingStudent.lastName,
+          dateOfBirth: editingStudent.dateOfBirth.slice(0, 10),
+          gender: editingStudent.gender,
+          address: editingStudent.address,
+          contactEmail: editingStudent.contactEmail,
+          gradeLevel: editingStudent.gradeLevel,
+          contactPhone: editingStudent.contactPhone,
+          parentPhone: editingStudent.parentPhone,
+          enrollmentDate: editingStudent.enrollmentDate.slice(0, 10),
+        } : undefined}
       />
       <ResetPasswordDialog
         open={Boolean(studentPasswordTarget)}

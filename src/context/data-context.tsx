@@ -77,8 +77,33 @@ interface DataContextType {
     gradeLevel: string;
     password?: string;
   }) => Promise<void>;
+  updateStudent: (studentId: string, studentData: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    contactEmail: string;
+    contactPhone: string;
+    parentPhone: string;
+    enrollmentDate: string;
+    gradeLevel: string;
+    password?: string;
+  }) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
   addTeacher: (teacherData: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    contactEmail: string;
+    contactPhone: string;
+    department: string;
+    classes?: string;
+    password?: string;
+  }) => Promise<void>;
+  updateTeacher: (teacherId: string, teacherData: {
     firstName: string;
     lastName: string;
     dateOfBirth: string;
@@ -320,12 +345,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await mutate('deleteStudent', { studentId }, 'Student Deleted');
   }, [mutate]);
 
+  const updateStudent = useCallback(async (
+    studentId: string,
+    data: DataContextType['updateStudent'] extends (id: string, arg: infer T) => Promise<void> ? T : never
+  ) => {
+    await mutate('updateStudent', { studentId, data }, 'Student Updated');
+  }, [mutate]);
+
   const addTeacher = useCallback(async (data: DataContextType['addTeacher'] extends (arg: infer T) => Promise<void> ? T : never) => {
     await mutate('addTeacher', data, 'Teacher Added');
   }, [mutate]);
 
   const deleteTeacher = useCallback(async (teacherId: string) => {
     await mutate('deleteTeacher', { teacherId }, 'Teacher Deleted');
+  }, [mutate]);
+
+  const updateTeacher = useCallback(async (
+    teacherId: string,
+    data: DataContextType['updateTeacher'] extends (id: string, arg: infer T) => Promise<void> ? T : never
+  ) => {
+    await mutate('updateTeacher', { teacherId, data }, 'Teacher Updated');
   }, [mutate]);
 
   const resetStudentPassword = useCallback(async (studentId: string, password: string) => {
@@ -414,8 +453,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loginTeacher,
     logout,
     addStudent,
+    updateStudent,
     deleteStudent,
     addTeacher,
+    updateTeacher,
     deleteTeacher,
     resetStudentPassword,
     resetTeacherPassword,
@@ -451,6 +492,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     deleteTeacher,
     resetStudentPassword,
     resetTeacherPassword,
+    updateStudent,
+    updateTeacher,
     importStudents,
     importTeachers,
     isLoading,

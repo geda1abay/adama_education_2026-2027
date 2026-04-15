@@ -547,6 +547,68 @@ export async function deleteStudentRecord(studentId: string) {
   await query(`DELETE FROM students WHERE id = $1`, [Number(studentId)]);
 }
 
+export async function updateStudentRecord(studentId: string, data: StudentInput) {
+  await bootstrapDatabase();
+
+  const { rows } = await query<{ id: number; parent_ids: unknown }>(
+    `SELECT id, parent_ids FROM students WHERE id = $1 LIMIT 1`,
+    [Number(studentId)]
+  );
+  const current = rows[0];
+  if (!current) {
+    throw new Error('Student not found.');
+  }
+
+  await query(
+    `
+      UPDATE students
+      SET
+        first_name = $1,
+        last_name = $2,
+        date_of_birth = $3,
+        gender = $4,
+        address = $5,
+        contact_email = $6,
+        contact_phone = $7,
+        parent_phone = $8,
+        enrollment_date = $9,
+        grade_level = $10,
+        parent_ids = $11::jsonb
+      WHERE id = $12
+    `,
+    [
+      data.firstName,
+      data.lastName,
+      toDbTimestamp(data.dateOfBirth),
+      data.gender || 'Not Specified',
+      data.address || 'Not Specified',
+      data.contactEmail,
+      data.contactPhone,
+      data.parentPhone || 'Not Specified',
+      toDbTimestamp(data.enrollmentDate),
+      data.gradeLevel,
+      JSON.stringify(data.parentIds || parseArray(current.parent_ids)),
+      Number(studentId),
+    ]
+  );
+
+  await query(
+    `
+      UPDATE user_accounts
+      SET email = $1, display_name = $2
+      WHERE role = 'student' AND linked_id = $3
+    `,
+    [data.contactEmail, `${data.firstName} ${data.lastName}`, studentId]
+  );
+
+  if (data.password) {
+    await query(`UPDATE user_accounts SET password_hash = $1 WHERE role = 'student' AND linked_id = $2`, [
+      await hashPassword(data.password),
+      studentId,
+    ]);
+  }
+}
+
 export async function addTeacherRecord(data: TeacherInput) {
   await bootstrapDatabase();
 
@@ -602,6 +664,70 @@ export async function deleteTeacherRecord(teacherId: string) {
   await bootstrapDatabase();
   await query(`DELETE FROM user_accounts WHERE role = 'teacher' AND linked_id = $1`, [teacherId]);
   await query(`DELETE FROM teachers WHERE id = $1`, [Number(teacherId)]);
+}
+
+export async function updateTeacherRecord(teacherId: string, data: TeacherInput) {
+  await bootstrapDatabase();
+
+  const normalizedClasses = normalizeClasses(data.classes);
+  const { rows } = await query<{ id: number; qualification: string; hire_date: string }>(
+    `SELECT id, qualification, hire_date FROM teachers WHERE id = $1 LIMIT 1`,
+    [Number(teacherId)]
+  );
+  const current = rows[0];
+
+  if (!current) {
+    throw new Error('Teacher not found.');
+  }
+
+  await query(
+    `
+      UPDATE teachers
+      SET
+        first_name = $1,
+        last_name = $2,
+        date_of_birth = $3,
+        gender = $4,
+        contact_email = $5,
+        contact_phone = $6,
+        address = $7,
+        hire_date = $8,
+        department = $9,
+        qualification = $10,
+        classes = $11::jsonb
+      WHERE id = $12
+    `,
+    [
+      data.firstName,
+      data.lastName,
+      toDbTimestamp(data.dateOfBirth),
+      data.gender || 'Not Specified',
+      data.contactEmail,
+      data.contactPhone,
+      data.address || 'Not Specified',
+      toDbTimestamp(data.hireDate || current.hire_date),
+      data.department,
+      data.qualification || current.qualification || data.department || 'Not Specified',
+      JSON.stringify(normalizedClasses),
+      Number(teacherId),
+    ]
+  );
+
+  await query(
+    `
+      UPDATE user_accounts
+      SET email = $1, display_name = $2
+      WHERE role = 'teacher' AND linked_id = $3
+    `,
+    [data.contactEmail, `${data.firstName} ${data.lastName}`, teacherId]
+  );
+
+  if (data.password) {
+    await query(`UPDATE user_accounts SET password_hash = $1 WHERE role = 'teacher' AND linked_id = $2`, [
+      await hashPassword(data.password),
+      teacherId,
+    ]);
+  }
 }
 
 export async function resetStudentPasswordRecord(studentId: string, password: string) {

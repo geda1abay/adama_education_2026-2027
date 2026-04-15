@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +35,7 @@ const studentSchema = z.object({
   contactPhone: z.string().min(10, { message: 'Mobile number must be at least 10 digits.' }),
   parentPhone: z.string().min(10, { message: 'Parent phone must be at least 10 digits.' }),
   enrollmentDate: z.string().min(1, { message: 'Enrollment date is required.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  password: z.string().optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -42,10 +43,18 @@ type StudentFormValues = z.infer<typeof studentSchema>;
 interface AddStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStudentAdd: (student: StudentFormValues) => void;
+  onStudentAdd: (student: StudentFormValues) => void | Promise<void>;
+  initialValues?: Partial<StudentFormValues>;
+  mode?: 'add' | 'edit';
 }
 
-export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStudentDialogProps) {
+export function AddStudentDialog({
+  open,
+  onOpenChange,
+  onStudentAdd,
+  initialValues,
+  mode = 'add',
+}: AddStudentDialogProps) {
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
@@ -63,8 +72,33 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
     },
   });
 
-  const onSubmit = (data: StudentFormValues) => {
-    onStudentAdd(data);
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    form.reset({
+      firstName: initialValues?.firstName || '',
+      lastName: initialValues?.lastName || '',
+      dateOfBirth: initialValues?.dateOfBirth || '',
+      gender: initialValues?.gender || '',
+      address: initialValues?.address || '',
+      contactEmail: initialValues?.contactEmail || '',
+      gradeLevel: initialValues?.gradeLevel || '',
+      contactPhone: initialValues?.contactPhone || '',
+      parentPhone: initialValues?.parentPhone || '',
+      enrollmentDate: initialValues?.enrollmentDate || '',
+      password: '',
+    });
+  }, [form, initialValues, open]);
+
+  const onSubmit = async (data: StudentFormValues) => {
+    if (mode === 'add' && (!data.password || data.password.length < 6)) {
+      form.setError('password', { message: 'Password must be at least 6 characters.' });
+      return;
+    }
+
+    await onStudentAdd(data);
     form.reset();
   };
 
@@ -72,9 +106,11 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Student</DialogTitle>
+          <DialogTitle>{mode === 'edit' ? 'Edit Student' : 'Add New Student'}</DialogTitle>
           <DialogDescription>
-            Enter the details of the new student. The system will assign the student ID automatically.
+            {mode === 'edit'
+              ? 'Update the student details. Leave the password blank to keep the current password.'
+              : 'Enter the details of the new student. The system will assign the student ID automatically.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -216,9 +252,9 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>{mode === 'edit' ? 'New Password (optional)' : 'Password'}</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••" {...field} />
+                    <Input type="password" placeholder="******" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -230,7 +266,7 @@ export function AddStudentDialog({ open, onOpenChange, onStudentAdd }: AddStuden
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit">Add Student</Button>
+              <Button type="submit">{mode === 'edit' ? 'Save Changes' : 'Add Student'}</Button>
             </DialogFooter>
           </form>
         </Form>

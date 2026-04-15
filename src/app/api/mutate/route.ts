@@ -13,6 +13,8 @@ import {
   importTeachersRecords,
   resetStudentPasswordRecord,
   resetTeacherPasswordRecord,
+  updateStudentRecord,
+  updateTeacherRecord,
   updateAdminProfileRecord,
   updateAppearanceRecord,
   updateSchoolInfoRecord,
@@ -33,11 +35,17 @@ export async function POST(request: NextRequest) {
       case 'deleteStudent':
         await deleteStudentRecord(payload.studentId);
         break;
+      case 'updateStudent':
+        await updateStudentRecord(payload.studentId, payload.data);
+        break;
       case 'addTeacher':
         await addTeacherRecord(payload);
         break;
       case 'deleteTeacher':
         await deleteTeacherRecord(payload.teacherId);
+        break;
+      case 'updateTeacher':
+        await updateTeacherRecord(payload.teacherId, payload.data);
         break;
       case 'resetStudentPassword':
         await resetStudentPasswordRecord(payload.studentId, payload.password);
